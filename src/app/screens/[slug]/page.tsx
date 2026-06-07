@@ -58,7 +58,7 @@ export default async function ScreenPage({
         <p className="text-muted text-base leading-relaxed max-w-2xl">{screen.description}</p>
         <div className="mt-6 inline-flex items-center gap-2 text-[11px] text-dim">
           <span className="text-foreground font-bold tabular">{matching.length}</span>
-          <span>社が条件に合致（プロトタイプ 18 社中）</span>
+          <span>社が条件に合致（カバー銘柄から）</span>
         </div>
       </header>
 
@@ -73,7 +73,7 @@ export default async function ScreenPage({
         <h2 className="text-xl font-bold mb-4">該当銘柄</h2>
         {matching.length === 0 ? (
           <div className="bg-surface border border-border border-dashed rounded-md p-8 text-center text-muted">
-            条件に合致する銘柄がありません。プロトタイプの掲載銘柄を拡大すると該当銘柄が増えます。
+            条件に合致する銘柄がありません。カバー銘柄が増えると、該当銘柄も増える予定です。
           </div>
         ) : (
           <div className="bg-surface border border-border rounded-md overflow-hidden">
@@ -137,7 +137,7 @@ export default async function ScreenPage({
       </section>
 
       <div className="mt-8 text-[11px] text-dim leading-relaxed">
-        ※ このスクリーンは公開情報に基づく機械的抽出です。投資判断は必ず個別銘柄ページの「規範的判断」と「見落とし論点」、および一次情報をご確認のうえご自身の責任で行ってください。
+        ※ このスクリーンは公開情報に基づく機械的抽出です。投資判断は必ず個別銘柄ページの「AI 評価」と「見落とし論点」、および一次情報をご確認のうえご自身の責任で行ってください。
         判断基準の詳細は <Link href="/legal/editorial-policy" className="underline">編集方針</Link> を、注意事項は <Link href="/legal/disclaimer" className="underline">免責事項</Link> をご覧ください。
       </div>
     </article>

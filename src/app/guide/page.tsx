@@ -211,7 +211,7 @@ export default function GuidePage() {
 
           <p className="mt-6 text-[12px] text-dim leading-relaxed">
             詳細は <Link href="/legal/disclaimer" className="underline">免責事項</Link> をご確認ください。
-            また、本サイトの編集方針（規範的判断の出し方など）は <Link href="/legal/editorial-policy" className="underline">編集方針</Link> に公開しています。
+            また、本サイトの編集方針（AI 評価の出し方など）は <Link href="/legal/editorial-policy" className="underline">編集方針</Link> に公開しています。
           </p>
         </section>
 

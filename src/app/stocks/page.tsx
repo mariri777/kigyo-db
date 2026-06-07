@@ -3,8 +3,8 @@ import { industries } from "@/lib/industries";
 import { StockTable } from "@/components/StockTable";
 
 export const metadata = {
-  title: "銘柄一覧 — 業界・評価で絞り込む",
-  description: "東証上場銘柄を業界・規範的判断で絞り込み、各指標で並び替え。プロトタイプは半導体・医薬品の 18 社。",
+  title: "銘柄一覧 — 業界・AI 評価で絞り込む",
+  description: "東証上場銘柄を業界・AI 評価で絞り込み、各指標で並び替え。現在 10 業界 61 社をカバー、順次拡大中。",
 };
 
 export default function StocksListPage() {
@@ -23,8 +23,8 @@ export default function StocksListPage() {
           銘柄一覧
         </h1>
         <p className="text-muted leading-relaxed max-w-2xl">
-          プロトタイプは半導体クラスタ・医薬品クラスタの 18 社を掲載。
-          業界と規範的判断（割安／ほぼ妥当／やや割高／割高）で絞り込み、各指標で並び替えできます。
+          現在 <strong className="text-foreground">10 業界 {stocks.length} 社</strong>を掲載中（順次拡大中）。
+          業界と AI 評価（割安／ほぼ妥当／やや割高／割高）で絞り込み、各指標で並び替えできます。
           銘柄名をクリックで詳細ページへ。
         </p>
       </header>
@@ -32,7 +32,7 @@ export default function StocksListPage() {
       <StockTable stocks={stocks} industryOptions={industryOptions} />
 
       <div className="mt-12 text-[11px] text-dim leading-relaxed">
-        ※ 規範的判断（割安・割高）は同業他社・過去水準との比較に基づく一般的な評価です。
+        ※ AI 評価（割安・割高）は同業他社・過去水準との比較に基づく一般的な評価です。
         判断基準の詳細は <a href="/legal/editorial-policy" className="underline">編集方針</a> をご確認ください。
       </div>
     </div>

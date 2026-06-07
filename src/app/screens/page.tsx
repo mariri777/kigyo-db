@@ -44,7 +44,7 @@ export default function ScreensHub() {
       </section>
 
       <section className="mt-16 pt-8 border-t border-border text-[12px] text-dim leading-relaxed">
-        ※ 各スクリーンは公開情報に基づく機械的抽出です。投資判断にあたっては、必ず各銘柄の個別ページの「規範的判断」と「見落とし論点」、および一次情報をご確認ください。
+        ※ 各スクリーンは公開情報に基づく機械的抽出です。投資判断にあたっては、必ず各銘柄の個別ページの「AI 評価」と「見落とし論点」、および一次情報をご確認ください。
         判断基準の詳細は <Link href="/legal/editorial-policy" className="underline">編集方針</Link> をご覧ください。
       </section>
     </div>

@@ -107,7 +107,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               投資判断はユーザー自身の責任で行ってください。本サービスは投資勧誘や売買推奨を目的とするものではありません。
             </p>
             <p>
-              数値データは EDINET / TDnet / J-Quants からの取得を前提とした構造です（本プロトタイプはサンプルデータ）。
+              数値データは EDINET / TDnet / J-Quants からの取得を前提とした構造です（現在はサンプルデータで運用中）。
             </p>
             <div className="pt-4 border-t border-border flex flex-wrap gap-x-5 gap-y-2">
               <Link href="/guide" className="text-muted hover:text-foreground transition">
