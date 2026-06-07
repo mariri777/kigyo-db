@@ -82,6 +82,14 @@ export default function PredictionsHub() {
             sub={resolvedCount > 0 ? `${aiHits}/${resolvedCount}` : "サンプル収集中"}
           />
         </div>
+        <div className="mt-4 max-w-2xl">
+          <Link
+            href="/predictions/track-record"
+            className="inline-flex items-center gap-1 text-[12px] text-foreground border border-border-strong rounded px-3 py-1.5 hover:bg-foreground hover:text-background transition"
+          >
+            的中率の詳細ダッシュボード →
+          </Link>
+        </div>
       </header>
 
       {/* ===== カテゴリ説明 ===== */}

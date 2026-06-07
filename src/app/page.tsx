@@ -350,9 +350,14 @@ export default function Home() {
             </p>
             <h2 className="text-2xl font-bold tracking-tight">AI 予測の答え合わせ</h2>
           </div>
-          <Link href="/predictions" className="text-sm text-muted hover:text-foreground transition">
-            予測一覧へ →
-          </Link>
+          <div className="flex gap-4 text-sm">
+            <Link href="/predictions/track-record" className="text-muted hover:text-foreground transition">
+              的中率の詳細 →
+            </Link>
+            <Link href="/predictions" className="text-muted hover:text-foreground transition">
+              予測一覧 →
+            </Link>
+          </div>
         </div>
         <p className="text-sm text-muted mb-5 leading-relaxed max-w-3xl">
           決算ガイダンス・配当方針・適時開示などの結果を AI が事前に予測し、当たりも外れも公開しています。

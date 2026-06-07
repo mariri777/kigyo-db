@@ -2032,3 +2032,93 @@ export function groupedPredictions(): Record<PredictionBucket, Prediction[]> {
   }
   return buckets;
 }
+
+// ──────────────────────────────────────────────
+// Track Record（AI 的中率ダッシュボード用集計）
+// ──────────────────────────────────────────────
+
+export type TrackRecordRow = {
+  group: string;
+  total: number;
+  hits: number;
+  accuracy: number; // 0-100
+};
+
+/** 全体スタッツ */
+export function trackRecordOverall(): {
+  total: number;
+  hits: number;
+  misses: number;
+  accuracy: number;
+} {
+  const resolved = ALL_PREDICTIONS.filter((p) => p.status === "resolved" && p.resolution);
+  const hits = resolved.filter((p) => p.aiReasoning.pick === p.resolution!.outcomeKey).length;
+  const total = resolved.length;
+  return {
+    total,
+    hits,
+    misses: total - hits,
+    accuracy: total > 0 ? (hits / total) * 100 : 0,
+  };
+}
+
+/** イベント種別ごとの的中率 */
+export function trackRecordByEventType(): TrackRecordRow[] {
+  const resolved = ALL_PREDICTIONS.filter((p) => p.status === "resolved" && p.resolution);
+  const labelMap: Record<PredictionEventType, string> = {
+    earnings: "決算",
+    disclosure: "適時開示",
+    macro: "マクロ",
+    news: "ニュース",
+  };
+  const groups: Record<PredictionEventType, { total: number; hits: number }> = {
+    earnings: { total: 0, hits: 0 },
+    disclosure: { total: 0, hits: 0 },
+    macro: { total: 0, hits: 0 },
+    news: { total: 0, hits: 0 },
+  };
+  for (const p of resolved) {
+    groups[p.eventType].total += 1;
+    if (p.aiReasoning.pick === p.resolution!.outcomeKey) {
+      groups[p.eventType].hits += 1;
+    }
+  }
+  return (Object.keys(groups) as PredictionEventType[]).map((key) => ({
+    group: labelMap[key],
+    total: groups[key].total,
+    hits: groups[key].hits,
+    accuracy: groups[key].total > 0 ? (groups[key].hits / groups[key].total) * 100 : 0,
+  }));
+}
+
+/** AI 確信度別の的中率（キャリブレーション） */
+export function trackRecordByConfidence(): TrackRecordRow[] {
+  const buckets: Array<{ label: string; min: number; max: number }> = [
+    { label: "確信度 90%以上", min: 90, max: 100 },
+    { label: "確信度 70-89%", min: 70, max: 90 },
+    { label: "確信度 50-69%", min: 50, max: 70 },
+    { label: "確信度 50%未満", min: 0, max: 50 },
+  ];
+  const resolved = ALL_PREDICTIONS.filter((p) => p.status === "resolved" && p.resolution);
+  return buckets.map((b) => {
+    const inBucket = resolved.filter(
+      (p) => p.aiReasoning.confidence >= b.min && p.aiReasoning.confidence < b.max,
+    );
+    const hits = inBucket.filter((p) => p.aiReasoning.pick === p.resolution!.outcomeKey).length;
+    return {
+      group: b.label,
+      total: inBucket.length,
+      hits,
+      accuracy: inBucket.length > 0 ? (hits / inBucket.length) * 100 : 0,
+    };
+  });
+}
+
+/** 全 resolved 予測を新しい順で返す */
+export function allResolvedPredictions(): Prediction[] {
+  return ALL_PREDICTIONS.filter((p) => p.status === "resolved" && p.resolution).sort((a, b) => {
+    const av = new Date(a.resolution!.resolvedAt).getTime();
+    const bv = new Date(b.resolution!.resolvedAt).getTime();
+    return bv - av;
+  });
+}
