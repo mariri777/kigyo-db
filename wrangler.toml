@@ -1,0 +1,29 @@
+# Cloudflare の設定ファイル
+# このファイルを読んで Wrangler（Cloudflare のリモコン）が動きます
+
+# プロジェクト名（仮名。本番ドメイン確定時に再度見直す）
+# 「超！企業 DB」の暫定ローマ字表記
+name = "cho-kigyo-db"
+
+# Cloudflare のランタイム（実行環境）のバージョン
+# 2024-09-23 以降にすると Node.js 互換 API が使える
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+# OpenNext がビルドしたファイルの場所（後で使う）
+main = ".open-next/worker.js"
+
+# 静的ファイル（画像など）の置き場
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# D1（データベース）の設定
+# binding = "DB" にすると、プログラムから env.DB でアクセスできる
+[[d1_databases]]
+binding = "DB"
+database_name = "cho-kigyo-db-database"
+# ↓ローカル開発の時は仮の ID で OK、本番作成時に置き換える
+database_id = "local-dev"
+# Drizzle Kit が出力するマイグレーションファイルの場所
+migrations_dir = "drizzle"

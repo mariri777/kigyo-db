@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-elev: #fafafa;
+  --border: #e7e7e7;
+  --border-strong: #d4d4d4;
+  --foreground: #0a0a0a;
+  --foreground-muted: #525252;
+  --foreground-dim: #9ca3af;
+  --accent: #0a0a0a;
+  --accent-soft: #f5f5f5;
+  --positive: #15803d;
+  --negative: #b91c1c;
+  --ai: #404040;
+  --ai-soft: #f7f7f7;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-elev: var(--surface-elev);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--foreground-muted);
+  --color-dim: var(--foreground-dim);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-ai: var(--ai);
+  --color-ai-soft: var(--ai-soft);
+  --font-sans: var(--font-noto-jp);
+  --font-mono: var(--font-jb-mono);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "palt";
+  -webkit-font-smoothing: antialiased;
+
+  /* 日本語向け改行最適化（progressive enhancement・非対応ブラウザは無視されるだけ）
+   * - line-break: strict        — 行頭禁則を厳密化（句読点が行頭に来ない）
+   * - word-break: auto-phrase   — 文節単位で改行（単語の分断を防ぐ、Chromium 119+ / Safari 17.4+）
+   * - text-wrap: pretty         — 最終行が孤立しないよう調整（段落向け） */
+  line-break: strict;
+  word-break: auto-phrase;
+  text-wrap: pretty;
+}
+
+/* タイポグラフィを引き締める — モノクロームのため weight と spacing で階層を作る
+ * text-wrap: balance で見出しの行長を均等化（「日本の上場企業を、/AI と一緒に学ぶ」のような不自然な改行を回避） */
+h1 { letter-spacing: -0.03em; font-weight: 700; text-wrap: balance; }
+h2 { letter-spacing: -0.025em; font-weight: 700; text-wrap: balance; }
+h3, h4 { letter-spacing: -0.015em; font-weight: 700; text-wrap: balance; }
+
+/* 長い英単語・URL がコンテナをはみ出すのを防ぐ（最後の手段としてのみ折る） */
+p, li, dd, summary {
+  overflow-wrap: break-word;
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* AI 生成セクション — 控えめなグレーパネルで差異を表現 */
+.ai-section {
+  border-left: 2px solid var(--foreground);
+  background: var(--ai-soft);
+}
+
+/* スコアバー */
+.score-bar {
+  height: 4px;
+  background: #ededed;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.score-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--foreground);
+}
+
+/* リンク・インタラクション基本 */
+::selection { background: var(--foreground); color: var(--background); }
