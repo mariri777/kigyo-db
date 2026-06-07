@@ -88,7 +88,7 @@ export default function GuidePage() {
           <h2 className="text-2xl font-bold tracking-tight mb-2">投資の基本：覚えておきたい 4 つの指標</h2>
           <p className="text-sm text-muted mb-6">
             このサイトで頻繁に出てくる用語を、やさしく噛み砕いて解説します。
-            各指標の詳細は、銘柄ページの「?」マークにカーソルを当てても確認できます。
+            各銘柄ページの「指標の見方 ▸」を開けば、要点をまとめた解説も同時に確認できます。
           </p>
 
           <div className="space-y-3">
@@ -154,34 +154,34 @@ export default function GuidePage() {
             <Route
               label="割安な会社を探したい"
               steps={[
-                { label: "1. 割安銘柄一覧へ", href: "/screens/undervalued", desc: "規範的判断で「割安」判定の銘柄" },
-                { label: "2. 気になった銘柄を選ぶ", desc: "「ひとことで言うと」を読んで会社の輪郭を掴む" },
-                { label: "3. 「評価」で根拠を読む", desc: "なぜ割安なのか、納得できる説明か" },
-                { label: "4. 「見落とし論点」でリスクを確認", desc: "安いには理由があるかも、必ず読む" },
+                { label: "1. 割安銘柄一覧へ", href: "/screens/undervalued", desc: "AI が「割安」と判定した銘柄を確認します。" },
+                { label: "2. 気になった銘柄を選ぶ", desc: "「ひとことで言うと」を読んで、会社の輪郭をつかみます。" },
+                { label: "3. 「評価」で根拠を読む", desc: "なぜ割安なのか、納得できる説明かを確認します。" },
+                { label: "4. 「見落とし論点」でリスクを確認", desc: "安いには理由があるかもしれません。必ず読みましょう。" },
               ]}
             />
             <Route
-              label="配当で稼ぎたい（インカム狙い）"
+              labelNode={<>配当で稼ぎたい（<Term>インカム</Term>狙い）</>}
               steps={[
-                { label: "1. 高配当銘柄一覧へ", href: "/screens/high-dividend", desc: "配当 3% 以上の銘柄" },
-                { label: "2. 成長フェーズを確認", desc: "「成熟期」寄りの方が配当が継続しやすい" },
-                { label: "3. 規範的判断と利益率の安定性をチェック", desc: "減配リスクの低い銘柄を選ぶ" },
+                { label: "1. 高配当銘柄一覧へ", href: "/screens/high-dividend", desc: "配当利回り 3% 以上の銘柄を確認します。" },
+                { label: "2. 成長フェーズを確認", desc: "「成熟期」寄りの会社のほうが、配当が継続しやすい傾向にあります。" },
+                { label: "3. 評価と利益率の安定性を確認", desc: "減配リスクの低い銘柄を選びます。" },
               ]}
             />
             <Route
               label="成長株を探したい"
               steps={[
-                { label: "1. 高成長銘柄 or 拡大期銘柄へ", href: "/screens/high-growth", desc: "売上 3 年 CAGR 10% 以上" },
-                { label: "2. PER の高さを許容する", desc: "成長期待が織り込まれている" },
-                { label: "3. 「見落とし論点」で成長前提が崩れるシナリオを確認", desc: "想定外のリスクがないか" },
+                { label: "1. 高成長 or 拡大期銘柄へ", href: "/screens/high-growth", descNode: <>売上の 3 年 <Term>CAGR</Term>（年平均成長率）が 10% 以上の銘柄を確認します。</> },
+                { label: "2. PER の高さを許容する", desc: "成長期待が株価に織り込まれているため、市場平均より高くなりがちです。" },
+                { label: "3. 「見落とし論点」でリスクを確認", desc: "成長前提が崩れるシナリオがないかを確認します。" },
               ]}
             />
             <Route
               label="特定の業界を学びたい"
               steps={[
-                { label: "1. 業界マップへ", href: "/industries", desc: "半導体・医薬品から順次拡大中" },
-                { label: "2. 業界マップ・競争構造・主要 KPI を読む", desc: "業界全体の構造を把握" },
-                { label: "3. 個別銘柄ページで深掘り", desc: "気になった会社を一つずつ" },
+                { label: "1. 業界マップへ", href: "/industries", desc: "現在 10 業界に対応、順次拡大中です。" },
+                { label: "2. 業界マップ・競争構造・主要 KPI を読む", desc: "業界全体の構造を把握します。" },
+                { label: "3. 個別銘柄ページで深掘り", desc: "気になった会社を一つずつ確認します。" },
               ]}
             />
           </div>
@@ -303,14 +303,16 @@ function Metric({ label, children }: { label: string; children: React.ReactNode 
 
 function Route({
   label,
+  labelNode,
   steps,
 }: {
-  label: string;
-  steps: { label: string; href?: string; desc: string }[];
+  label?: string;
+  labelNode?: React.ReactNode;
+  steps: { label: string; href?: string; desc?: string; descNode?: React.ReactNode }[];
 }) {
   return (
     <div className="bg-surface border border-border rounded-md p-4">
-      <h3 className="font-bold mb-3">{label}</h3>
+      <h3 className="font-bold mb-3">{labelNode ?? label}</h3>
       <ol className="space-y-2">
         {steps.map((step, i) => (
           <li key={i} className="grid grid-cols-[140px_1fr] gap-3 items-baseline">
@@ -324,7 +326,7 @@ function Route({
             ) : (
               <span className="text-sm font-medium">{step.label}</span>
             )}
-            <span className="text-[12px] text-muted leading-relaxed">{step.desc}</span>
+            <span className="text-[12px] text-muted leading-relaxed">{step.descNode ?? step.desc}</span>
           </li>
         ))}
       </ol>

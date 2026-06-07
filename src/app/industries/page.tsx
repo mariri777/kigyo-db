@@ -13,13 +13,13 @@ export default function IndustriesHub() {
           Industry Map
         </p>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
-          業界ごとの
+          業界の競争構造を、
           <br />
-          徹底分析。
+          一枚に。
         </h1>
         <p className="text-muted max-w-2xl leading-relaxed">
-          東証 33 業種より細かい粒度で、業界の競争構造・主要 KPI・見落とし論点を分析。
-          開発者の業界知識を直接プロダクトに転写し、東証 Prime・Standard・Growth を順次カバーします。
+          東証の業種分類より細かい粒度で、業界の<strong className="text-foreground">バリューチェーン・競争構造・主要指標（KPI）・見落とし論点</strong>を分析。
+          現在 <strong className="text-foreground">10 業界</strong>をカバー、銘柄数は順次拡大中です。
         </p>
       </header>
 

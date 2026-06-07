@@ -4,9 +4,10 @@ import { groupedPredictions } from "@/lib/predictions";
 import type { Prediction, PredictionBucket } from "@/lib/predictions";
 import { PredictionListItem } from "@/components/PredictionListItem";
 import { PredictionCard } from "@/components/PredictionCard";
+import { Term } from "@/components/Term";
 
 export const metadata: Metadata = {
-  title: "予測 — 確率で考える練習",
+  title: "予測 — 結果で学ぶ確率思考",
   description:
     "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると「教訓」が追加されるミニ学習ユニットです。",
 };
@@ -90,19 +91,19 @@ export default function PredictionsHub() {
           <ul className="text-[12px] text-muted leading-relaxed space-y-1">
             <li>
               <strong className="text-foreground">Earnings / 決算</strong>{" "}
-              — 個別企業の四半期・通期決算。ガイダンス修正方向、コンセンサス上回り等を予測
+              — 個別企業の四半期・通期決算。<Term>ガイダンス</Term>の修正方向、<Term>コンセンサス</Term>を上回るか等を予測します。
             </li>
             <li>
-              <strong className="text-foreground">Disclosure / 適時開示</strong>{" "}
-              — 自社株買い、M&A、配当変更などの開示前後の反応予測
+              <strong className="text-foreground">Disclosure / <Term>適時開示</Term></strong>{" "}
+              — <Term>自社株買い</Term>、M&amp;A、配当変更などの開示前後の反応を予測します。
             </li>
             <li>
               <strong className="text-foreground">Macro / マクロ</strong>{" "}
-              — 日銀政策決定会合、FOMC、CPI など、複数銘柄に同時影響するイベント
+              — 日銀政策決定会合、<Term>FOMC</Term>、<Term>CPI</Term> など、複数銘柄に同時影響するイベント。
             </li>
             <li>
               <strong className="text-foreground">News / ニュース</strong>{" "}
-              — 取引時間中の重要ニュースに対する短期反応（5-30 分で決着）
+              — 取引時間中の重要ニュースに対する短期反応（5-30 分で決着）。
             </li>
           </ul>
         </div>

@@ -1,6 +1,7 @@
 import { Countdown } from "./Countdown";
 import { Disclose } from "./Disclose";
 import { VoteButtons } from "./VoteButtons";
+import { Term } from "./Term";
 import type {
   Prediction,
   PredictionChoice,
@@ -74,7 +75,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
         {/* 結果（resolved の場合） */}
         {isResolved && p.resolution && (
           <div className="mt-4 mb-4 border border-foreground bg-accent-soft px-4 py-3 rounded-sm">
-            <div className="text-[10px] tracking-[0.2em] uppercase text-muted mb-1">Result</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-muted mb-1">結果 / Result</div>
             <div className="text-lg font-bold mb-1">{p.resolution.outcomeLabel}</div>
             <div className="flex items-center gap-3 flex-wrap mt-2">
               <span className="text-[11px] text-dim">
@@ -125,7 +126,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
         {/* ─── 学習セクション ─── */}
         <div className="mt-5 pt-5 border-t border-border space-y-1">
           <div className="text-[10px] tracking-[0.2em] uppercase text-dim mb-2">
-            For Learners — 予測する前に、ここを見る・こう考える
+            予測する前に — ここを見る・こう考える
           </div>
 
           {/* 見るべきポイント */}
@@ -167,7 +168,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
             openLabel="🎯 考え方のフレーム（閉じる）"
           >
             <p className="text-[11px] text-dim mb-3">
-              プロが頭の中で使っているメンタルモデル。覚えると他の銘柄でも応用できます。
+              プロが頭の中で使っている<Term>メンタルモデル</Term>（考え方の型）。一度覚えると他の銘柄でも応用できます。
             </p>
             <ul className="space-y-3">
               {p.frames.map((f, i) => (
@@ -258,7 +259,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
         {isResolved && p.resolution && (
           <div className="mt-5 pt-5 border-t border-border">
             <div className="text-[10px] tracking-[0.2em] uppercase text-dim mb-2">
-              🎓 Lesson — 答え合わせと学び
+              🎓 答え合わせと学び
             </div>
 
             <div className="bg-accent-soft border border-border rounded-sm p-4 space-y-4">
@@ -541,9 +542,10 @@ function ProbabilityBars({
                       className={`text-[10px] tabular ${
                         delta > 0 ? "text-foreground" : "text-muted"
                       }`}
+                      title="pp = パーセンテージポイント。確率の差を表す単位。"
                     >
                       ({delta > 0 ? "+" : ""}
-                      {delta}pp / 1 週間)
+                      {delta}<Term term="pp">pp</Term> / 1 週間)
                     </span>
                   )}
                 </div>

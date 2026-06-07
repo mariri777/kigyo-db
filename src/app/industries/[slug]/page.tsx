@@ -78,16 +78,16 @@ export default async function IndustryPage({
             <div className="text-[11px] text-muted mt-1">{industry.marketScale.growth}</div>
           </div>
           <div className="bg-background p-4">
-            <div className="text-[10px] text-dim tracking-wider mb-1">対象上場企業</div>
+            <div className="text-[10px] text-dim tracking-wider mb-1">カバー銘柄</div>
             <div className="font-bold tabular">
-              {agg.count} 社 <span className="text-xs text-muted font-normal">（プロトタイプ）</span>
+              {agg.count} 社 <span className="text-xs text-muted font-normal">（サンプルデータ）</span>
             </div>
             <div className="text-[11px] text-muted mt-1">
               時価総額合計 {agg.totalMcap.toLocaleString()} 億円
             </div>
           </div>
           <div className="bg-background p-4">
-            <div className="text-[10px] text-dim tracking-wider mb-1">対象群の平均</div>
+            <div className="text-[10px] text-dim tracking-wider mb-1">カバー銘柄の平均</div>
             <div className="font-bold tabular">
               PER {agg.avgPer.toFixed(1)} 倍 / ROE {agg.avgRoe.toFixed(1)}%
             </div>
