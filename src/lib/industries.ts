@@ -782,13 +782,6 @@ export const SAAS: Industry = {
       position: "営業マーケ",
     },
     {
-      key: "saas-hr",
-      name: "HR SaaS",
-      role: "タレントマネジメント・評価・配置・育成など人事関連業務の SaaS 化。",
-      companyCodes: ["4435"],
-      position: "HR",
-    },
-    {
       key: "saas-communication",
       name: "コミュニケーション SaaS",
       role: "ビジネスチャット・ビデオ会議など、社内外のコミュニケーション基盤。",
@@ -840,9 +833,9 @@ export const SAAS: Industry = {
     {
       sub: "HR SaaS",
       summary:
-        "国内は SmartHR（非上場）が急成長で頭角、カオナビはタレントマネジメント特化で差別化。エンタープライズ層では Workday・SAP SuccessFactors（米独）が浸透。",
+        "国内は SmartHR（非上場）が急成長で頭角、カオナビは 2025 年にカーライル傘下で非公開化。エンタープライズ層では Workday・SAP SuccessFactors（米独）が浸透。",
       detail:
-        "SmartHR は労務手続き SaaS で急成長、評価管理機能の拡張でカオナビ領域に侵食中。カオナビは『顔写真ベースの人材情報管理』を起点に評価・配置に拡張するが、機能の重複が増えている。エンタープライズ層では Workday・SAP SuccessFactors（米独）の日本本格参入が論点。",
+        "SmartHR は労務手続き SaaS で急成長し、評価管理機能の拡張でタレントマネジメント領域に侵食中。同領域の代表だったカオナビは 2025 年にカーライルの TOB で非公開化され、上場 HR SaaS の選択肢は減少した。エンタープライズ層では Workday・SAP SuccessFactors（米独）の日本本格参入が論点。",
     },
     {
       sub: "コミュニケーション SaaS",
@@ -940,18 +933,18 @@ export const SAAS: Industry = {
         "Salesforce は既に国内 CRM・SFA 市場で支配的、Workday は人事領域で本格営業開始。Microsoft も Dynamics 365 で攻勢。国内 SaaS の差別化は『日本固有の業務要件への対応』『中小・中堅市場のきめ細かなサポート』『税理士パートナー網』の 3 点に集約されつつある。これらが米系 SaaS の機能拡張で侵食された場合の感応度の議論が IR で抽象的。",
       citations: [
         { doc: "Salesforce Japan 2024 年次レポート" },
-        { doc: "カオナビ 2025年3月期 通期決算説明会資料" },
+        { doc: "freee 2025年6月期 通期決算説明会資料" },
       ],
     },
     {
       title: "成長 SaaS の PER は『将来の高営業利益率』を 5–10 年先まで織り込む水準",
       lede:
-        "Money Forward PER 125 倍、カオナビ 68 倍、ラクス 58 倍。現状の薄利／赤字に対し、長期で米系 SaaS 並みの 25–30% 営業利益率を織り込む。",
+        "Money Forward PER 125 倍、ラクス 58 倍、Sansan 52 倍。現状の薄利／赤字に対し、長期で米系 SaaS 並みの 25–30% 営業利益率を織り込む。",
       body:
         "国内 SaaS 大手の PER は 50–125 倍と高水準。現状の薄利・赤字に対し、長期的に米系 SaaS（Salesforce、Workday）の成熟期営業利益率 20–30% に到達する前提を織り込む。達成は理論的に可能だが、競合激化・AI コスト・海外展開コストが圧迫要因。PER と現状営業利益率のギャップが、SaaS 株のボラティリティの源泉になっている。",
       citations: [
         { doc: "マネーフォワード 2025年11月期 通期決算説明会資料" },
-        { doc: "カオナビ 2025年3月期 通期決算説明会資料" },
+        { doc: "ラクス 2025年3月期 通期決算説明会資料" },
       ],
     },
     {
