@@ -150,7 +150,7 @@ export const SEMICONDUCTOR: Industry = {
       key: "front-end-equipment",
       name: "前工程装置（WFE）",
       role: "ウェハ上にトランジスタを形成する装置群。エッチング、成膜、洗浄、コータ／デベロッパなど。",
-      companyCodes: ["8035", "7735"],
+      companyCodes: ["8035", "7735", "6525"],
       position: "前工程",
     },
     {
@@ -163,8 +163,8 @@ export const SEMICONDUCTOR: Industry = {
     {
       key: "back-end-equipment",
       name: "後工程装置",
-      role: "ウェハ切断・薄化装置。CoWoS／HBM 後工程拡大で構造受益。",
-      companyCodes: ["6146"],
+      role: "ウェハ切断・薄化装置、ウェハプローバ。CoWoS／HBM 後工程拡大で構造受益。",
+      companyCodes: ["6146", "7729"],
       position: "後工程",
     },
     {
@@ -176,9 +176,30 @@ export const SEMICONDUCTOR: Industry = {
     },
     {
       key: "materials",
-      name: "材料",
-      role: "シリコンウェハ、フォトレジスト、ガス、薬液など。",
-      companyCodes: ["4063"],
+      name: "材料（ウェハ・レジスト）",
+      role: "シリコンウェハ、フォトレジスト、ガス、薬液など。製造のたびに消費される消耗材。",
+      companyCodes: ["4063", "3436", "4186"],
+      position: "材料",
+    },
+    {
+      key: "mask-blanks",
+      name: "マスクブランクス",
+      role: "回路の設計図を焼き付けるフォトマスクの原版。EUV 用は HOYA がほぼ独占。",
+      companyCodes: ["7741"],
+      position: "材料",
+    },
+    {
+      key: "package-substrate",
+      name: "パッケージ基板",
+      role: "チップと基板をつなぐ高密度配線基板（FC-BGA）。AI 半導体の大型化で構造受益。",
+      companyCodes: ["4062"],
+      position: "部材",
+    },
+    {
+      key: "backend-materials",
+      name: "後工程材料",
+      role: "CMP スラリー、封止材、ダイボンディング材など。先端パッケージ化で使用量が増加。",
+      companyCodes: ["4004"],
       position: "材料",
     },
     {
@@ -193,6 +214,13 @@ export const SEMICONDUCTOR: Industry = {
       name: "ファブレス（設計）",
       role: "製造を委託、設計に特化。カスタム SoC・ASIC。データセンタ向け急拡大。",
       companyCodes: ["6526"],
+      position: "設計",
+    },
+    {
+      key: "auto-idm",
+      name: "車載・マイコン（IDM）",
+      role: "設計から製造まで一貫の IDM。車載マイコンで世界首位級、自動車業界との結節点。",
+      companyCodes: ["6723"],
       position: "設計",
     },
     {
@@ -314,6 +342,54 @@ export const SEMICONDUCTOR: Industry = {
           { rank: 3, name: "ローム（日）", value: "約 10%" },
           { rank: 4, name: "WolfSpeed（米）", value: "約 8%" },
           { rank: 5, name: "オン・セミ（米）", value: "約 7%" },
+        ],
+      },
+    },
+    {
+      sub: "マスクブランクス・材料",
+      summary:
+        "EUV マスクブランクスは HOYA がほぼ独占、AGC が第 2 供給者を追う。300mm ウェハは信越・SUMCO の 2 強、レジストは TOK が首位級。",
+      detail:
+        "EUV マスクブランクスは低欠陥率の歩留まりが参入障壁で、HOYA の独占が続く。顧客側はデュアルソース化圧力を強めるが、Hi-NA 世代では品質要求がさらに上がり格差が開く可能性もある。レジストは JSR の非公開化（JIC 傘下）後、上場大手として TOK の希少性が増した。ラムリサーチの乾式レジスト参入が中期の世代交代リスク。",
+      shares: {
+        metric: "EUV マスクブランクス世界シェア",
+        entries: [
+          { rank: 1, name: "HOYA（日）", value: "ほぼ独占" },
+          { rank: 2, name: "AGC（日）", value: "第 2 供給者として追随" },
+        ],
+      },
+    },
+    {
+      sub: "パッケージ基板",
+      summary:
+        "FC-BGA はイビデン・新光電気工業（非上場化）・台湾 Unimicron の 3 強。AI 半導体の大型化・多層化で需要構造が転換、各社が大型投資を実行中。",
+      detail:
+        "AI 半導体（GPU・カスタム ASIC）はチップサイズと信号数の増大でパッケージ基板も大型・多層化し、単価が従来品の数倍になる構造変化が進む。日本勢ではイビデンが先行投資（岐阜の新工場群）で受注を固める。新光電気工業は 2025 年に JIC 傘下で非公開化され、上場プレーヤーはイビデンに絞られた。中期ではガラスコア基板への技術転換が競争構造のリセット要因。",
+      shares: {
+        metric: "高級 FC-BGA 基板シェア（概算）",
+        entries: [
+          { rank: 1, name: "イビデン（日）", value: "約 30%" },
+          { rank: 2, name: "新光電気工業（日・非上場）", value: "約 20%" },
+          { rank: 3, name: "Unimicron（台）", value: "約 20%" },
+          { name: "サムスン電機・AT&S ほか", value: "約 30%" },
+        ],
+        note: "サーバー・AI 向け高級品の概算シェア。集計範囲により数値は大きく変わる。",
+      },
+    },
+    {
+      sub: "車載マイコン（MCU）",
+      summary:
+        "ルネサス・NXP・インフィニオン・ST・TI の 5 強寡占。車載は認証障壁が高く参入困難だが、中国 OEM の現地調達志向が中期リスク。",
+      detail:
+        "車載 MCU は機能安全認証（ISO 26262）と長期供給保証が参入障壁となり、5 強寡占が長く続いてきた。ルネサスは車載 MCU で世界首位級だが、EV シフトでドメインコントローラ（高性能 SoC）への統合が進むと、MCU 単体の搭載数が減る『アーキテクチャ変化リスク』がある。中国 BYD 系など OEM の半導体内製・現地調達も数量面の中期リスク。",
+      shares: {
+        metric: "車載 MCU 世界シェア（概算）",
+        entries: [
+          { rank: 1, name: "ルネサス（日）", value: "約 30%" },
+          { rank: 2, name: "NXP（蘭）", value: "約 25%" },
+          { rank: 3, name: "インフィニオン（独）", value: "約 20%" },
+          { rank: 4, name: "ST（伊仏）", value: "約 10%" },
+          { rank: 5, name: "TI（米）", value: "約 8%" },
         ],
       },
     },

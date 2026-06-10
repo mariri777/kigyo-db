@@ -15,6 +15,16 @@ const SRC_2025FY_SHIN = { doc: "2025年3月期 統合報告書", period: "2025/3
 const SRC_2025FY_FRTC = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 10 };
 const SRC_2025FY_ANRT = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 13 };
 
+// 半導体クラスタ拡張（2026-06 追加分）の出典
+const SRC_2025FY_RENESAS = { doc: "2025年12月期 通期決算説明会資料", period: "2025/12", page: 10 };
+const SRC_2025FY_SUMCO = { doc: "2025年12月期 通期決算説明会資料", period: "2025/12", page: 8 };
+const SRC_2025FY_HOYA = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 12 };
+const SRC_2025FY_KOKUSAI = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 9 };
+const SRC_2025FY_IBIDEN = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 11 };
+const SRC_2025FY_ACCRETECH = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 10 };
+const SRC_2025FY_TOK = { doc: "2025年12月期 通期決算説明会資料", period: "2025/12", page: 9 };
+const SRC_2025FY_RESONAC = { doc: "2025年12月期 通期決算説明会資料", period: "2025/12", page: 14 };
+
 // 医薬品クラスタ用の出典
 const SRC_2025FY_TAKEDA = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 22 };
 const SRC_2025FY_DAIICHI = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 18 };
@@ -943,6 +953,674 @@ export const stocks: Stock[] = [
   },
 
   // ===== 医薬品クラスタ =====
+  {
+    code: "6723",
+    name: "ルネサスエレクトロニクス",
+    nameEn: "Renesas Electronics",
+    exchange: "Prime",
+    tier: 1,
+    sectorTSE: "電気機器",
+    industryCluster: "車載半導体（IDM）",
+    priceJpy: 1950,
+    priceDate: "2026-05-26",
+    changePct: -0.82,
+    marketCapOku: 37800,
+    per: 14.2,
+    pbr: 1.8,
+    dividendYield: 1.4,
+    roe: 12.6,
+    operatingMargin: 24.8,
+    revenueGrowth3y: 1.8,
+    description:
+      "車載マイコン（MCU）世界首位級の IDM（設計から製造まで一貫）。自動車・産業向けが二本柱。Dialog・Altium 買収でアナログ・設計ツールへ領域拡大。車載半導体の在庫調整の出口が目先の焦点。",
+    oneLiner:
+      "クルマの頭脳『マイコン』で世界トップ級。エンジン制御から EV のバッテリー管理まで、自動車 1 台に何十個も載る半導体を、設計から製造まで一貫して手がける日本最大の半導体メーカーの一つ。",
+    tags: [
+      { dimension: "product", value: "車載マイコン（MCU）", source: SRC_2025FY_RENESAS },
+      { dimension: "product", value: "SoC・アナログ・パワーマネジメント IC", source: SRC_2025FY_RENESAS },
+      { dimension: "customer", value: "自動車 Tier1（デンソー・ボッシュ等）", source: SRC_2025FY_RENESAS },
+      { dimension: "customer", value: "産業機器・インフラ・IoT", source: SRC_2025FY_RENESAS },
+      { dimension: "channel", value: "代理店＋大口直販", source: SRC_2025FY_RENESAS },
+      { dimension: "revenue_model", value: "デバイス売り切り（IDM 一貫生産）", source: SRC_2025FY_RENESAS },
+      { dimension: "value_chain", value: "設計〜前工程製造（IDM）", source: SRC_2025FY_RENESAS },
+      { dimension: "geography", value: "中国 23%・日本 21%・欧州 18%・北米 16%", source: SRC_2025FY_RENESAS },
+    ],
+    segments: [
+      { name: "自動車向け", revenueOku: 7300, share: 50.5, operatingMargin: 28.1 },
+      { name: "産業・インフラ・IoT", revenueOku: 6100, share: 42.2, operatingMargin: 22.4 },
+      { name: "その他", revenueOku: 1050, share: 7.3, operatingMargin: 8.0 },
+    ],
+    segmentsPeriod: "2025/12",
+    phaseScores: { launch: 6, expansion: 38, mature: 58, decline: 8 },
+    phaseRationale:
+      "車載半導体の在庫調整局面で売上 3 年 CAGR +1.8% と足踏み。EV・ADAS の長期トレンドは拡大要因だが、足元の数字は成熟期色が濃い。在庫調整の出口で拡大スコアが戻るかが分岐点。",
+    factorBetas: {
+      usdjpy: 0.55,
+      us10y: -0.35,
+      oil: 0.02,
+      sox: 1.21,
+      china: 0.48,
+      market: 1.15,
+      size: -0.22,
+      value: 0.18,
+      momentum: 0.12,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "車載在庫調整の『出口』はディストリビューター在庫より Tier1 直販比率に先に出る",
+        body:
+          "車載半導体の回復シグナルとして市場はディストリビューター在庫週数を追うが、ルネサスは Tier1 への直販比率が高く、回復局面では直販受注の戻りが先行する構造。販路別の受注開示が四半期ごとに揃っておらず、回復の初動を市場が遅れて織り込む可能性がある。",
+        citations: [SRC_2025FY_RENESAS],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "Dialog・Altium 買収のクロスセル効果が IR で定量化されていない",
+        body:
+          "アナログ（Dialog）と設計ツール（Altium）の買収により『MCU＋アナログ＋設計環境』のセット提案が可能になったが、クロスセルによる追加売上・解約率の変化が開示されていない。買収額合計 1 兆円超に対する回収進捗を検証する材料が不足しており、のれん減損リスクの評価が難しい。",
+        citations: [SRC_2025FY_RENESAS],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "中国ローカル MCU の台頭は民生から車載へ、単価下落の時間差侵食",
+        body:
+          "中国の MCU 新興勢は民生・家電向けで急速にシェアを取り、単価下落が先行している。32bit 車載 MCU は認証障壁が高く即座の代替は起きないが、中国系 OEM の現地調達方針が強まると、中国売上 23% の構成が単価・数量の両面で侵食されるリスクが中期的に積み上がる。",
+        citations: [SRC_2025FY_RENESAS],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "割安",
+      score: 64,
+      rationale:
+        "PER 14.2 倍は車載半導体グローバル大手（NXP・インフィニオンの 17–18 倍）に対して約 2 割のディスカウント。在庫調整の出口が見え始める局面では見直し余地が大きい。ただし車載依存度の高さと買収のれんの重さが恒常的なディスカウント要因として残る。",
+      citations: [SRC_2025FY_RENESAS],
+    },
+  },
+  {
+    code: "3436",
+    name: "SUMCO",
+    nameEn: "SUMCO",
+    exchange: "Prime",
+    tier: 1,
+    sectorTSE: "金属製品",
+    industryCluster: "半導体材料（ウェハ）",
+    priceJpy: 1180,
+    priceDate: "2026-05-26",
+    changePct: 1.05,
+    marketCapOku: 4150,
+    per: 19.6,
+    pbr: 0.74,
+    dividendYield: 2.3,
+    roe: 3.8,
+    operatingMargin: 8.4,
+    revenueGrowth3y: -3.2,
+    description:
+      "300mm シリコンウェハ世界 2 位。信越化学と日本勢 2 社で世界シェア 5 割超の寡占。ウェハ市況サイクルの底で PBR 1 倍割れ、AI 半導体向け先端ウェハ需要の回復タイミングが焦点。",
+    oneLiner:
+      "半導体の『土台』になる円盤＝シリコンウェハの専業メーカーで世界 2 位。半導体そのものではなく、半導体を作るための素材を供給する。市況の波をまともに受けるが、寡占構造は強固。",
+    tags: [
+      { dimension: "product", value: "300mm シリコンウェハ", source: SRC_2025FY_SUMCO },
+      { dimension: "product", value: "200mm 以下ウェハ", source: SRC_2025FY_SUMCO },
+      { dimension: "customer", value: "ロジックファウンドリ（TSMC 等）", source: SRC_2025FY_SUMCO },
+      { dimension: "customer", value: "メモリ大手（サムスン・SK・マイクロン）", source: SRC_2025FY_SUMCO },
+      { dimension: "channel", value: "長期契約（LTA）中心の直販", source: SRC_2025FY_SUMCO },
+      { dimension: "revenue_model", value: "素材量産（市況・数量連動）", source: SRC_2025FY_SUMCO },
+      { dimension: "value_chain", value: "最上流素材（ウェハ）", source: SRC_2025FY_SUMCO },
+      { dimension: "geography", value: "台湾 28%・日本 22%・韓国 18%・中国 14%", source: SRC_2025FY_SUMCO },
+    ],
+    segments: [
+      { name: "高純度シリコンウェハ", revenueOku: 4250, share: 100.0, operatingMargin: 8.4 },
+    ],
+    segmentsPeriod: "2025/12",
+    phaseScores: { launch: 3, expansion: 26, mature: 60, decline: 11 },
+    phaseRationale:
+      "ウェハ市況の調整が長期化し売上 3 年 CAGR −3.2%。顧客側のウェハ在庫消化が一巡した後の AI 向け先端ウェハ回復が拡大スコアの源泉だが、現時点では成熟・調整局面の色が濃い。",
+    factorBetas: {
+      usdjpy: 0.41,
+      us10y: -0.28,
+      oil: 0.08,
+      sox: 1.05,
+      china: 0.55,
+      market: 1.08,
+      size: 0.34,
+      value: 0.62,
+      momentum: -0.31,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "PBR 0.7 倍は『九州新工場の償却先行』をどこまで織り込んだ水準か",
+        body:
+          "佐賀・伊万里の 300mm 新工場投資は減価償却が利益に先行して乗る構造で、市況底とのダブルパンチが現在の低 ROE の主因。償却負担のピークアウト時期と市況回復が重なる場合、利益の戻りは市場予想より急になる。設備投資の回収カーブの開示が粗く、ここに認識ギャップがある。",
+        citations: [SRC_2025FY_SUMCO],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "LTA（長期契約）の価格改定が 2026–27 年に集中、スポット価格との乖離が表面化する",
+        body:
+          "コロナ後の逼迫期に締結した LTA の更改時期が 2026–27 年に集中する。足元のスポットウェハ価格は LTA 価格を下回っており、更改時の価格リセットが売上単価を段階的に押し下げるリスクがある。一方で AI 向け先端ウェハ（エピ付き）はプレミアム維持の余地があり、ミックス開示の充実が評価の鍵。",
+        citations: [SRC_2025FY_SUMCO],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "中国ウェハメーカーの 300mm 量産は『レガシー専用』のうちに収まるか",
+        body:
+          "中国勢の 300mm ウェハ量産能力は急拡大しているが、品質要求の緩い成熟ノード向けに留まる。問題は中国国内ファブの装置・材料国産化方針により、SUMCO の中国売上 14% が構造的に置き換わるシナリオ。先端用途での参入障壁（欠陥密度・平坦度）は依然高いが、レガシー側の数量喪失は価格競争を激化させる。",
+        citations: [SRC_2025FY_SUMCO],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "割安",
+      score: 71,
+      rationale:
+        "PBR 0.74 倍は過去 10 年レンジ（0.7–2.5 倍）の下限近辺。世界シェア 2 位の寡占的地位と AI 先端ウェハの回復余地を考慮すると、サイクル底値圏の割安水準と判断。ただし回復時期の不確実性が高く、LTA 更改の価格リセットが重なると見直しが遅れる『忍耐が必要な割安』。",
+      citations: [SRC_2025FY_SUMCO],
+    },
+  },
+  {
+    code: "7741",
+    name: "HOYA",
+    nameEn: "HOYA",
+    exchange: "Prime",
+    tier: 1,
+    sectorTSE: "精密機器",
+    industryCluster: "マスクブランクス／精密ガラス",
+    priceJpy: 19850,
+    priceDate: "2026-05-26",
+    changePct: 0.42,
+    marketCapOku: 68500,
+    per: 35.8,
+    pbr: 7.2,
+    dividendYield: 0.8,
+    roe: 21.4,
+    operatingMargin: 27.9,
+    revenueGrowth3y: 8.6,
+    description:
+      "EUV マスクブランクスでほぼ独占、HDD 用ガラス基板でも世界首位。メガネレンズ・コンタクト・内視鏡のライフケア事業が利益の安定基盤。『半導体×ヘルスケア』の二刀流ポートフォリオ。",
+    oneLiner:
+      "半導体の設計図の『原版（マスクブランクス）』でほぼ独占。その一方でメガネレンズやコンタクトレンズでも世界大手という、ハイテクと生活用品の二刀流企業。安定と成長を 1 社で併せ持つ。",
+    tags: [
+      { dimension: "product", value: "EUV マスクブランクス", source: SRC_2025FY_HOYA },
+      { dimension: "product", value: "HDD 用ガラス基板", source: SRC_2025FY_HOYA },
+      { dimension: "product", value: "メガネレンズ・コンタクトレンズ", source: SRC_2025FY_HOYA },
+      { dimension: "product", value: "医療用内視鏡", source: SRC_2025FY_HOYA },
+      { dimension: "customer", value: "フォトマスクメーカー・先端ファウンドリ", source: SRC_2025FY_HOYA },
+      { dimension: "customer", value: "眼鏡店・医療機関・一般消費者", source: SRC_2025FY_HOYA },
+      { dimension: "revenue_model", value: "独占素材＋消費財リカーリングの複合", source: SRC_2025FY_HOYA },
+      { dimension: "value_chain", value: "マスク原版（最上流材料）", source: SRC_2025FY_HOYA },
+      { dimension: "geography", value: "海外売上比率 約 75%", source: SRC_2025FY_HOYA },
+    ],
+    segments: [
+      { name: "ライフケア（メガネ・コンタクト・内視鏡）", revenueOku: 5150, share: 60.2, operatingMargin: 22.8 },
+      { name: "情報・通信（ブランクス・HDD 基板・半導体）", revenueOku: 3400, share: 39.8, operatingMargin: 38.5 },
+    ],
+    segmentsPeriod: "2025/3",
+    phaseScores: { launch: 8, expansion: 54, mature: 44, decline: 2 },
+    phaseRationale:
+      "EUV 世代進行と HDD（ニアライン向け）回復で情報・通信が拡大、ライフケアは人口動態に乗る安定成長。ポートフォリオ全体では拡大寄りの安定成長で、振れ幅は半導体専業より小さい。",
+    factorBetas: {
+      usdjpy: 0.46,
+      us10y: -0.38,
+      oil: 0.01,
+      sox: 0.72,
+      china: 0.18,
+      market: 0.92,
+      size: -0.41,
+      value: -0.66,
+      momentum: 0.35,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "EUV ブランクス独占の持続性：AGC の追い上げと『歩留まり格差』の実態",
+        body:
+          "EUV マスクブランクスは HOYA がほぼ独占し AGC が第 2 供給者の地位を狙う構図が続く。参入障壁の本体は低欠陥率の歩留まりにあり、Hi-NA 世代では要求がさらに上がるため格差はむしろ開く可能性がある。一方で顧客側（ファウンドリ・マスクメーカー）はデュアルソース化圧力を強めており、独占利益率の天井が政策的に抑えられるリスクは残る。",
+        citations: [SRC_2025FY_HOYA],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "複合企業ディスカウントの逆転：ライフケアの安定が半導体価値をプレミアム化している",
+        body:
+          "通常、複合企業はディスカウント評価されるが、HOYA はライフケアの安定キャッシュフローが半導体側の変動を吸収するため、半導体専業よりも高い PER を許容されてきた。この『逆コングロマリットプレミアム』は金利上昇局面で剥落しやすく、PER 35 倍の持続条件としてライフケアの利益率維持が思いのほか重要。",
+        citations: [SRC_2025FY_HOYA],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "HDD ガラス基板はニアライン HDD 投資の遅行受益、SSD 代替論の再燃が逆風",
+        body:
+          "データセンタのニアラインストレージ投資回復で HDD 用ガラス基板の数量が戻る局面。ただし QLC SSD の大容量化・価格下落が想定より速い場合、HDD の中期需要曲線そのものが下振れる。基板はガラス比率上昇（アルミからの置換）という独自ドライバを持つため、HDD 台数減少とガラス化進行の綱引きの開示が不足している。",
+        citations: [SRC_2025FY_HOYA],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "やや割高",
+      score: 31,
+      rationale:
+        "PER 35.8 倍は精密機器セクター平均 24 倍を大きく上回る。EUV ブランクス独占とライフケアの安定性を織り込んだクオリティプレミアムであり不合理な水準ではないが、金利上昇局面ではプレミアム剥落のリスクがあり、新規に入るには分の悪い価格帯。",
+      citations: [SRC_2025FY_HOYA],
+    },
+  },
+  {
+    code: "6525",
+    name: "KOKUSAI ELECTRIC",
+    nameEn: "KOKUSAI ELECTRIC",
+    exchange: "Prime",
+    tier: 2,
+    sectorTSE: "電気機器",
+    industryCluster: "半導体前工程装置",
+    priceJpy: 2680,
+    priceDate: "2026-05-26",
+    changePct: 2.95,
+    marketCapOku: 12300,
+    per: 19.2,
+    pbr: 3.9,
+    dividendYield: 1.5,
+    roe: 21.8,
+    operatingMargin: 22.4,
+    revenueGrowth3y: 15.3,
+    description:
+      "成膜装置（バッチ式 ALD/CVD）の専業大手。旧日立国際電気の装置部門が KKR 傘下を経て 2023 年に再上場。メモリ（NAND・DRAM）投資との連動が強く、TEL・ラムリサーチと競合。中国売上比率の高さが特徴。",
+    oneLiner:
+      "半導体の表面に極薄の膜を何層も積み上げる『成膜装置』の専業メーカー。NAND や DRAM などメモリ半導体の工場投資が増えると業績が伸びる、メモリ連動色の強い装置株。",
+    tags: [
+      { dimension: "product", value: "バッチ式成膜装置（ALD/CVD）", source: SRC_2025FY_KOKUSAI },
+      { dimension: "product", value: "トリートメント装置", source: SRC_2025FY_KOKUSAI },
+      { dimension: "customer", value: "メモリ大手（サムスン・SK・キオクシア）", source: SRC_2025FY_KOKUSAI },
+      { dimension: "customer", value: "ロジックファウンドリ・中国成熟ノード", source: SRC_2025FY_KOKUSAI },
+      { dimension: "channel", value: "直販・サービス網", source: SRC_2025FY_KOKUSAI },
+      { dimension: "revenue_model", value: "装置売り切り＋サービス", source: SRC_2025FY_KOKUSAI },
+      { dimension: "value_chain", value: "前工程（成膜）装置", source: SRC_2025FY_KOKUSAI },
+      { dimension: "geography", value: "中国 35%・韓国 22%・台湾 18%・日本 12%", source: SRC_2025FY_KOKUSAI },
+    ],
+    segments: [
+      { name: "成膜装置", revenueOku: 2540, share: 84.7, operatingMargin: 24.6 },
+      { name: "サービス", revenueOku: 460, share: 15.3, operatingMargin: 18.2 },
+    ],
+    segmentsPeriod: "2025/3",
+    phaseScores: { launch: 12, expansion: 72, mature: 22, decline: 0 },
+    phaseRationale:
+      "NAND の積層数増加と DRAM 微細化で成膜工程数が構造的に増えるトレンドに乗り、売上 3 年 CAGR +15.3% で拡大期色が強い。一方、中国売上比率の高さが規制リスクとして拡大シナリオの不確実性を高めている。",
+    factorBetas: {
+      usdjpy: 0.58,
+      us10y: -0.44,
+      oil: 0.04,
+      sox: 1.48,
+      china: 0.72,
+      market: 1.25,
+      size: 0.12,
+      value: -0.38,
+      momentum: 0.51,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "中国売上 35% の規制感応度は TEL より一段高い構造",
+        body:
+          "バッチ式成膜装置は中国の成熟ノード投資との親和性が高く、中国売上比率が WFE 大手の中でも突出している。米輸出規制の適用範囲が成熟ノード向け装置まで拡大するシナリオでは、売上への直撃度が TEL・SCREEN より大きい。規制ニュースに対する株価ベータの高さはこの構造の反映であり、中国比率の段階的な引き下げ計画の有無が中期評価を分ける。",
+        citations: [SRC_2025FY_KOKUSAI],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "NAND 300 層超で成膜工程は線形以上に増えるが、単価競争も同時に始まる",
+        body:
+          "NAND の積層数が 300 層を超える世代では成膜・エッチングの工程数が非線形に増加し、装置需要の構造的拡大が見込まれる。ただし高アスペクト比成膜ではラムリサーチが対抗装置を強化しており、寡占が崩れると数量増を単価下落が相殺する展開もありうる。受注の数量・単価分解の開示が乏しく、成長の質を外部から検証しにくい。",
+        citations: [SRC_2025FY_KOKUSAI],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "KKR 売出し後の需給オーバーハングは解消したか：浮動株比率の変化を追う",
+        body:
+          "再上場後、旧親会社系ファンドの段階的売出しが株価の上値を抑えてきた経緯がある。売出しの完了状況と浮動株比率の変化は、ファンダメンタルズと無関係に株価のレンジを決める要因として残る。指数組入れ（TOPIX ウェイト見直し等）のイベントと重なるタイミングが需給の転換点になりやすい。",
+        citations: [SRC_2025FY_KOKUSAI],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "ほぼ妥当",
+      score: 49,
+      rationale:
+        "PER 19.2 倍は国内装置セクター平均 22 倍をやや下回る。メモリ投資回復の恩恵は業績にまだ完全には乗っていないが、中国売上比率の高さによる規制リスクディスカウントを考慮すると、現水準は概ね妥当圏。規制リスクの顕在化と回復の綱引き。",
+      citations: [SRC_2025FY_KOKUSAI],
+    },
+  },
+  {
+    code: "4062",
+    name: "イビデン",
+    nameEn: "Ibiden",
+    exchange: "Prime",
+    tier: 1,
+    sectorTSE: "電気機器",
+    industryCluster: "パッケージ基板",
+    priceJpy: 5420,
+    priceDate: "2026-05-26",
+    changePct: 1.78,
+    marketCapOku: 7650,
+    per: 27.6,
+    pbr: 1.7,
+    dividendYield: 0.7,
+    roe: 6.4,
+    operatingMargin: 10.2,
+    revenueGrowth3y: 2.4,
+    description:
+      "IC パッケージ基板（FC-BGA）の世界大手。インテル向けで成長し、AI サーバー（GPU）向けが急拡大中。大型化・多層化する AI 向け基板への先行投資（岐阜の新工場群）の回収局面が焦点。",
+    oneLiner:
+      "半導体チップと電子基板をつなぐ『パッケージ基板』の世界大手。AI 半導体はチップが巨大なぶん基板も大型で複雑になるため、その追い風を受ける。岐阜の工場群で大型投資を実行中。",
+    tags: [
+      { dimension: "product", value: "IC パッケージ基板（FC-BGA）", source: SRC_2025FY_IBIDEN },
+      { dimension: "product", value: "セラミック製品（DPF・SiC 部材）", source: SRC_2025FY_IBIDEN },
+      { dimension: "customer", value: "米大手ロジック（インテル等）", source: SRC_2025FY_IBIDEN },
+      { dimension: "customer", value: "AI 半導体ファブレス・ファウンドリ", source: SRC_2025FY_IBIDEN },
+      { dimension: "channel", value: "直販（認定ベース長期取引）", source: SRC_2025FY_IBIDEN },
+      { dimension: "revenue_model", value: "受託量産（顧客認定型）", source: SRC_2025FY_IBIDEN },
+      { dimension: "value_chain", value: "後工程材料（パッケージ基板）", source: SRC_2025FY_IBIDEN },
+      { dimension: "geography", value: "北米 45%・アジア 30%・日本 18%", source: SRC_2025FY_IBIDEN },
+    ],
+    segments: [
+      { name: "電子（パッケージ基板）", revenueOku: 2150, share: 52.4, operatingMargin: 14.8 },
+      { name: "セラミック", revenueOku: 1250, share: 30.5, operatingMargin: 9.2 },
+      { name: "その他", revenueOku: 700, share: 17.1, operatingMargin: 3.5 },
+    ],
+    segmentsPeriod: "2025/3",
+    phaseScores: { launch: 18, expansion: 62, mature: 28, decline: 4 },
+    phaseRationale:
+      "AI サーバー向け FC-BGA の需要急増に対し、新工場立ち上げの減価償却が利益に先行。売上 3 年 CAGR +2.4% と見かけは低いが、中身は PC 向け退潮と AI 向け急成長の入れ替わりで、ミックスは拡大期に転換中。",
+    factorBetas: {
+      usdjpy: 0.49,
+      us10y: -0.41,
+      oil: 0.06,
+      sox: 1.36,
+      china: 0.31,
+      market: 1.21,
+      size: 0.18,
+      value: 0.05,
+      momentum: 0.44,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "『インテル依存』からの脱却度合いが開示から読み取れない",
+        body:
+          "イビデンの FC-BGA はインテル向けで育った歴史があり、同社の設備投資計画の振れに業績が振り回されてきた。AI 向け顧客（GPU・カスタム ASIC 勢）への多角化が進んでいるとされるが、顧客別構成の開示はなく、脱インテル依存の進捗を外部から定量検証できない。インテルのファウンドリ戦略迷走が続く中、この開示不足はディスカウント要因。",
+        citations: [SRC_2025FY_IBIDEN],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "減価償却ピークと AI 基板単価の交点：2027 年の利益カーブが評価の分水嶺",
+        body:
+          "河間・大野の新工場償却が 2026–27 年にピークを迎える一方、AI 向け大型基板は単価が従来品の数倍。償却負担を単価ミックスが上回る交点がいつ来るかで、PER の見え方が劇的に変わる。会社計画は保守的な償却前提を置いている可能性があり、上振れ余地と下振れ材料（歩留まり立ち上げ遅延）が同居する。",
+        citations: [SRC_2025FY_IBIDEN],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "ガラスコア基板への技術転換は中期の地殻変動リスク",
+        body:
+          "業界ではビルドアップ樹脂基板からガラスコア基板への転換ロードマップが語られ始めている。ガラス化が本格化すると、既存の樹脂基板での競争優位（微細配線・多層化技術）の一部がリセットされ、ガラス加工に強い新規参入者（や HOYA・AGC のような素材勢）との競争構造に変わりうる。イビデンのガラスコア対応の開発進捗は IR でほぼ語られていない。",
+        citations: [SRC_2025FY_IBIDEN],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "ほぼ妥当",
+      score: 45,
+      rationale:
+        "PER 27.6 倍は償却先行で利益が圧縮された局面の数字であり、見かけほど割高ではない。AI 基板の量産歩留まりが想定通りに立ち上がれば 2027 年利益ベースの PER は大きく低下するが、その実現確度に賭ける投資であり、現水準は期待と リスクが拮抗する妥当圏。",
+      citations: [SRC_2025FY_IBIDEN],
+    },
+  },
+  {
+    code: "7729",
+    name: "東京精密",
+    nameEn: "ACCRETECH (Tokyo Seimitsu)",
+    exchange: "Prime",
+    tier: 2,
+    sectorTSE: "精密機器",
+    industryCluster: "半導体後工程装置／計測",
+    priceJpy: 9250,
+    priceDate: "2026-05-26",
+    changePct: 0.65,
+    marketCapOku: 3850,
+    per: 18.4,
+    pbr: 2.5,
+    dividendYield: 2.1,
+    roe: 14.2,
+    operatingMargin: 17.8,
+    revenueGrowth3y: 7.4,
+    description:
+      "ウェハプローバ世界首位。ダイシング・研削など後工程装置と、三次元座標測定機の精密計測の二本柱。HBM・チップレット化でウェハレベルテスト工程が増える構造変化の受益者。",
+    oneLiner:
+      "半導体を切り分ける前に、ウェハのまま検査するための装置『プローバ』で世界首位。テスタ（アドバンテスト）とセットで使われる装置で、AI 半導体のテスト強化の恩恵を受ける。精密測定機器も手がける。",
+    tags: [
+      { dimension: "product", value: "ウェハプローバ", source: SRC_2025FY_ACCRETECH },
+      { dimension: "product", value: "ダイシングマシン・研削装置", source: SRC_2025FY_ACCRETECH },
+      { dimension: "product", value: "三次元座標測定機", source: SRC_2025FY_ACCRETECH },
+      { dimension: "customer", value: "OSAT・IDM・ファウンドリ", source: SRC_2025FY_ACCRETECH },
+      { dimension: "customer", value: "自動車・機械メーカー（計測機器）", source: SRC_2025FY_ACCRETECH },
+      { dimension: "channel", value: "直販", source: SRC_2025FY_ACCRETECH },
+      { dimension: "revenue_model", value: "装置売り切り＋消耗部品・保守", source: SRC_2025FY_ACCRETECH },
+      { dimension: "value_chain", value: "後工程（テスト・加工）装置", source: SRC_2025FY_ACCRETECH },
+      { dimension: "geography", value: "中国 30%・日本 25%・台湾 15%・韓国 12%", source: SRC_2025FY_ACCRETECH },
+    ],
+    segments: [
+      { name: "半導体製造装置", revenueOku: 1180, share: 78.7, operatingMargin: 19.4 },
+      { name: "計測機器", revenueOku: 320, share: 21.3, operatingMargin: 12.8 },
+    ],
+    segmentsPeriod: "2025/3",
+    phaseScores: { launch: 8, expansion: 56, mature: 34, decline: 2 },
+    phaseRationale:
+      "HBM・チップレット化で『切る前に検査する』ウェハレベルテストの工程数が増加し、プローバ需要は構造的に拡大。計測機器は安定収益だが景気連動で、全体では拡大寄りのバランス型。",
+    factorBetas: {
+      usdjpy: 0.52,
+      us10y: -0.31,
+      oil: 0.03,
+      sox: 1.27,
+      china: 0.44,
+      market: 1.12,
+      size: 0.41,
+      value: 0.21,
+      momentum: 0.18,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "プローバは『テスタの影』で語られるが、HBM の KGD 要求で独自の成長カーブを持つ",
+        body:
+          "市場はテスト需要をアドバンテストのテスタ売上で代理観測するが、HBM のような積層デバイスでは KGD（Known Good Die：積層前の良品保証）要求が強まり、プローバの稼働工程はテスタとは別の伸び方をする。プローバ首位の東京精密はこの構造変化の直接受益者だが、時価総額が小さく証券会社のカバレッジも薄いため、織り込みが遅行しやすい。",
+        citations: [SRC_2025FY_ACCRETECH],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "ディスコとの比較で見える『消耗品比率』の差が利益率の質の差",
+        body:
+          "同じ後工程装置でも、ディスコはブレード等の消耗品が収益の安定層を形成するのに対し、東京精密は装置売り切りの比重が高く、サイクル下降局面の利益率耐性で見劣りする。営業利益率 17.8% 対ディスコ 38% の差は技術力だけでなくビジネスモデル構造の差であり、消耗品・サービス比率を高める施策の有無が長期評価の論点。",
+        citations: [SRC_2025FY_ACCRETECH],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "計測機器事業の分離価値：コングロマリットディスカウントか相互補完か",
+        body:
+          "三次元測定機は国内では高シェアだが半導体装置とのシナジーは限定的で、SOTP（部門別評価）では分離した方が高く評価される可能性がある。一方で半導体不況期に計測が下支えしてきた歴史も事実。アクティビストの保有が観測される局面では事業ポートフォリオ再編が株価材料になりやすい。",
+        citations: [SRC_2025FY_ACCRETECH],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "ほぼ妥当",
+      score: 55,
+      rationale:
+        "PER 18.4 倍は装置セクター平均を下回り、計測機器の安定性を含めれば実質的なディスカウント。プローバの構造成長（HBM・KGD）が市場に再評価されれば見直し余地があり、妥当圏の中ではやや割安寄り。小型株ゆえの流動性ディスカウントが残る点は留意。",
+      citations: [SRC_2025FY_ACCRETECH],
+    },
+  },
+  {
+    code: "4186",
+    name: "東京応化工業",
+    nameEn: "Tokyo Ohka Kogyo",
+    exchange: "Prime",
+    tier: 1,
+    sectorTSE: "化学",
+    industryCluster: "半導体材料（レジスト）",
+    priceJpy: 4350,
+    priceDate: "2026-05-26",
+    changePct: -0.55,
+    marketCapOku: 5300,
+    per: 22.1,
+    pbr: 2.3,
+    dividendYield: 1.6,
+    roe: 10.8,
+    operatingMargin: 16.4,
+    revenueGrowth3y: 8.2,
+    description:
+      "フォトレジスト世界首位級。EUV レジストで先行するメーカーの一つ。装置と異なり製造のたびに消費される材料のため、ウェハ投入量に連動する安定性の高い収益構造を持つ。",
+    oneLiner:
+      "半導体の回路を『焼き付ける』ときに使う感光材＝フォトレジストで世界トップ級。装置と違って製造のたびに消費される材料なので、半導体の生産量が増えるほど売れ続ける消耗品ビジネス。",
+    tags: [
+      { dimension: "product", value: "フォトレジスト（EUV/ArF/KrF）", source: SRC_2025FY_TOK },
+      { dimension: "product", value: "高純度化学薬品", source: SRC_2025FY_TOK },
+      { dimension: "customer", value: "先端ファウンドリ・メモリ大手", source: SRC_2025FY_TOK },
+      { dimension: "channel", value: "直販（顧客認定ベース）", source: SRC_2025FY_TOK },
+      { dimension: "revenue_model", value: "消耗材料（ウェハ投入数量連動）", source: SRC_2025FY_TOK },
+      { dimension: "value_chain", value: "前工程材料（感光材）", source: SRC_2025FY_TOK },
+      { dimension: "geography", value: "海外売上比率 約 8 割（台湾・韓国・北米）", source: SRC_2025FY_TOK },
+    ],
+    segments: [
+      { name: "材料事業", revenueOku: 1950, share: 95.1, operatingMargin: 17.2 },
+      { name: "装置事業", revenueOku: 100, share: 4.9, operatingMargin: 4.0 },
+    ],
+    segmentsPeriod: "2025/12",
+    phaseScores: { launch: 8, expansion: 52, mature: 42, decline: 2 },
+    phaseRationale:
+      "ウェハ投入量の増加に連動する消耗材ビジネスで、EUV 採用ノードの拡大が単価ミックスを改善。装置のような受注の振れがなく、安定拡大型のプロファイル。",
+    factorBetas: {
+      usdjpy: 0.38,
+      us10y: -0.22,
+      oil: 0.05,
+      sox: 0.94,
+      china: 0.38,
+      market: 0.95,
+      size: 0.28,
+      value: 0.31,
+      momentum: 0.08,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "EUV レジストの次の戦争は『メタル系・乾式』への世代交代で再戦になる",
+        body:
+          "化学増幅型レジストで築いた現在の地位は、メタルオキサイドレジスト（Inpria 系）やラムリサーチの乾式レジスト（dry resist）が Hi-NA 世代で採用された場合に再戦を強いられる。TOK は次世代材料の開発状況をほぼ開示しておらず、現行 EUV レジストの優位が次世代に持ち越せるかは外部から判断できない。材料の世代交代は装置より静かに、しかし不可逆に起きる。",
+        citations: [SRC_2025FY_TOK],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "『装置と同じサイクル株』扱いされるバリュエーションの歪み",
+        body:
+          "レジストはウェハ投入量（生産量）連動であり、設備投資（WFE）連動の装置株より業績の振れが小さい。それにもかかわらず株価は SOX 指数と高相関で売買され、装置株と同じ振幅で動く傾向がある。この『ビジネスモデルと株価ボラティリティの不一致』は、装置株の調整局面でレジスト株を仕込む逆張り機会の源泉になってきた。",
+        citations: [SRC_2025FY_TOK],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "JSR 非公開化後、『残された上場レジスト大手』としての希少性と再編可能性",
+        body:
+          "レジスト世界大手の一角だった JSR が産業革新投資機構（JIC）傘下で非公開化されたことで、レジスト専業に近い上場大手は TOK・信越（事業の一部）に絞られた。国策ファンドによる材料産業の再編が続くシナリオでは、TOK 自身が再編の対象（買収プレミアム）になる可能性が市場で意識されやすく、下値を支える要因として機能している。",
+        citations: [SRC_2025FY_TOK],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "ほぼ妥当",
+      score: 53,
+      rationale:
+        "PER 22.1 倍は化学セクター平均より高いが、半導体数量に連動する消耗材の安定性と EUV ミックス改善を考慮すれば妥当。素材株の中では希少な『半導体生産量への純粋プレー』であり、装置株調整局面での相対的な耐性が価値。",
+      citations: [SRC_2025FY_TOK],
+    },
+  },
+  {
+    code: "4004",
+    name: "レゾナック・ホールディングス",
+    nameEn: "Resonac",
+    exchange: "Prime",
+    tier: 2,
+    sectorTSE: "化学",
+    industryCluster: "半導体後工程材料",
+    priceJpy: 3620,
+    priceDate: "2026-05-26",
+    changePct: 0.89,
+    marketCapOku: 6850,
+    per: 16.8,
+    pbr: 1.2,
+    dividendYield: 1.8,
+    roe: 7.2,
+    operatingMargin: 6.8,
+    revenueGrowth3y: 3.1,
+    description:
+      "旧昭和電工＋日立化成。CMP スラリー・封止材・銅張積層板など半導体後工程材料で世界トップ群。石化など市況事業を抱える複合化学から『半導体材料会社』への転換途上で、ポートフォリオ再編が評価の鍵。",
+    oneLiner:
+      "半導体を仕上げる工程で使う材料（研磨剤・封止材など）の世界的大手。昭和電工と日立化成が合併してできた会社で、化学コンビナートも持つ。『総合化学から半導体材料会社へ』変身中の企業。",
+    tags: [
+      { dimension: "product", value: "後工程材料（CMP スラリー・封止材）", source: SRC_2025FY_RESONAC },
+      { dimension: "product", value: "銅張積層板・感光性フィルム", source: SRC_2025FY_RESONAC },
+      { dimension: "product", value: "石油化学・黒鉛電極", source: SRC_2025FY_RESONAC },
+      { dimension: "customer", value: "OSAT・半導体メーカー・基板メーカー", source: SRC_2025FY_RESONAC },
+      { dimension: "channel", value: "直販", source: SRC_2025FY_RESONAC },
+      { dimension: "revenue_model", value: "消耗材料＋市況製品の複合", source: SRC_2025FY_RESONAC },
+      { dimension: "value_chain", value: "後工程材料", source: SRC_2025FY_RESONAC },
+      { dimension: "geography", value: "日本 40%・アジア 45%・その他 15%", source: SRC_2025FY_RESONAC },
+    ],
+    segments: [
+      { name: "半導体・電子材料", revenueOku: 4200, share: 30.9, operatingMargin: 13.5 },
+      { name: "モビリティ", revenueOku: 1950, share: 14.3, operatingMargin: 4.2 },
+      { name: "ケミカル", revenueOku: 4800, share: 35.3, operatingMargin: 5.1 },
+      { name: "その他", revenueOku: 2650, share: 19.5, operatingMargin: 2.8 },
+    ],
+    segmentsPeriod: "2025/12",
+    phaseScores: { launch: 10, expansion: 40, mature: 50, decline: 10 },
+    phaseRationale:
+      "半導体・電子材料は AI パッケージ需要で拡大期にあるが、石化・黒鉛電極など市況事業が全体の足を引っ張る複合構造。ポートフォリオ転換（石化分離）の進捗が拡大スコアの上限を決める。",
+    factorBetas: {
+      usdjpy: 0.35,
+      us10y: -0.18,
+      oil: 0.21,
+      sox: 0.88,
+      china: 0.42,
+      market: 1.02,
+      size: 0.36,
+      value: 0.58,
+      momentum: -0.12,
+    },
+    factorPeriod: "2023/6–2026/5 週次リターン回帰",
+    insights: [
+      {
+        title: "石化分離の実行速度が『化学→半導体材料』の評価替えの鍵",
+        body:
+          "会社は石油化学事業の分離・JV 化を掲げており、実現すれば売上構成に占める半導体・電子材料比率が一気に高まる。SOTP（部門別評価）では半導体材料部門に化学平均を大きく上回るマルチプルが付く余地があり、分離の発表・実行が評価替えのトリガーになる。逆に市況悪化で分離交渉が停滞すると、複合企業ディスカウントが長期化する。",
+        citations: [SRC_2025FY_RESONAC],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "AI パッケージ（CoWoS 系）材料での実質シェアが開示から見えない",
+        body:
+          "後工程材料は品目が多岐にわたり（スラリー・封止材・ダイボンディングフィルム等）、AI 先端パッケージ向けの実質的な中身・シェアが外部から検証できない。『AI 関連売上』の定義も各社バラバラで、レゾナックの後工程材料の競争力を定量比較する材料が不足。開示の解像度が上がるだけで再評価される余地がある。",
+        citations: [SRC_2025FY_RESONAC],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+      {
+        title: "日立化成買収で膨らんだ有利子負債が金利上昇局面の重石",
+        body:
+          "旧日立化成の買収（約 9,600 億円）で積み上がった有利子負債は、低金利前提では問題化しなかったが、金利上昇局面では利払い負担と財務制限条項が資本政策（増配・自社株買い・成長投資）の自由度を縛る。石化分離による負債圧縮が財務面でも転換点になる構造で、分離の成否に評価が二重に依存している。",
+        citations: [SRC_2025FY_RESONAC],
+        generatedAt: "2026-06-10T19:00:00+09:00",
+      },
+    ],
+    valuationCall: {
+      verdict: "割安",
+      score: 62,
+      rationale:
+        "PER 16.8 倍・PBR 1.2 倍は半導体材料企業としては大幅なディスカウント。市況事業の混在と有利子負債の重さが原因であり、石化分離が実行されれば『化学→半導体材料』の評価替え余地が大きい。イベントドリブン型の割安で、カタリストの時期が読めない点がリスク。",
+      citations: [SRC_2025FY_RESONAC],
+    },
+  },
   {
     code: "4502",
     name: "武田薬品工業",
