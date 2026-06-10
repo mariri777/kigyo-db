@@ -195,7 +195,7 @@ export default async function StockPage({
         <div className="mt-3 text-[10px] text-dim leading-relaxed">
           指標：{stock.segmentsPeriod} 期実績ベース。出典は EDINET XBRL / J-Quants。
           <span className="ml-2 text-[10px] border border-border rounded px-1.5 py-0.5">
-            ※ サンプルデータで運用中（株価は固定値、最終更新：2026-05-26）
+            ※ サンプルデータで運用中（株価基準日：{stock.priceDate}）
           </span>
         </div>
         <details className="mt-2 group">

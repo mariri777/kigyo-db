@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "prices:template": "node scripts/update-prices.mjs template",
+    "prices:apply": "node scripts/update-prices.mjs apply"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

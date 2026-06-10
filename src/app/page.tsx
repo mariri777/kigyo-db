@@ -137,9 +137,9 @@ export default function Home() {
             投資を始めたばかりの方にも、専門家の補助線としても。
           </p>
           <p className="text-dim text-sm">
-            現在 61 社・10 業界に対応。順次拡大中。
+            現在 {listStocks().length} 社・{industries.length} 業界に対応。順次拡大中。
             <span className="ml-2 text-[11px] border border-border rounded px-1.5 py-0.5">
-              ※ サンプルデータで運用中（最終更新：2026-05-26）
+              ※ サンプルデータで運用中（株価基準日：{listStocks()[0].priceDate}）
             </span>
           </p>
 
