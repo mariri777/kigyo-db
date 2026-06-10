@@ -23,7 +23,7 @@ binding = "ASSETS"
 [[d1_databases]]
 binding = "DB"
 database_name = "cho-kigyo-db-database"
-# ↓ローカル開発の時は仮の ID で OK、本番作成時に置き換える
-database_id = "local-dev"
+# Cloudflare 本番 D1 の ID（npx wrangler d1 create で取得）
+database_id = "ae691639-98d9-49fb-82f4-517f8c47f9dd"
 # Drizzle Kit が出力するマイグレーションファイルの場所
 migrations_dir = "drizzle"
