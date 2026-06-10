@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import { SearchBox } from "@/components/SearchBox";
+import { SITE_URL, SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const notoJp = Noto_Sans_JP({
@@ -24,12 +25,18 @@ export const metadata: Metadata = {
   },
   description:
     "日本の上場企業 3,800 社を対象に、AI が事業類似銘柄・見落とし論点・業界構造を掘り出す。先回りキュレーション型の銘柄分析サービス。",
-  metadataBase: new URL("https://orekabu.example.com"),
+  metadataBase: new URL(SITE_URL),
   openGraph: {
+    type: "website",
     title: "超！企業DB — AI が掘る、日本株の発見",
     description: "事業類似銘柄、見落とし論点、業界構造を AI が先回りで掘り出す。",
-    siteName: "超！企業DB",
+    siteName: SITE_NAME,
     locale: "ja_JP",
+  },
+  twitter: {
+    card: "summary",
+    title: "超！企業DB — AI が掘る、日本株の発見",
+    description: "事業類似銘柄、見落とし論点、業界構造を AI が先回りで掘り出す。",
   },
 };
 
