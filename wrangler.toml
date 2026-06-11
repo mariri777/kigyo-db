@@ -18,6 +18,10 @@ main = ".open-next/worker.js"
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# Workers Logs（エラー調査用。1102 等が出たとき原因を特定できる。無料枠あり）
+[observability]
+enabled = true
+
 # D1（データベース）の設定
 # binding = "DB" にすると、プログラムから env.DB でアクセスできる
 [[d1_databases]]
