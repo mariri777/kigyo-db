@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
+import Script from "next/script";
 import { SearchBox } from "@/components/SearchBox";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
 import "./globals.css";
@@ -154,6 +155,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </div>
           </div>
         </footer>
+        {/* Cloudflare Web Analytics（cookie 不使用・個人を追跡しない計測）。本番ビルドのみ */}
+        {process.env.NODE_ENV === "production" && (
+          <Script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon='{"token": "6a7cbafe0c2b4fed9c18724aabea76e6"}'
+          />
+        )}
       </body>
     </html>
   );
