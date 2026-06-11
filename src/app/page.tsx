@@ -139,7 +139,7 @@ export default function Home() {
           <p className="text-dim text-sm">
             現在 {listStocks().length} 社・{industries.length} 業界に対応。順次拡大中。
             <span className="ml-2 text-[11px] border border-border rounded px-1.5 py-0.5">
-              ※ サンプルデータで運用中（株価基準日：{listStocks()[0].priceDate}）
+              ※ 株価は実勢（{listStocks()[0].priceDate} 終値・週次更新）／財務指標・分析はサンプルデータ
             </span>
           </p>
 
@@ -335,6 +335,9 @@ export default function Home() {
                   className="h-full bg-foreground/60"
                   style={{ width: `${(agg.totalMcap / maxMcap) * 100}%` }}
                 />
+              </div>
+              <div className="mt-2 pt-2 border-t border-border text-[10px] text-dim group-hover:text-foreground transition flex items-center justify-end gap-1">
+                競争構造を見る <span className="group-hover:translate-x-0.5 transition-transform inline-block">→</span>
               </div>
             </Link>
           ))}

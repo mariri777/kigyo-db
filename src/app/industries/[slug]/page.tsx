@@ -80,7 +80,7 @@ export default async function IndustryPage({
           <div className="bg-background p-4">
             <div className="text-[10px] text-dim tracking-wider mb-1">カバー銘柄</div>
             <div className="font-bold tabular">
-              {agg.count} 社 <span className="text-xs text-muted font-normal">（サンプルデータ）</span>
+              {agg.count} 社 <span className="text-xs text-muted font-normal">（株価実勢・財務はサンプル）</span>
             </div>
             <div className="text-[11px] text-muted mt-1">
               時価総額合計 {agg.totalMcap.toLocaleString()} 億円
