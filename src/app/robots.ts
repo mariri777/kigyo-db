@@ -10,8 +10,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // 個人用ページと動作確認ページは検索結果に出す意味がないので除外
-      disallow: ["/profile", "/db-test"],
+      // 個人用ページは検索結果に出す意味がないので除外
+      disallow: ["/profile"],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
