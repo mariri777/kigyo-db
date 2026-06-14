@@ -1,6 +1,7 @@
 import "server-only";
 
 import { eq, inArray } from "drizzle-orm";
+import { chunkedFetch } from "@/server/db/helpers";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
 import type {
@@ -69,18 +70,19 @@ export async function listIndustryClusterNamesByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, string>> {
-  if (companyIds.length === 0) return new Map();
-  const rows = await db
-    .select({
-      companyId: s.companyIndustryClusters.companyId,
-      name: s.industryClusters.name,
-    })
-    .from(s.companyIndustryClusters)
-    .innerJoin(
-      s.industryClusters,
-      eq(s.industryClusters.id, s.companyIndustryClusters.industryClusterId),
-    )
-    .where(inArray(s.companyIndustryClusters.companyId, companyIds));
+  const rows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select({
+        companyId: s.companyIndustryClusters.companyId,
+        name: s.industryClusters.name,
+      })
+      .from(s.companyIndustryClusters)
+      .innerJoin(
+        s.industryClusters,
+        eq(s.industryClusters.id, s.companyIndustryClusters.industryClusterId),
+      )
+      .where(inArray(s.companyIndustryClusters.companyId, chunk)),
+  );
   const out = new Map<number, string>();
   for (const r of rows) if (!out.has(r.companyId)) out.set(r.companyId, r.name);
   return out;
@@ -115,20 +117,21 @@ export async function listBusinessTagsByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, BusinessTag[]>> {
-  if (companyIds.length === 0) return new Map();
-  const rows = await db
-    .select({
-      companyId: s.businessTags.companyId,
-      dimension: s.businessTags.dimension,
-      value: s.businessTags.value,
-      doc: s.sources.doc,
-      page: s.sources.page,
-      period: s.sources.period,
-      url: s.sources.url,
-    })
-    .from(s.businessTags)
-    .leftJoin(s.sources, eq(s.sources.id, s.businessTags.sourceId))
-    .where(inArray(s.businessTags.companyId, companyIds));
+  const rows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select({
+        companyId: s.businessTags.companyId,
+        dimension: s.businessTags.dimension,
+        value: s.businessTags.value,
+        doc: s.sources.doc,
+        page: s.sources.page,
+        period: s.sources.period,
+        url: s.sources.url,
+      })
+      .from(s.businessTags)
+      .leftJoin(s.sources, eq(s.sources.id, s.businessTags.sourceId))
+      .where(inArray(s.businessTags.companyId, chunk)),
+  );
   const out = new Map<number, BusinessTag[]>();
   for (const r of rows) {
     const tag: BusinessTag = {
@@ -176,18 +179,19 @@ export async function listSegmentsByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, SegmentsBundle>> {
-  if (companyIds.length === 0) return new Map();
-  const rows = await db
-    .select({
-      companyId: s.companySegments.companyId,
-      period: s.companySegments.period,
-      name: s.companySegments.name,
-      revenueOku: s.companySegments.revenueOku,
-      share: s.companySegments.share,
-      operatingMargin: s.companySegments.operatingMargin,
-    })
-    .from(s.companySegments)
-    .where(inArray(s.companySegments.companyId, companyIds));
+  const rows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select({
+        companyId: s.companySegments.companyId,
+        period: s.companySegments.period,
+        name: s.companySegments.name,
+        revenueOku: s.companySegments.revenueOku,
+        share: s.companySegments.share,
+        operatingMargin: s.companySegments.operatingMargin,
+      })
+      .from(s.companySegments)
+      .where(inArray(s.companySegments.companyId, chunk)),
+  );
   const out = new Map<number, SegmentsBundle>();
   for (const r of rows) {
     const seg: Segment = {
@@ -222,17 +226,19 @@ export async function getInsights(
   if (insightRows.length === 0) return [];
 
   const ids = insightRows.map((i) => i.id);
-  const srcRows = await db
-    .select({
-      insightId: s.insightSources.insightId,
-      doc: s.sources.doc,
-      page: s.sources.page,
-      period: s.sources.period,
-      url: s.sources.url,
-    })
-    .from(s.insightSources)
-    .innerJoin(s.sources, eq(s.sources.id, s.insightSources.sourceId))
-    .where(inArray(s.insightSources.insightId, ids));
+  const srcRows = await chunkedFetch(ids, (chunk) =>
+    db
+      .select({
+        insightId: s.insightSources.insightId,
+        doc: s.sources.doc,
+        page: s.sources.page,
+        period: s.sources.period,
+        url: s.sources.url,
+      })
+      .from(s.insightSources)
+      .innerJoin(s.sources, eq(s.sources.id, s.insightSources.sourceId))
+      .where(inArray(s.insightSources.insightId, chunk)),
+  );
 
   const citationsById = new Map<number, Source[]>();
   for (const r of srcRows) {
@@ -254,32 +260,35 @@ export async function listInsightsByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, Insight[]>> {
-  if (companyIds.length === 0) return new Map();
-  const insightRows = await db
-    .select({
-      id: s.companyInsights.id,
-      companyId: s.companyInsights.companyId,
-      title: s.companyInsights.title,
-      lede: s.companyInsights.lede,
-      body: s.companyInsights.body,
-      generatedAt: s.companyInsights.generatedAt,
-    })
-    .from(s.companyInsights)
-    .where(inArray(s.companyInsights.companyId, companyIds));
+  const insightRows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select({
+        id: s.companyInsights.id,
+        companyId: s.companyInsights.companyId,
+        title: s.companyInsights.title,
+        lede: s.companyInsights.lede,
+        body: s.companyInsights.body,
+        generatedAt: s.companyInsights.generatedAt,
+      })
+      .from(s.companyInsights)
+      .where(inArray(s.companyInsights.companyId, chunk)),
+  );
   if (insightRows.length === 0) return new Map();
 
   const insightIds = insightRows.map((i) => i.id);
-  const srcRows = await db
-    .select({
-      insightId: s.insightSources.insightId,
-      doc: s.sources.doc,
-      page: s.sources.page,
-      period: s.sources.period,
-      url: s.sources.url,
-    })
-    .from(s.insightSources)
-    .innerJoin(s.sources, eq(s.sources.id, s.insightSources.sourceId))
-    .where(inArray(s.insightSources.insightId, insightIds));
+  const srcRows = await chunkedFetch(insightIds, (chunk) =>
+    db
+      .select({
+        insightId: s.insightSources.insightId,
+        doc: s.sources.doc,
+        page: s.sources.page,
+        period: s.sources.period,
+        url: s.sources.url,
+      })
+      .from(s.insightSources)
+      .innerJoin(s.sources, eq(s.sources.id, s.insightSources.sourceId))
+      .where(inArray(s.insightSources.insightId, chunk)),
+  );
 
   const citationsById = new Map<number, Source[]>();
   for (const r of srcRows) {
@@ -335,11 +344,12 @@ export async function listPhaseByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, PhaseBundle>> {
-  if (companyIds.length === 0) return new Map();
-  const rows = await db
-    .select()
-    .from(s.companyPhaseScores)
-    .where(inArray(s.companyPhaseScores.companyId, companyIds));
+  const rows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select()
+      .from(s.companyPhaseScores)
+      .where(inArray(s.companyPhaseScores.companyId, chunk)),
+  );
   const out = new Map<number, PhaseBundle>();
   for (const r of rows) {
     out.set(r.companyId, {
@@ -390,11 +400,12 @@ export async function listFactorByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, FactorBundle>> {
-  if (companyIds.length === 0) return new Map();
-  const rows = await db
-    .select()
-    .from(s.companyFactorBetas)
-    .where(inArray(s.companyFactorBetas.companyId, companyIds));
+  const rows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select()
+      .from(s.companyFactorBetas)
+      .where(inArray(s.companyFactorBetas.companyId, chunk)),
+  );
   const out = new Map<number, FactorBundle>();
   for (const r of rows) {
     out.set(r.companyId, {
@@ -454,29 +465,32 @@ export async function listValuationByCompanies(
   db: Db,
   companyIds: number[],
 ): Promise<Map<number, ValuationCall>> {
-  if (companyIds.length === 0) return new Map();
-  const valRows = await db
-    .select({
-      companyId: s.companyValuationCalls.companyId,
-      verdict: s.companyValuationCalls.verdict,
-      score: s.companyValuationCalls.score,
-      rationale: s.companyValuationCalls.rationale,
-    })
-    .from(s.companyValuationCalls)
-    .where(inArray(s.companyValuationCalls.companyId, companyIds));
+  const valRows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select({
+        companyId: s.companyValuationCalls.companyId,
+        verdict: s.companyValuationCalls.verdict,
+        score: s.companyValuationCalls.score,
+        rationale: s.companyValuationCalls.rationale,
+      })
+      .from(s.companyValuationCalls)
+      .where(inArray(s.companyValuationCalls.companyId, chunk)),
+  );
   if (valRows.length === 0) return new Map();
 
-  const srcRows = await db
-    .select({
-      companyId: s.valuationSources.companyId,
-      doc: s.sources.doc,
-      page: s.sources.page,
-      period: s.sources.period,
-      url: s.sources.url,
-    })
-    .from(s.valuationSources)
-    .innerJoin(s.sources, eq(s.sources.id, s.valuationSources.sourceId))
-    .where(inArray(s.valuationSources.companyId, companyIds));
+  const srcRows = await chunkedFetch(companyIds, (chunk) =>
+    db
+      .select({
+        companyId: s.valuationSources.companyId,
+        doc: s.sources.doc,
+        page: s.sources.page,
+        period: s.sources.period,
+        url: s.sources.url,
+      })
+      .from(s.valuationSources)
+      .innerJoin(s.sources, eq(s.sources.id, s.valuationSources.sourceId))
+      .where(inArray(s.valuationSources.companyId, chunk)),
+  );
 
   const sourcesByCompany = new Map<number, Source[]>();
   for (const r of srcRows) {

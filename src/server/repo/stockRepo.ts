@@ -1,6 +1,7 @@
 import "server-only";
 
 import { eq, inArray } from "drizzle-orm";
+import { chunkedFetch } from "@/server/db/helpers";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
 import type { Exchange } from "@/domain/types";
@@ -66,10 +67,11 @@ export async function listByCompanyIds(
   db: Db,
   companyIds: number[],
 ): Promise<StockRow[]> {
-  if (companyIds.length === 0) return [];
-  return (await db
-    .select(SELECT_COLUMNS)
-    .from(s.stocks)
-    .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
-    .where(inArray(s.stocks.companyId, companyIds))) as StockRow[];
+  return chunkedFetch(companyIds, (chunk) =>
+    db
+      .select(SELECT_COLUMNS)
+      .from(s.stocks)
+      .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+      .where(inArray(s.stocks.companyId, chunk)) as unknown as Promise<StockRow[]>,
+  );
 }
