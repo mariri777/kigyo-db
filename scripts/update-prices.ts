@@ -133,7 +133,9 @@ function cmdApply(args: string[]): void {
   }
 
   const rows = parseCsv();
-  let { src, blocks } = loadStockBlocks();
+  const loaded = loadStockBlocks();
+  let src = loaded.src;
+  const blocks = loaded.blocks;
   const byCode = new Map(blocks.map((b) => [b.code, b]));
 
   // 事前チェック:CSV に知らない銘柄コードがないか
