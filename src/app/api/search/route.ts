@@ -8,46 +8,37 @@
 //     キー入力ごとの過剰リクエストを抑える。
 //
 // キャッシュ:
-//   - 同じ q の結果は CDN エッジで 5 分間共有(s-maxage=300)。
-//   - stale-while-revalidate=86400 で 1 日は古い結果を返しつつ裏で更新。
-//   - 価格は検索結果に含めないので、5 分粒度で十分。
+//   - 同じ q の結果は Workers Cache API(Cloudflare の PoP キャッシュ)で
+//     5 分間共有する。Cache-Control ヘッダだけでは Workers のレスポンスは
+//     自動キャッシュされないので、withEdgeCache で明示的に保存する。
+//   - 1 日(86400 秒)は stale-while-revalidate として古い結果を返しつつ
+//     裏で更新する。価格は検索結果に含まれないため十分新鮮。
 
 import { getDb } from "@/server/db/client";
 import { search as searchStocks, type SearchHit } from "@/server/repo/stockRepo";
+import { withEdgeCache } from "@/server/cache";
 
 // D1 へ毎リクエストアクセスするため、build 時の static 生成は不可
 export const dynamic = "force-dynamic";
 
 const MAX_QUERY_LEN = 64;
 const RESULT_LIMIT = 12;
+const CACHE_TTL_SEC = 300;
 
 export async function GET(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const raw = url.searchParams.get("q") ?? "";
-  const q = raw.trim().slice(0, MAX_QUERY_LEN);
-
-  if (q.length === 0) {
-    return Response.json(
-      { results: [] satisfies SearchHit[] },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400",
-        },
-      },
-    );
-  }
-
-  const db = await getDb();
-  const results = await searchStocks(db, q, RESULT_LIMIT);
-
-  return Response.json(
-    { results },
-    {
-      headers: {
-        // 同じ q は CDN で 5 分共有、1 日は古い結果を返しつつ裏で再取得
-        "Cache-Control":
-          "public, s-maxage=300, stale-while-revalidate=86400",
-      },
+  return withEdgeCache(
+    request,
+    async () => {
+      const url = new URL(request.url);
+      const raw = url.searchParams.get("q") ?? "";
+      const q = raw.trim().slice(0, MAX_QUERY_LEN);
+      if (q.length === 0) {
+        return Response.json({ results: [] satisfies SearchHit[] });
+      }
+      const db = await getDb();
+      const results = await searchStocks(db, q, RESULT_LIMIT);
+      return Response.json({ results });
     },
+    CACHE_TTL_SEC,
   );
 }

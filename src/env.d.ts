@@ -5,6 +5,13 @@ declare global {
   interface CloudflareEnv {
     DB: D1Database;
   }
+
+  // Cloudflare Workers の Cache API。標準 CacheStorage には default プロパティが
+  // ないため、Workers ランタイム固有の拡張として宣言する。
+  // https://developers.cloudflare.com/workers/runtime-apis/cache/
+  interface CacheStorage {
+    readonly default: Cache;
+  }
 }
 
 export {};
