@@ -4,7 +4,6 @@ import Link from "next/link";
 import Script from "next/script";
 import { SearchBox, type Hit } from "@/components/SearchBox";
 import {
-  SITE_BACKGROUND_COLOR,
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
   SITE_LANG,
@@ -122,6 +121,10 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
+// SearchBox の index を D1 から読むため、build 時の prerender(/_not-found 等)を回避。
+// 全ページが force-dynamic なので、layout の動的化は性能上の追加コストなし。
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const searchIndex = await buildSearchIndex();
   const websiteLd = {
@@ -157,7 +160,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
 
   return (
     <html lang={SITE_LANG} className={`${notoJp.variable} ${jbMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col" style={{ backgroundColor: SITE_BACKGROUND_COLOR }}>
+      <body className="min-h-full flex flex-col">
         <Script
           id="ld-website"
           type="application/ld+json"

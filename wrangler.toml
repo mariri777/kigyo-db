@@ -16,6 +16,14 @@ binding = "ASSETS"
 [observability]
 enabled = true
 
+# CPU 時間上限。Workers Paid プラン($5/月)が必須。
+# 3,572 銘柄を読む集計ページ(/、/themes 等)が SSR 時に
+# 重い処理を行うため、デフォルトの 50ms ではすぐ Worker exceeded resource limits になる。
+# 最大 30,000ms(30 秒)まで設定可能。
+# 注: Paid プラン加入前は下記をコメントアウトして deploy する必要あり(Free だと弾かれる)。
+# [limits]
+# cpu_ms = 30000
+
 # D1 データベース: env.DB でアクセスする
 [[d1_databases]]
 binding = "DB"
