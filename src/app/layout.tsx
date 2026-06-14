@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
-import { SearchBox, type Hit } from "@/components/SearchBox";
+import { SearchBox } from "@/components/SearchBox";
 import {
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
@@ -16,36 +16,7 @@ import {
   SITE_TWITTER,
   SITE_URL,
 } from "@/shared/site";
-import { listStockBriefs } from "@/server/usecase";
-import { industries } from "@/content/industries";
-import { listPosts, CATEGORY_LABEL } from "@/content/posts";
 import "./globals.css";
-
-async function buildSearchIndex(): Promise<Hit[]> {
-  const stocks = await listStockBriefs();
-  const items: Hit[] = [];
-  for (const s of stocks) {
-    items.push({
-      type: "stock",
-      code: s.code,
-      name: s.name,
-      nameEn: s.nameEn,
-      cluster: s.sectorTSE,
-    });
-  }
-  for (const i of industries) {
-    items.push({ type: "industry", slug: i.slug, name: i.name });
-  }
-  for (const p of listPosts()) {
-    items.push({
-      type: "post",
-      slug: p.slug,
-      title: p.title,
-      category: CATEGORY_LABEL[p.category],
-    });
-  }
-  return items;
-}
 
 const notoJp = Noto_Sans_JP({
   variable: "--font-noto-jp",
@@ -109,6 +80,14 @@ export const metadata: Metadata = {
     },
   },
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: [
+      { url: "/icon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -121,12 +100,12 @@ export const viewport: Viewport = {
   colorScheme: "dark light",
 };
 
-// SearchBox の index を D1 から読むため、build 時の prerender(/_not-found 等)を回避。
-// 全ページが force-dynamic なので、layout の動的化は性能上の追加コストなし。
-export const dynamic = "force-dynamic";
-
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const searchIndex = await buildSearchIndex();
+// 検索は client から /api/search を都度叩く方式に切り替えたので layout 自体は
+// D1 に触らない同期コンポーネントに戻している。/_not-found を含む build 時の
+// prerender も問題なく通る。
+export default function RootLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
   const websiteLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
@@ -139,7 +118,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       "@type": "Organization",
       name: SITE_NAME,
       url: SITE_URL,
-      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon` },
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon-512.png` },
     },
     potentialAction: {
       "@type": "SearchAction",
@@ -153,7 +132,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     name: SITE_NAME,
     alternateName: "Cho! Kigyo DB",
     url: SITE_URL,
-    logo: `${SITE_URL}/icon`,
+    logo: `${SITE_URL}/icon-512.png`,
     description: SITE_DESCRIPTION,
     sameAs: SITE_SAME_AS,
   };
@@ -231,7 +210,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                   🎯
                 </span>
               </Link>
-              <SearchBox index={searchIndex} />
+              <SearchBox />
             </nav>
           </div>
         </header>

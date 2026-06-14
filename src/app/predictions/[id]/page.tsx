@@ -10,7 +10,6 @@ import { PredictionCard } from "@/components/PredictionCard";
 import { PredictionListItem } from "@/components/PredictionListItem";
 import { getStockBrief } from "@/server/usecase";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -23,11 +22,11 @@ export async function generateMetadata({
   const stock = prediction.stockCode
     ? await getStockBrief(prediction.stockCode)
     : null;
-  const baseTitle = stock
-    ? `${stock.name}(${stock.code}) — ${prediction.question}`
-    : prediction.question;
-  const title = `${baseTitle} | 予測`;
-  const description = prediction.questionNote ?? prediction.eventName;
+  const title = stock
+    ? `予測:${stock.name}(${stock.code})— ${prediction.question}`
+    : `予測:${prediction.question}`;
+  const noteOrEvent = prediction.questionNote ?? prediction.eventName;
+  const description = `${noteOrEvent}。AI と編集部がイベント前に確率を提示し、結果と教訓まで公開する予測カード。`;
   const url = `/predictions/${prediction.id}`;
   return {
     title,

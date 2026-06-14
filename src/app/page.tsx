@@ -12,7 +12,6 @@ import { FactorAnomaliesSection } from "@/components/home/FactorAnomaliesSection
 import { WhatYouCanDo } from "@/components/home/WhatYouCanDo";
 import { LatestPostsSection } from "@/components/home/LatestPostsSection";
 
-export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const { briefs, overlayStocks, undervalued, expansion } = await listHomeHighlights();

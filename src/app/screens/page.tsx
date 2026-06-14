@@ -3,9 +3,9 @@ import Link from "next/link";
 import { screens, screenStockCount } from "@/domain/screens";
 import { listStockBriefs } from "@/server/usecase";
 
-const title = "スクリーン — 切り口別の銘柄一覧";
+const title = "スクリーン — 高配当・低 PER・割安銘柄を切り口別に";
 const description =
-  "高配当・低 PER・低 PBR・大型株など、目的別の定量フィルタで東証上場銘柄をスクリーニング。各スクリーンの抽出条件(メソドロジー)はすべて公開。";
+  "高配当・低 PER・低 PBR・大型株・PBR 改善期待など、投資スタイル別の定量フィルタで東証銘柄をスクリーニング。抽出条件(メソドロジー)はすべて公開。";
 
 export const metadata: Metadata = {
   title,
@@ -15,7 +15,6 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/screens", type: "website" },
   twitter: { card: "summary_large_image", title, description },
 };
-export const dynamic = "force-dynamic";
 
 export default async function ScreensHub() {
   const all = await listStockBriefs();

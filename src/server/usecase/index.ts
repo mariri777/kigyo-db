@@ -7,7 +7,11 @@ import "server-only";
  *
  * これは旧 `@/lib/stocksRepo` の置き換え先。sed の置換ターゲットを 1 か所に集約する。
  */
-export { listStockBriefs, getStockBrief } from "./stockBriefs";
+export {
+  listStockBriefs,
+  getStockBrief,
+  listStockBriefsPaginated,
+} from "./stockBriefs";
 export { getStockDetail } from "./getStockDetail";
 export { listOverlayStocks } from "./listOverlayStocks";
 export { listHomeHighlights } from "./listHomeHighlights";

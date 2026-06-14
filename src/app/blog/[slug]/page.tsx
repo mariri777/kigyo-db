@@ -9,7 +9,6 @@ import { PostCard } from "@/components/PostCard";
 import { formatJaDate } from "@/shared/format";
 import type { StockBrief } from "@/domain/types";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

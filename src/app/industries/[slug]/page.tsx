@@ -15,7 +15,6 @@ import { PostCard } from "@/components/PostCard";
 import { listStockBriefs } from "@/server/usecase";
 import { formatPbrOpt, formatPct1Opt, formatPerOpt, formatPriceOpt } from "@/shared/format";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -25,8 +24,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const ind = getIndustry(slug);
   if (!ind) return { title: "見つかりません", robots: { index: false, follow: false } };
-  const title = `${ind.name}業界マップ — 競争構造・主要企業・投資論点`;
-  const description = `${ind.name}業界の競争構造、主要 KPI、見落とし論点、上場企業一覧。${ind.description.slice(0, 70)}`;
+  const title = `${ind.name}業界マップ — 競争構造・主要プレイヤー・投資論点`;
+  const description = `${ind.name}業界の競争構造、バリューチェーン上のサブクラスタ、主要 KPI、市場が見落とした論点、上場企業一覧を一枚に。${ind.description.slice(0, 70)}`;
   const url = `/industries/${ind.slug}`;
   return {
     title,

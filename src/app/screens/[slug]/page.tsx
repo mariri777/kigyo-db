@@ -6,7 +6,6 @@ import type { StockBrief } from "@/domain/types";
 import { listStockBriefs } from "@/server/usecase";
 import { formatPbrOpt, formatPct1Opt, formatPerOpt, formatPriceOpt } from "@/shared/format";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,

@@ -3,8 +3,8 @@ import Link from "next/link";
 import { industries, industryAggregates } from "@/content/industries";
 import { listStockBriefs } from "@/server/usecase";
 
-const title = "業界マップ — 業界ごとの徹底分析";
-const description = `バリューチェーン・競争構造・主要 KPI・見落とし論点を業界別に深掘り。現在 ${industries.length} 業界をカバー。`;
+const title = `業界マップ — バリューチェーンで読む ${industries.length} 業界`;
+const description = `半導体・自動車・化学など ${industries.length} 業界を、バリューチェーン・競争構造・主要 KPI・市場が見落とした論点まで分解。東証の業種分類より一段細かい粒度で、銘柄を俯瞰できます。`;
 
 export const metadata: Metadata = {
   title,
@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/industries", type: "website" },
   twitter: { card: "summary_large_image", title, description },
 };
-export const dynamic = "force-dynamic";
 
 const COMING_SOON: { name: string; note: string }[] = [];
 
@@ -33,7 +32,7 @@ export default async function IndustriesHub() {
         </h1>
         <p className="text-muted max-w-2xl leading-relaxed">
           東証の業種分類より細かい粒度で、業界の<strong className="text-foreground">バリューチェーン・競争構造・主要指標（KPI）・見落とし論点</strong>を分析。
-          現在 <strong className="text-foreground">10 業界</strong>をカバー、銘柄数は順次拡大中です。
+          現在 <strong className="text-foreground">{industries.length} 業界</strong>をカバー、銘柄数は順次拡大中です。
         </p>
       </header>
 

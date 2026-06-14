@@ -28,7 +28,6 @@ import { formatOkuOpt, formatPct1Opt, formatPriceOpt, formatSignedPct2Opt, forma
 import { Metric } from "@/components/stock/Metric";
 import { splitInsight } from "@/domain/insight";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -38,18 +37,14 @@ export async function generateMetadata({
   const { code } = await params;
   const stock = await getStockDetail(code);
   if (!stock) return { title: "見つかりません", robots: { index: false, follow: false } };
-  const metricBits: string[] = [];
-  if (stock.per != null && stock.per > 0) metricBits.push(`PER ${stock.per.toFixed(1)} 倍`);
-  if (stock.pbr != null && stock.pbr > 0) metricBits.push(`PBR ${stock.pbr.toFixed(2)} 倍`);
-  if (stock.dividendYield != null && stock.dividendYield > 0) metricBits.push(`配当利回り ${stock.dividendYield.toFixed(2)}%`);
-  const metricLine = metricBits.length ? ` / ${metricBits.join(" / ")}` : "";
-  const title = `${stock.name}(${stock.code})— 競合・類似銘柄・見落とし論点`;
-  const description = `${stock.name}(${stock.code} 東証 ${stock.exchange} / ${stock.industryCluster})の事業構造タグ・類似銘柄・AI による見落とし論点${metricLine}。${stock.description.slice(0, 60)}`;
+  const title = `${stock.name}(${stock.code})の事業構造・類似銘柄・AI 評価`;
+  const oneLiner = stock.oneLiner?.trim() || stock.description.slice(0, 70);
+  const description = `${stock.name}(${stock.code}・東証${stock.exchange}・${stock.industryCluster})の事業構造タグ、競合・類似銘柄、AI が拾い上げた見落とし論点、PER/PBR/配当利回りを 1 ページで把握。${oneLiner}`;
   const url = `/stocks/${stock.code}`;
   return {
     title,
     description,
-    keywords: [stock.name, stock.code, stock.industryCluster, stock.sectorTSE, "類似銘柄", "PER", "PBR"],
+    keywords: [stock.name, stock.code, stock.industryCluster, stock.sectorTSE, "類似銘柄", "競合", "PER", "PBR", "配当利回り"],
     alternates: { canonical: url },
     openGraph: {
       type: "article",

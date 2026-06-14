@@ -7,9 +7,9 @@ import { PredictionCard } from "@/components/PredictionCard";
 import { Term } from "@/components/Term";
 import { listStockBriefs } from "@/server/usecase";
 
-const predictionsTitle = "予測 — 結果で学ぶ確率思考";
+const predictionsTitle = "予測 — 決算・適時開示・マクロを確率で読む";
 const predictionsDescription =
-  "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると「教訓」が追加されるミニ学習ユニットです。AI と編集部の的中率も累積で全公開。";
+  "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると『教訓』が追加されるミニ学習ユニット。AI と編集部の的中率も累積で全公開。";
 
 export const metadata: Metadata = {
   title: predictionsTitle,
@@ -50,7 +50,6 @@ const BUCKET_ORDER: PredictionBucket[] = [
   "resolved",
 ];
 
-export const dynamic = "force-dynamic";
 
 export default async function PredictionsHub() {
   const stockNameByCode = new Map(

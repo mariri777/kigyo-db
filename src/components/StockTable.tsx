@@ -1,9 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { StockBrief } from "@/domain/types";
-import { formatPriceOpt, formatPct1Opt, formatPbrOpt, formatPerOpt } from "@/shared/format";
+import {
+  formatPriceOpt,
+  formatPct1Opt,
+  formatPbrOpt,
+  formatPerOpt,
+} from "@/shared/format";
 
 type SortKey =
   | "code"
@@ -14,47 +19,89 @@ type SortKey =
   | "dividendYield";
 type SortDir = "asc" | "desc";
 
+const PAGE_SIZE = 100;
+
+/**
+ * /stocks 一覧テーブル。
+ *
+ * - 初回 SSR で受け取る `initial` 100 件をそのまま表示
+ * - 業界フィルタ・ソートを変えたら /api/stocks に投げて結果を置き換え
+ * - 「もっと見る」で次の 100 件を fetch して append
+ *
+ * これにより:
+ *   - HTML に 3,572 銘柄を一切埋めず、SSR コストと payload を最小化
+ *   - 並び替え/フィルタが SQL 側で行われるため client CPU も軽い
+ *   - 同じパラメータ組は /api/stocks の CDN cache (30分) で共有
+ */
 export function StockTable({
-  stocks,
+  initial,
   industryOptions,
 }: {
-  stocks: StockBrief[];
-  /** 業界カテゴリ(半導体 / 医薬品 等)と所属銘柄コード */
+  initial: StockBrief[];
   industryOptions: { slug: string; name: string; codes: string[] }[];
 }) {
+  const [stocks, setStocks] = useState<StockBrief[]>(initial);
   const [industryFilter, setIndustryFilter] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("marketCapOku");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [hasMore, setHasMore] = useState(initial.length === PAGE_SIZE);
+  const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
-  const filtered = useMemo(() => {
-    let list = [...stocks];
+  // フィルタ/ソート変更時にリセット fetch、初回は initial を尊重するため skip フラグ
+  const firstRender = useRef(true);
 
-    if (industryFilter.length > 0) {
-      const allowed = new Set(
-        industryOptions
-          .filter((o) => industryFilter.includes(o.slug))
-          .flatMap((o) => o.codes),
-      );
-      list = list.filter((s) => allowed.has(s.code));
-    }
+  const buildQuery = useCallback(
+    (offset: number) => {
+      const params = new URLSearchParams();
+      for (const slug of industryFilter) params.append("industry", slug);
+      params.set("sort", sortKey);
+      params.set("dir", sortDir);
+      params.set("offset", String(offset));
+      params.set("limit", String(PAGE_SIZE));
+      return `/api/stocks?${params.toString()}`;
+    },
+    [industryFilter, sortKey, sortDir],
+  );
 
-    list.sort((a, b) => {
-      const av = a[sortKey];
-      const bv = b[sortKey];
-      if (typeof av === "string" && typeof bv === "string") {
-        return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+  const fetchPage = useCallback(
+    async (offset: number, replace: boolean) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      setLoading(true);
+      try {
+        const res = await fetch(buildQuery(offset), {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const data = (await res.json()) as {
+          results: StockBrief[];
+          hasMore: boolean;
+        };
+        setStocks((prev) =>
+          replace ? data.results : [...prev, ...data.results],
+        );
+        setHasMore(data.hasMore);
+      } catch (err) {
+        if ((err as Error)?.name !== "AbortError") {
+          // 失敗時は黙って前の結果を残す
+        }
+      } finally {
+        setLoading(false);
       }
-      // null は常に末尾へ
-      const anum = typeof av === "number" ? av : null;
-      const bnum = typeof bv === "number" ? bv : null;
-      if (anum === null && bnum === null) return 0;
-      if (anum === null) return 1;
-      if (bnum === null) return -1;
-      return sortDir === "asc" ? anum - bnum : bnum - anum;
-    });
+    },
+    [buildQuery],
+  );
 
-    return list;
-  }, [stocks, industryOptions, industryFilter, sortKey, sortDir]);
+  // フィルタ/ソート変更で 0 オフセットから取り直す
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    void fetchPage(0, true);
+  }, [fetchPage]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -84,7 +131,9 @@ export function StockTable({
             return (
               <button
                 key={opt.slug}
-                onClick={() => toggleArr(setIndustryFilter, industryFilter, opt.slug)}
+                onClick={() =>
+                  toggleArr(setIndustryFilter, industryFilter, opt.slug)
+                }
                 className={`text-[11px] rounded-full px-3 py-1 border transition ${
                   active
                     ? "bg-foreground text-background border-foreground"
@@ -92,7 +141,9 @@ export function StockTable({
                 }`}
               >
                 {opt.name}{" "}
-                <span className="opacity-60 ml-1 tabular">{opt.codes.length}</span>
+                <span className="opacity-60 ml-1 tabular">
+                  {opt.codes.length}
+                </span>
               </button>
             );
           })}
@@ -108,22 +159,63 @@ export function StockTable({
       </div>
 
       <div className="text-[11px] text-dim mb-2 tabular">
-        {filtered.length} / {stocks.length} 社
+        {stocks.length} 社 表示中{loading && "(更新中…)"}
       </div>
 
       {/* テーブル */}
       <div className="bg-surface border border-border rounded-md overflow-hidden">
         <div className="hidden md:grid grid-cols-[70px_1fr_140px_100px_70px_70px_80px_100px] text-[11px] text-dim border-b border-border bg-surface-elev px-4 py-2 gap-2">
-          <SortHeader label="コード" k="code" current={sortKey} dir={sortDir} onClick={toggleSort} />
+          <SortHeader
+            label="コード"
+            k="code"
+            current={sortKey}
+            dir={sortDir}
+            onClick={toggleSort}
+          />
           <div>銘柄</div>
           <div>業種</div>
-          <SortHeader label="株価" k="priceJpy" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <SortHeader label="PER" k="per" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <SortHeader label="PBR" k="pbr" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <SortHeader label="配当" k="dividendYield" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <SortHeader label="時価総額" k="marketCapOku" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+          <SortHeader
+            label="株価"
+            k="priceJpy"
+            current={sortKey}
+            dir={sortDir}
+            onClick={toggleSort}
+            align="right"
+          />
+          <SortHeader
+            label="PER"
+            k="per"
+            current={sortKey}
+            dir={sortDir}
+            onClick={toggleSort}
+            align="right"
+          />
+          <SortHeader
+            label="PBR"
+            k="pbr"
+            current={sortKey}
+            dir={sortDir}
+            onClick={toggleSort}
+            align="right"
+          />
+          <SortHeader
+            label="配当"
+            k="dividendYield"
+            current={sortKey}
+            dir={sortDir}
+            onClick={toggleSort}
+            align="right"
+          />
+          <SortHeader
+            label="時価総額"
+            k="marketCapOku"
+            current={sortKey}
+            dir={sortDir}
+            onClick={toggleSort}
+            align="right"
+          />
         </div>
-        {filtered.slice(0, 200).map((s) => (
+        {stocks.map((s) => (
           <Link
             key={s.code}
             href={`/stocks/${s.code}`}
@@ -132,9 +224,13 @@ export function StockTable({
             <div className="text-dim tabular text-xs">{s.code}</div>
             <div>
               <div className="font-medium group-hover:underline">{s.name}</div>
-              <div className="text-[11px] text-dim md:hidden">{s.sectorTSE}</div>
+              <div className="text-[11px] text-dim md:hidden">
+                {s.sectorTSE}
+              </div>
             </div>
-            <div className="text-[11px] text-muted hidden md:block truncate">{s.sectorTSE}</div>
+            <div className="text-[11px] text-muted hidden md:block truncate">
+              {s.sectorTSE}
+            </div>
             <div className="text-right tabular font-mono text-xs sm:text-sm">
               {formatPriceOpt(s.priceJpy)}
             </div>
@@ -154,17 +250,25 @@ export function StockTable({
             </div>
           </Link>
         ))}
-        {filtered.length === 0 && (
+        {stocks.length === 0 && !loading && (
           <div className="px-4 py-8 text-center text-sm text-dim">
             条件に合う銘柄がありません。フィルタを調整してください。
           </div>
         )}
-        {filtered.length > 200 && (
-          <div className="px-4 py-3 text-[11px] text-dim text-center border-t border-border">
-            上位 200 件を表示中(全 {filtered.length} 社)。絞り込みで件数を減らしてください。
-          </div>
-        )}
       </div>
+
+      {hasMore && (
+        <div className="mt-4 flex justify-center">
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void fetchPage(stocks.length, false)}
+            className="text-[12px] font-medium border border-border-strong rounded-md px-4 py-2 hover:bg-surface-elev transition disabled:opacity-50"
+          >
+            {loading ? "読み込み中…" : `さらに ${PAGE_SIZE} 件読み込む`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -193,7 +297,9 @@ function SortHeader({
       } ${active ? "text-foreground" : "text-dim"}`}
     >
       {label}
-      {active && <span className="text-[8px]">{dir === "asc" ? "▲" : "▼"}</span>}
+      {active && (
+        <span className="text-[8px]">{dir === "asc" ? "▲" : "▼"}</span>
+      )}
     </button>
   );
 }

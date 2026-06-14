@@ -10,8 +10,9 @@ import { listThemes } from "@/content/themes";
 import { listPredictions } from "@/content/predictions";
 import { listPosts } from "@/content/posts";
 
-// D1 を参照するため build 時の static 生成を回避(リクエスト時に動的生成)
-export const dynamic = "force-dynamic";
+// D1 から全銘柄を列挙するため build 時の static 生成は不可。
+// 24 時間ごとに ISR で再生成して、ほぼ静的アセットとして配信する。
+export const revalidate = 86400;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();

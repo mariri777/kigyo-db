@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { listStockBriefs } from "@/server/usecase";
+import { listStockBriefsPaginated } from "@/server/usecase";
 import { industries } from "@/content/industries";
 import { StockTable } from "@/components/StockTable";
 
-const title = "銘柄一覧 — 業界・指標で絞り込む";
+const title = "銘柄一覧 — 東証 3,800 社を業界・指標で絞り込む";
 const description =
-  "東証上場銘柄を業界・PER・PBR・配当利回り・時価総額で絞り込み、並び替え。事業構造タグ・類似銘柄・AI 評価に 1 クリックでジャンプ。";
+  "東証プライム/スタンダード/グロース上場の約 3,800 社を、業界・PER・PBR・配当利回り・時価総額で絞り込み・並び替え。気になる銘柄から事業構造タグ・類似銘柄・AI 評価に 1 クリックでジャンプ。";
 
 export const metadata: Metadata = {
   title,
@@ -15,10 +15,18 @@ export const metadata: Metadata = {
   openGraph: { title, description, url: "/stocks", type: "website" },
   twitter: { card: "summary_large_image", title, description },
 };
-export const dynamic = "force-dynamic";
+
+const INITIAL_PAGE_SIZE = 100;
 
 export default async function StocksListPage() {
-  const stocks = await listStockBriefs();
+  // 初回 SSR は時価総額順の上位 100 件のみ。残りは StockTable が
+  // /api/stocks 経由で「もっと見る」で追加 fetch する(CDN cache 30 分)。
+  const initial = await listStockBriefsPaginated({
+    sortKey: "marketCapOku",
+    sortDir: "desc",
+    offset: 0,
+    limit: INITIAL_PAGE_SIZE,
+  });
   const industryOptions = industries.map((i) => ({
     slug: i.slug,
     name: i.name,
@@ -35,16 +43,12 @@ export default async function StocksListPage() {
           銘柄一覧
         </h1>
         <p className="text-muted leading-relaxed max-w-2xl">
-          現在{" "}
-          <strong className="text-foreground">
-            東証 {stocks.length.toLocaleString()} 社
-          </strong>
-          を掲載中。業界で絞り込み、各指標で並び替えできます。
-          銘柄名をクリックで詳細ページへ。
+          東証プライム/スタンダード/グロース上場銘柄を、業界で絞り込み・各指標で並び替えできます。
+          時価総額の大きい順に 100 件ずつ表示します。
         </p>
       </header>
 
-      <StockTable stocks={stocks} industryOptions={industryOptions} />
+      <StockTable initial={initial} industryOptions={industryOptions} />
 
       <div className="mt-12 text-[11px] text-dim leading-relaxed">
         ※ 株価・PER・PBR・配当利回り・時価総額は Yahoo Finance より日次更新。

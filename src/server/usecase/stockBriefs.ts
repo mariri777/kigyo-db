@@ -1,5 +1,6 @@
 import "server-only";
 
+import { cache } from "react";
 import { getDb } from "@/server/db/client";
 import * as stockRepo from "@/server/repo/stockRepo";
 import type { StockRow } from "@/server/repo/stockRepo";
@@ -22,15 +23,38 @@ export function toBrief(r: StockRow): StockBrief {
   };
 }
 
-/** 全銘柄(3,572 件)の軽量型を返す。1 クエリ。 */
-export async function listStockBriefs(): Promise<StockBrief[]> {
-  const db = await getDb();
-  const rows = await stockRepo.listAll(db);
-  return rows.map(toBrief);
-}
+/**
+ * 全銘柄(3,572 件)の軽量型を返す。stocks + companies の単一 JOIN。
+ * 同一リクエスト内での重複呼び出しを React.cache で集約する。
+ */
+export const listStockBriefs = cache(
+  async function listStockBriefs(): Promise<StockBrief[]> {
+    const db = await getDb();
+    const rows = await stockRepo.listAll(db);
+    return rows.map(toBrief);
+  },
+);
 
-export async function getStockBrief(code: string): Promise<StockBrief | null> {
+export const getStockBrief = cache(
+  async function getStockBrief(code: string): Promise<StockBrief | null> {
+    const db = await getDb();
+    const r = await stockRepo.findByCode(db, code);
+    return r ? toBrief(r) : null;
+  },
+);
+
+/**
+ * /stocks 一覧と /api/stocks ペジネーション用。
+ * 業界 slug → 銘柄コードの解決は呼び出し側(industries.ts の subClusters)で行う。
+ */
+export async function listStockBriefsPaginated(opts: {
+  codes?: string[];
+  sortKey: stockRepo.StockSortKey;
+  sortDir: stockRepo.StockSortDir;
+  offset: number;
+  limit: number;
+}): Promise<StockBrief[]> {
   const db = await getDb();
-  const r = await stockRepo.findByCode(db, code);
-  return r ? toBrief(r) : null;
+  const rows = await stockRepo.listPaginated(db, opts);
+  return rows.map(toBrief);
 }

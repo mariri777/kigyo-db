@@ -12,7 +12,6 @@ import { posts } from "@/content/posts";
 import { listOverlayStocks } from "@/server/usecase";
 import { formatPct1Opt, formatPerOpt, formatOkuOpt } from "@/shared/format";
 
-export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -22,8 +21,8 @@ export async function generateMetadata({
   const { slug } = await params;
   const theme = getTheme(slug);
   if (!theme) return { title: "見つかりません", robots: { index: false, follow: false } };
-  const title = `${theme.name} — 業界横断テーマ特集`;
-  const description = theme.lede.slice(0, 140);
+  const title = `${theme.name} — 業界横断テーマ特集 / 推奨銘柄 + ランキング`;
+  const description = `『${theme.name}』を投資テーマに、業界横断で銘柄をキュレーション。編集部の推奨銘柄、${theme.rankLabel}でのファクターランキング、関連業界・記事をまとめて。${theme.lede.slice(0, 70)}`;
   const url = `/themes/${theme.slug}`;
   return {
     title,
