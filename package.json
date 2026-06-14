@@ -8,8 +8,10 @@
     "start": "next start",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "prices:template": "node scripts/update-prices.mjs template",
-    "prices:apply": "node scripts/update-prices.mjs apply"
+    "prices:template": "tsx scripts/update-prices.ts template",
+    "prices:apply": "tsx scripts/update-prices.ts apply",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:refresh-csv": "tsx scripts/refresh-csv.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
@@ -20,12 +22,17 @@
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "better-sqlite3": "^12.10.1",
     "drizzle-kit": "^0.31.10",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5",
-    "wrangler": "^4.98.0"
+    "wrangler": "^4.98.0",
+    "xlsx": "^0.18.5",
+    "yahoo-finance2": "^3.15.3"
   }
 }

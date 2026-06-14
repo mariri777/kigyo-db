@@ -1,5 +1,5 @@
-# 超！企業DB 株価更新シート
-# price 列を最新の終値（円）に書き換えて、以下を実行：
+# 超!企業DB 株価更新シート
+# price 列を最新の終値(円)に書き換えて、以下を実行:
 #   npm run prices:apply -- --date YYYY-MM-DD
 code,name,price
 8035,東京エレクトロン,63400

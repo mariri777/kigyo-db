@@ -45,6 +45,11 @@ next-env.d.ts
 .wrangler/
 .dev.vars
 
+# seed の CSV (scripts/seed/*.csv) は全てコミット対象。
+# 中間 SQL/キャッシュは除外。
+scripts/seed/.jpx-cache.*
+scripts/seed/*.sql
+
 # macOS
 .DS_Store
 
