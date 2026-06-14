@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Countdown } from "./Countdown";
-import { daysFromToday } from "@/lib/predictions";
-import type { Prediction } from "@/lib/predictions";
-import { eventLabelShort } from "@/lib/predictionLabels";
-import { formatPredictionEventDate } from "@/lib/format";
+import { daysFromToday } from "@/content/predictions";
+import type { Prediction } from "@/content/predictions";
+import { eventLabelShort } from "@/shared/predictionLabels";
+import { formatPredictionEventDate } from "@/shared/format";
 
 /**
  * ハブページ用のコンパクトな予測カード。

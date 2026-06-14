@@ -1,4 +1,4 @@
-import type { Source } from "@/lib/types";
+import type { Source } from "@/domain/types";
 
 export function SourceChip({ source }: { source: Source }) {
   return (

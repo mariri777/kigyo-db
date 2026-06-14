@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CROSS_INDUSTRY_PAIRS } from "@/lib/homeHighlights";
+import { CROSS_INDUSTRY_PAIRS } from "@/content/homeHighlights";
 
 export function CrossIndustryPairsSection() {
   return (

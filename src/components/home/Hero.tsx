@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { StockBrief } from "@/lib/types";
+import type { StockBrief } from "@/domain/types";
 
 /** トップページのヒーローセクション。 */
 export function Hero({

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { SimilarStock } from "@/lib/types";
+import type { SimilarStock } from "@/domain/types";
 import { ScoreBar } from "./ScoreBar";
 
 export function SimilarCard({ s, scoreLabel = "類似度" }: { s: SimilarStock; scoreLabel?: string }) {

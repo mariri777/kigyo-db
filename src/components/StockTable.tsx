@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import type { StockBrief } from "@/lib/types";
-import { formatPrice, formatPct1 } from "@/lib/format";
+import type { StockBrief } from "@/domain/types";
+import { formatPriceOpt, formatPct1Opt, formatPbrOpt, formatPerOpt } from "@/shared/format";
 
 type SortKey =
   | "code"
@@ -44,9 +44,13 @@ export function StockTable({
       if (typeof av === "string" && typeof bv === "string") {
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       }
-      return sortDir === "asc"
-        ? (av as number) - (bv as number)
-        : (bv as number) - (av as number);
+      // null は常に末尾へ
+      const anum = typeof av === "number" ? av : null;
+      const bnum = typeof bv === "number" ? bv : null;
+      if (anum === null && bnum === null) return 0;
+      if (anum === null) return 1;
+      if (bnum === null) return -1;
+      return sortDir === "asc" ? anum - bnum : bnum - anum;
     });
 
     return list;
@@ -132,19 +136,21 @@ export function StockTable({
             </div>
             <div className="text-[11px] text-muted hidden md:block truncate">{s.sectorTSE}</div>
             <div className="text-right tabular font-mono text-xs sm:text-sm">
-              {formatPrice(s.priceJpy)}
+              {formatPriceOpt(s.priceJpy)}
             </div>
             <div className="text-right tabular font-mono">
-              {s.per > 0 ? s.per.toFixed(1) : "—"}
+              {formatPerOpt(s.per)}
             </div>
             <div className="text-right tabular font-mono">
-              {s.pbr > 0 ? s.pbr.toFixed(2) : "—"}
+              {formatPbrOpt(s.pbr)}
             </div>
             <div className="text-right tabular font-mono">
-              {s.dividendYield > 0 ? formatPct1(s.dividendYield) : "—"}
+              {formatPct1Opt(s.dividendYield)}
             </div>
             <div className="text-right tabular font-mono text-xs">
-              {s.marketCapOku > 0 ? `${s.marketCapOku.toLocaleString()}億` : "—"}
+              {s.marketCapOku !== null && s.marketCapOku > 0
+                ? `${s.marketCapOku.toLocaleString()}億`
+                : "—"}
             </div>
           </Link>
         ))}

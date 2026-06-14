@@ -1,12 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
 import { SearchBox, type Hit } from "@/components/SearchBox";
-import { SITE_URL, SITE_NAME } from "@/lib/site";
-import { listStockBriefs } from "@/lib/stocksRepo";
-import { industries } from "@/lib/industries";
-import { listPosts, CATEGORY_LABEL } from "@/lib/posts";
+import {
+  SITE_BACKGROUND_COLOR,
+  SITE_DESCRIPTION,
+  SITE_KEYWORDS,
+  SITE_LANG,
+  SITE_LOCALE,
+  SITE_NAME,
+  SITE_PUBLISHER,
+  SITE_SAME_AS,
+  SITE_TAGLINE,
+  SITE_THEME_COLOR,
+  SITE_TWITTER,
+  SITE_URL,
+} from "@/shared/site";
+import { listStockBriefs } from "@/server/usecase";
+import { industries } from "@/content/industries";
+import { listPosts, CATEGORY_LABEL } from "@/content/posts";
 import "./globals.css";
 
 async function buildSearchIndex(): Promise<Hit[]> {
@@ -48,37 +61,119 @@ const jbMono = JetBrains_Mono({
   display: "swap",
 });
 
+const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
+
 export const metadata: Metadata = {
-  title: {
-    default: "超！企業DB — AI が掘る、日本株の発見",
-    template: "%s | 超！企業DB",
-  },
-  description:
-    "日本の上場企業 3,800 社を対象に、AI が事業類似銘柄・見落とし論点・業界構造を掘り出す。先回りキュレーション型の銘柄分析サービス。",
   metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  generator: "Next.js",
+  keywords: SITE_KEYWORDS,
+  authors: [{ name: SITE_PUBLISHER, url: SITE_URL }],
+  creator: SITE_PUBLISHER,
+  publisher: SITE_PUBLISHER,
+  category: "finance",
+  classification: "投資情報 / 銘柄分析",
+  referrer: "origin-when-cross-origin",
+  formatDetection: { telephone: false, email: false, address: false },
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
     type: "website",
-    title: "超！企業DB — AI が掘る、日本株の発見",
-    description: "事業類似銘柄、見落とし論点、業界構造を AI が先回りで掘り出す。",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     siteName: SITE_NAME,
-    locale: "ja_JP",
+    locale: SITE_LOCALE,
+    url: SITE_URL,
   },
   twitter: {
-    card: "summary",
-    title: "超！企業DB — AI が掘る、日本株の発見",
-    description: "事業類似銘柄、見落とし論点、業界構造を AI が先回りで掘り出す。",
+    card: "summary_large_image",
+    site: SITE_TWITTER,
+    creator: SITE_TWITTER,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  manifest: "/manifest.webmanifest",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: SITE_THEME_COLOR },
+  ],
+  colorScheme: "dark light",
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const searchIndex = await buildSearchIndex();
+  const websiteLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    alternateName: "Cho! Kigyo DB",
+    url: SITE_URL,
+    inLanguage: SITE_LANG,
+    description: SITE_DESCRIPTION,
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: SITE_URL,
+      logo: { "@type": "ImageObject", url: `${SITE_URL}/icon` },
+    },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: `${SITE_URL}/stocks?q={search_term_string}`,
+      "query-input": "required name=search_term_string",
+    },
+  };
+  const organizationLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: SITE_NAME,
+    alternateName: "Cho! Kigyo DB",
+    url: SITE_URL,
+    logo: `${SITE_URL}/icon`,
+    description: SITE_DESCRIPTION,
+    sameAs: SITE_SAME_AS,
+  };
+
   return (
-    <html lang="ja" className={`${notoJp.variable} ${jbMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+    <html lang={SITE_LANG} className={`${notoJp.variable} ${jbMono.variable} h-full antialiased`}>
+      <body className="min-h-full flex flex-col" style={{ backgroundColor: SITE_BACKGROUND_COLOR }}>
+        <Script
+          id="ld-website"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd) }}
+        />
+        <Script
+          id="ld-organization"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd) }}
+        />
         <header className="border-b border-border bg-surface/80 backdrop-blur sticky top-0 z-50">
           <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-3">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-accent text-xl font-bold tracking-tight">超！企業DB</span>
+              <span className="text-accent text-xl font-bold tracking-tight">超!企業DB</span>
               <span className="text-dim text-xs hidden sm:inline">Cho! Kigyo DB</span>
             </Link>
             <nav className="flex items-center gap-3 sm:gap-5 text-sm">
@@ -121,7 +216,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 ブログ
               </Link>
               <Link href="/about" className="text-muted hover:text-foreground transition hidden lg:inline">
-                超！企業DBとは
+                超!企業DBとは
               </Link>
               <Link
                 href="/profile"
@@ -179,13 +274,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
                 編集方針
               </Link>
               <Link href="/about" className="text-muted hover:text-foreground transition">
-                超！企業DBとは
+                超!企業DBとは
               </Link>
-              <span className="ml-auto text-dim">© 2026 超！企業DB</span>
+              <span className="ml-auto text-dim">© 2026 超!企業DB</span>
             </div>
           </div>
         </footer>
-        {/* Cloudflare Web Analytics（cookie 不使用・個人を追跡しない計測）。本番ビルドのみ */}
+        {/* Cloudflare Web Analytics(cookie 不使用・個人を追跡しない計測)。本番ビルドのみ */}
         {process.env.NODE_ENV === "production" && (
           <Script
             defer

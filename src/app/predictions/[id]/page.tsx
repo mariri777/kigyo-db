@@ -5,12 +5,12 @@ import {
   getPrediction,
   listPredictions,
   predictionWithLiveStatus,
-} from "@/lib/predictions";
+} from "@/content/predictions";
 import { PredictionCard } from "@/components/PredictionCard";
 import { PredictionListItem } from "@/components/PredictionListItem";
-import { getStockBrief } from "@/lib/stocksRepo";
+import { getStockBrief } from "@/server/usecase";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -19,16 +19,29 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const prediction = getPrediction(id);
-  if (!prediction) return { title: "見つかりません" };
+  if (!prediction) return { title: "見つかりません", robots: { index: false, follow: false } };
   const stock = prediction.stockCode
     ? await getStockBrief(prediction.stockCode)
     : null;
-  const title = stock
-    ? `${stock.name}（${stock.code}） — ${prediction.question}`
+  const baseTitle = stock
+    ? `${stock.name}(${stock.code}) — ${prediction.question}`
     : prediction.question;
+  const title = `${baseTitle} | 予測`;
+  const description = prediction.questionNote ?? prediction.eventName;
+  const url = `/predictions/${prediction.id}`;
   return {
-    title: `${title} | 予測`,
-    description: prediction.questionNote ?? prediction.eventName,
+    title,
+    description,
+    keywords: ["予測", prediction.eventName, stock?.name ?? "マクロ", "AI 予測"],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url,
+      siteName: "超!企業DB",
+    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -60,8 +73,51 @@ export default async function PredictionDetailPage({
     .filter((p) => p.id !== prediction.id && p.stockCode !== prediction.stockCode)
     .slice(0, 3);
 
+  const predictionJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
+        { "@type": "ListItem", position: 2, name: "予測", item: "https://kigyo.cho-super.com/predictions" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: stock ? `${stock.name}(${stock.code})` : "マクロ",
+          item: stock
+            ? `https://kigyo.cho-super.com/stocks/${stock.code}`
+            : "https://kigyo.cho-super.com/predictions",
+        },
+        {
+          "@type": "ListItem",
+          position: 4,
+          name: prediction.question,
+          item: `https://kigyo.cho-super.com/predictions/${prediction.id}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: prediction.question,
+      description: prediction.questionNote ?? prediction.eventName,
+      url: `https://kigyo.cho-super.com/predictions/${prediction.id}`,
+      inLanguage: "ja",
+      author: { "@type": "Organization", name: "超!企業DB 編集部" },
+      publisher: {
+        "@type": "Organization",
+        name: "超!企業DB",
+        logo: { "@type": "ImageObject", url: "https://kigyo.cho-super.com/icon" },
+      },
+    },
+  ];
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(predictionJsonLd) }}
+      />
       {/* パンくず */}
       <nav className="flex items-center gap-2 text-[11px] text-muted mb-6 flex-wrap">
         <Link href="/predictions" className="hover:text-foreground transition">
@@ -136,7 +192,7 @@ export default async function PredictionDetailPage({
           投票内容は各ブラウザのローカルに保存されるため、相手の投票は見えません。
         </p>
         <div className="bg-surface-elev border border-border rounded-md px-3 py-2 text-[11px] text-muted tabular font-mono break-all">
-          https://orekabu.example.com/predictions/{prediction.id}
+          https://kigyo.cho-super.com/predictions/{prediction.id}
         </div>
       </section>
 

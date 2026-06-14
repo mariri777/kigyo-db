@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FACTOR_ANOMALIES } from "@/lib/homeHighlights";
+import { FACTOR_ANOMALIES } from "@/content/homeHighlights";
 
 export function FactorAnomaliesSection() {
   return (

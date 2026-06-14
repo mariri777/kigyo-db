@@ -1,4 +1,4 @@
-import type { Prediction } from "./predictions";
+import type { Prediction } from "@/content/predictions";
 
 type EventType = Prediction["eventType"];
 

@@ -1,4 +1,4 @@
-import type { StockBrief } from "./types";
+import type { StockBrief } from "@/domain/types";
 
 export type ChainPosition =
   // 製造業（半導体・医薬等）のバリューチェーン位置
@@ -2455,8 +2455,9 @@ export function industryAggregates(
     const b = briefsByCode.get(c);
     if (b) list.push(b);
   }
-  const totalMcap = list.reduce((acc, s) => acc + s.marketCapOku, 0);
+  const totalMcap = list.reduce((acc, s) => acc + (s.marketCapOku ?? 0), 0);
+  const perList = list.map((s) => s.per).filter((p): p is number => p !== null && p > 0);
   const avgPer =
-    list.length > 0 ? list.reduce((acc, s) => acc + s.per, 0) / list.length : 0;
+    perList.length > 0 ? perList.reduce((a, b) => a + b, 0) / perList.length : 0;
   return { count: list.length, totalMcap, avgPer };
 }

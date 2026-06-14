@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Prediction } from "@/lib/predictions";
+import type { Prediction } from "@/content/predictions";
 
 export function AiTrackRecordSection({
   totalPredictions,

@@ -2,26 +2,26 @@
 // ハブ・固定ページ・データ由来の詳細ページを列挙し、検索エンジンに通知する。
 
 import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/site";
-import { listStockBriefs } from "@/lib/stocksRepo";
-import { industries } from "@/lib/industries";
-import { screens } from "@/lib/screens";
-import { listThemes } from "@/lib/themes";
-import { listPredictions } from "@/lib/predictions";
-import { listPosts } from "@/lib/posts";
+import { SITE_URL } from "@/shared/site";
+import { listStockBriefs } from "@/server/usecase";
+import { industries } from "@/content/industries";
+import { screens } from "@/domain/screens";
+import { listThemes } from "@/content/themes";
+import { listPredictions } from "@/content/predictions";
+import { listPosts } from "@/content/posts";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const hubs: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
-    { url: `${SITE_URL}/stocks`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/stocks`, lastModified: now, changeFrequency: "daily", priority: 0.9 },
+    { url: `${SITE_URL}/industries`, lastModified: now, changeFrequency: "weekly", priority: 0.85 },
+    { url: `${SITE_URL}/themes`, lastModified: now, changeFrequency: "weekly", priority: 0.85 },
     { url: `${SITE_URL}/screens`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/industries`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/themes`, lastModified: now, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/predictions`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/predictions`, lastModified: now, changeFrequency: "daily", priority: 0.85 },
     { url: `${SITE_URL}/predictions/track-record`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
-    { url: `${SITE_URL}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
+    { url: `${SITE_URL}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.75 },
   ];
 
   const statics: MetadataRoute.Sitemap = [
@@ -36,7 +36,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const stockPages: MetadataRoute.Sitemap = (await listStockBriefs()).map((s) => ({
     url: `${SITE_URL}/stocks/${s.code}`,
-    lastModified: now,
+    lastModified: s.priceDate ? new Date(s.priceDate) : now,
     changeFrequency: "weekly",
     priority: 0.7,
   }));
@@ -44,7 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: `${SITE_URL}/industries/${i.slug}`,
     lastModified: now,
     changeFrequency: "weekly",
-    priority: 0.7,
+    priority: 0.75,
   }));
   const screenPages: MetadataRoute.Sitemap = screens.map((s) => ({
     url: `${SITE_URL}/screens/${s.slug}`,
@@ -54,21 +54,21 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
   const themePages: MetadataRoute.Sitemap = listThemes().map((t) => ({
     url: `${SITE_URL}/themes/${t.slug}`,
-    lastModified: now,
+    lastModified: t.updatedAt ? new Date(t.updatedAt) : now,
     changeFrequency: "weekly",
-    priority: 0.6,
+    priority: 0.7,
   }));
   const predictionPages: MetadataRoute.Sitemap = listPredictions().map((p) => ({
     url: `${SITE_URL}/predictions/${p.id}`,
-    lastModified: now,
+    lastModified: p.resolution?.resolvedAt ? new Date(p.resolution.resolvedAt) : now,
     changeFrequency: "weekly",
-    priority: 0.5,
+    priority: 0.55,
   }));
   const postPages: MetadataRoute.Sitemap = listPosts().map((p) => ({
     url: `${SITE_URL}/blog/${p.slug}`,
-    lastModified: now,
+    lastModified: p.publishedAt ? new Date(p.publishedAt) : now,
     changeFrequency: "monthly",
-    priority: 0.6,
+    priority: 0.65,
   }));
 
   // /profile はインデックス対象外 (robots.ts で disallow)

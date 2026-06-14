@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getStock, listOverlayStocks } from "@/lib/stocksRepo";
+import { getStockDetail, listOverlayStocks } from "@/server/usecase";
 import {
   similarStocksByBusiness,
   phaseSimilarDifferentIndustry,
   riskComplementStocks,
-} from "@/lib/similarity";
-import type { BusinessTag, TagDimension } from "@/lib/types";
+} from "@/domain/similarity";
+import type { BusinessTag, TagDimension } from "@/domain/types";
 import { Section } from "@/components/Section";
 import { SimilarCard } from "@/components/SimilarCard";
 import { FactorTable } from "@/components/FactorTable";
@@ -16,19 +16,19 @@ import { SourceList, SourceChip } from "@/components/SourceChip";
 import { AiBadge, AiDisclaimer } from "@/components/AiNotice";
 import { ScoreBar } from "@/components/ScoreBar";
 import { Term } from "@/components/Term";
-import { postsForStock } from "@/lib/posts";
+import { postsForStock } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
-import { industries } from "@/lib/industries";
+import { industries } from "@/content/industries";
 import { Disclose } from "@/components/Disclose";
 import { HistoryChart } from "@/components/HistoryChart";
-import { getPredictionsByStock } from "@/lib/predictions";
+import { getPredictionsByStock } from "@/content/predictions";
 import { PredictionCard } from "@/components/PredictionCard";
-import { verdictBlockClass } from "@/lib/verdict";
-import { formatOku, formatPct1, formatPrice, formatSignedPct2 } from "@/lib/format";
+import { verdictBlockClass } from "@/domain/verdict";
+import { formatOkuOpt, formatPct1Opt, formatPriceOpt, formatSignedPct2Opt, formatPerOpt, formatPbrOpt } from "@/shared/format";
 import { Metric } from "@/components/stock/Metric";
-import { splitInsight } from "@/lib/insight";
+import { splitInsight } from "@/domain/insight";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -36,11 +36,33 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
-  const stock = await getStock(code);
-  if (!stock) return { title: "見つかりません" };
+  const stock = await getStockDetail(code);
+  if (!stock) return { title: "見つかりません", robots: { index: false, follow: false } };
+  const metricBits: string[] = [];
+  if (stock.per != null && stock.per > 0) metricBits.push(`PER ${stock.per.toFixed(1)} 倍`);
+  if (stock.pbr != null && stock.pbr > 0) metricBits.push(`PBR ${stock.pbr.toFixed(2)} 倍`);
+  if (stock.dividendYield != null && stock.dividendYield > 0) metricBits.push(`配当利回り ${stock.dividendYield.toFixed(2)}%`);
+  const metricLine = metricBits.length ? ` / ${metricBits.join(" / ")}` : "";
+  const title = `${stock.name}(${stock.code})— 競合・類似銘柄・見落とし論点`;
+  const description = `${stock.name}(${stock.code} 東証 ${stock.exchange} / ${stock.industryCluster})の事業構造タグ・類似銘柄・AI による見落とし論点${metricLine}。${stock.description.slice(0, 60)}`;
+  const url = `/stocks/${stock.code}`;
   return {
-    title: `${stock.name}（${stock.code}）— 競合・類似銘柄・見落とし論点`,
-    description: `${stock.name}（${stock.code}）の事業構造・類似銘柄・AI による見落とし論点。${stock.description.slice(0, 80)}`,
+    title,
+    description,
+    keywords: [stock.name, stock.code, stock.industryCluster, stock.sectorTSE, "類似銘柄", "PER", "PBR"],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url,
+      siteName: "超!企業DB",
+    },
+    twitter: { card: "summary_large_image", title, description },
+    other: {
+      "stock:ticker": stock.code,
+      "stock:exchange": `東証 ${stock.exchange}`,
+    },
   };
 }
 
@@ -68,7 +90,7 @@ export default async function StockPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const stock = await getStock(code);
+  const stock = await getStockDetail(code);
   if (!stock) notFound();
 
   const pool = await listOverlayStocks();
@@ -82,15 +104,41 @@ export default async function StockPage({
   );
   const predictions = getPredictionsByStock(stock.code);
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: stock.name,
-    alternateName: stock.nameEn,
-    identifier: stock.code,
-    description: stock.description,
-    industry: stock.industryCluster,
-  };
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
+        { "@type": "ListItem", position: 2, name: "銘柄一覧", item: "https://kigyo.cho-super.com/stocks" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: `${stock.name}(${stock.code})`,
+          item: `https://kigyo.cho-super.com/stocks/${stock.code}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      name: stock.name,
+      alternateName: stock.nameEn,
+      identifier: stock.code,
+      description: stock.description,
+      industry: stock.industryCluster,
+      url: `https://kigyo.cho-super.com/stocks/${stock.code}`,
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FinancialProduct",
+      name: `${stock.name}(${stock.code})`,
+      category: "Equity / Common Stock",
+      provider: { "@type": "Organization", name: "東京証券取引所" },
+      identifier: stock.code,
+      description: `${stock.name}の上場株式(東証 ${stock.exchange} / ${stock.industryCluster})`,
+    },
+  ];
 
   return (
     <article className="max-w-6xl mx-auto px-6 py-8">
@@ -174,23 +222,29 @@ export default async function StockPage({
         </details>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-6">
-          <Metric label="株価" value={formatPrice(stock.priceJpy)} sub={stock.priceDate} accent />
+          <Metric label="株価" value={formatPriceOpt(stock.priceJpy)} sub={stock.priceDate ?? ""} accent />
           <Metric
             label="前日比"
-            value={formatSignedPct2(stock.changePct)}
+            value={formatSignedPct2Opt(stock.changePct)}
             sub=""
-            tone={stock.changePct >= 0 ? "positive" : "negative"}
+            tone={
+              stock.changePct === null
+                ? undefined
+                : stock.changePct >= 0
+                  ? "positive"
+                  : "negative"
+            }
           />
-          <Metric labelNode={<Term>時価総額</Term>} value={formatOku(stock.marketCapOku)} sub="" />
-          <Metric labelNode={<Term>PER</Term>} value={`${stock.per.toFixed(1)}倍`} sub="実績" />
-          <Metric labelNode={<Term>PBR</Term>} value={`${stock.pbr.toFixed(2)}倍`} sub="" />
-          <Metric labelNode={<Term>配当利回り</Term>} value={formatPct1(stock.dividendYield)} sub="予想" />
-          <Metric labelNode={<Term>ROE</Term>} value={formatPct1(stock.roe)} sub="" />
+          <Metric labelNode={<Term>時価総額</Term>} value={formatOkuOpt(stock.marketCapOku)} sub="" />
+          <Metric labelNode={<Term>PER</Term>} value={formatPerOpt(stock.per)} sub="実績" />
+          <Metric labelNode={<Term>PBR</Term>} value={formatPbrOpt(stock.pbr)} sub="" />
+          <Metric labelNode={<Term>配当利回り</Term>} value={formatPct1Opt(stock.dividendYield)} sub="予想" />
+          <Metric labelNode={<Term>ROE</Term>} value={formatPct1Opt(stock.roe)} sub="" />
         </div>
         <div className="mt-3 text-[10px] text-dim leading-relaxed">
-          指標：{stock.segmentsPeriod} 期実績ベース。出典は EDINET XBRL / J-Quants。
+          指標:{stock.segmentsPeriod ?? "—"} 期実績ベース。出典は EDINET XBRL / J-Quants。
           <span className="ml-2 text-[10px] border border-border rounded px-1.5 py-0.5">
-            ※ 株価は実勢（{stock.priceDate} 終値・週次更新）／財務指標・分析はサンプルデータ
+            ※ 株価は実勢({stock.priceDate ?? "—"} 終値・週次更新)/財務指標・分析はサンプルデータ
           </span>
         </div>
         <details className="mt-2 group">
@@ -245,31 +299,37 @@ export default async function StockPage({
         rightSlot={<AiBadge />}
         ai
       >
-        <div className={`border rounded-md p-5 ${verdictBlockClass(stock.valuationCall.verdict)}`}>
-          <div className="flex items-baseline gap-4 mb-3">
-            <div>
-              <div className="text-[11px] uppercase tracking-widest opacity-80">評価</div>
-              <div className="text-3xl font-bold">{stock.valuationCall.verdict}</div>
-            </div>
-            <div className="flex-1">
-              <div className="text-[11px] uppercase tracking-widest opacity-80 mb-1">割安度スコア</div>
-              <div className="flex items-center gap-3">
-                <div className="text-2xl font-bold tabular">{stock.valuationCall.score}</div>
-                <div className="text-[11px] opacity-70 tabular">/ 100</div>
-                <div className="flex-1 max-w-xs">
-                  <ScoreBar score={stock.valuationCall.score} />
+        {stock.valuationCall ? (
+          <div className={`border rounded-md p-5 ${verdictBlockClass(stock.valuationCall.verdict)}`}>
+            <div className="flex items-baseline gap-4 mb-3">
+              <div>
+                <div className="text-[11px] uppercase tracking-widest opacity-80">評価</div>
+                <div className="text-3xl font-bold">{stock.valuationCall.verdict}</div>
+              </div>
+              <div className="flex-1">
+                <div className="text-[11px] uppercase tracking-widest opacity-80 mb-1">割安度スコア</div>
+                <div className="flex items-center gap-3">
+                  <div className="text-2xl font-bold tabular">{stock.valuationCall.score}</div>
+                  <div className="text-[11px] opacity-70 tabular">/ 100</div>
+                  <div className="flex-1 max-w-xs">
+                    <ScoreBar score={stock.valuationCall.score} />
+                  </div>
                 </div>
               </div>
             </div>
+            <p className="text-sm leading-relaxed text-foreground/90">{stock.valuationCall.rationale}</p>
+            <div className="mt-3">
+              <SourceList sources={stock.valuationCall.citations} />
+            </div>
+            <div className="mt-3 text-[11px] opacity-70">
+              判断基準の詳細は <Link href="/legal/editorial-policy" className="underline">編集方針</Link> をご確認ください。
+            </div>
           </div>
-          <p className="text-sm leading-relaxed text-foreground/90">{stock.valuationCall.rationale}</p>
-          <div className="mt-3">
-            <SourceList sources={stock.valuationCall.citations} />
+        ) : (
+          <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+            この銘柄の AI 評価はまだ生成されていません。
           </div>
-          <div className="mt-3 text-[11px] opacity-70">
-            判断基準の詳細は <Link href="/legal/editorial-policy" className="underline">編集方針</Link> をご確認ください。
-          </div>
-        </div>
+        )}
         <AiDisclaimer />
       </Section>
 
@@ -306,7 +366,7 @@ export default async function StockPage({
           ))}
         </div>
 
-        <h3 className="text-sm font-bold mt-8 mb-3">セグメント別売上（{stock.segmentsPeriod}）</h3>
+        <h3 className="text-sm font-bold mt-8 mb-3">セグメント別売上({stock.segmentsPeriod ?? "—"})</h3>
         <div className="bg-surface border border-border rounded-md overflow-hidden">
           <div className="grid grid-cols-[1fr_100px_70px_90px] text-[11px] text-dim border-b border-border bg-surface-elev px-4 py-2">
             <div>セグメント</div>
@@ -376,7 +436,7 @@ export default async function StockPage({
           </>
         }
       >
-        <PhaseChart scores={stock.phaseScores} rationale={stock.phaseRationale} />
+        <PhaseChart scores={stock.phaseScores} rationale={stock.phaseRationale ?? ""} />
         <h3 className="text-sm font-bold mt-8 mb-3">同じフェーズで、異なる業界の銘柄</h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {phaseAdj.map((s) => (
@@ -398,7 +458,7 @@ export default async function StockPage({
           </>
         }
       >
-        <FactorTable betas={stock.factorBetas} period={stock.factorPeriod} />
+        <FactorTable betas={stock.factorBetas} period={stock.factorPeriod ?? ""} />
         <h3 className="text-sm font-bold mt-8 mb-3">ポートフォリオを補完する銘柄（感応度が逆方向）</h3>
         <p className="text-xs text-muted mb-3 max-w-2xl leading-relaxed">
           似た銘柄ではなく、{stock.name} のリスクを相殺する方向に動く銘柄を提示します。ポートフォリオ構築時の補完候補として。

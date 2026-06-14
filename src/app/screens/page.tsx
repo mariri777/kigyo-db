@@ -1,13 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { screens, screenStockCount } from "@/lib/screens";
-import { listStockBriefs } from "@/lib/stocksRepo";
+import { screens, screenStockCount } from "@/domain/screens";
+import { listStockBriefs } from "@/server/usecase";
 
-export const metadata = {
-  title: "スクリーン — 切り口別の銘柄一覧",
-  description:
-    "高配当、低 PER、低 PBR、大型株など、目的別の切り口で東証上場銘柄をスクリーニング。",
+const title = "スクリーン — 切り口別の銘柄一覧";
+const description =
+  "高配当・低 PER・低 PBR・大型株など、目的別の定量フィルタで東証上場銘柄をスクリーニング。各スクリーンの抽出条件(メソドロジー)はすべて公開。";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  keywords: ["スクリーニング", "高配当株", "低 PER", "低 PBR", "大型株", "メソドロジー"],
+  alternates: { canonical: "/screens" },
+  openGraph: { title, description, url: "/screens", type: "website" },
+  twitter: { card: "summary_large_image", title, description },
 };
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export default async function ScreensHub() {
   const all = await listStockBriefs();

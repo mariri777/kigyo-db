@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { CATEGORY_LABEL, type Post } from "@/lib/posts";
-import { formatJaDate } from "@/lib/format";
+import { CATEGORY_LABEL, type Post } from "@/content/posts";
+import { formatJaDate } from "@/shared/format";
 
 export function PostCard({ post, compact = false }: { post: Post; compact?: boolean }) {
   return (

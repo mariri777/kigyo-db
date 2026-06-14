@@ -1,7 +1,20 @@
-import type { PhaseScores } from "@/lib/types";
-import { PHASES } from "@/lib/phase";
+import type { PhaseScores } from "@/domain/types";
+import { PHASES } from "@/domain/phase";
 
-export function PhaseChart({ scores, rationale }: { scores: PhaseScores; rationale: string }) {
+export function PhaseChart({
+  scores,
+  rationale,
+}: {
+  scores: PhaseScores | null;
+  rationale: string;
+}) {
+  if (!scores) {
+    return (
+      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+        この銘柄の成長フェーズ判定はまだ生成されていません。
+      </div>
+    );
+  }
   return (
     <div className="bg-surface border border-border rounded-md p-4">
       <div className="grid grid-cols-4 gap-3 mb-3">

@@ -1,5 +1,5 @@
-import type { Stock } from "@/lib/types";
-import { getStockHistory } from "@/lib/history";
+import type { Stock } from "@/domain/types";
+import { getStockHistory } from "@/domain/history";
 
 const WIDTH = 640;
 const HEIGHT = 200;
@@ -10,8 +10,23 @@ const PADDING = { top: 24, right: 50, bottom: 36, left: 60 };
  * 外部ライブラリなしの純 SVG。
  */
 export function HistoryChart({ stock }: { stock: Stock }) {
-  const { years, revenueGrowthPct, marginChangePp, startRevenue, endRevenue, startMargin, endMargin } =
-    getStockHistory(stock);
+  const history = getStockHistory(stock);
+  if (!history) {
+    return (
+      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+        この銘柄の業績推移はまだ生成されていません(財務時系列の seed 待ち)。
+      </div>
+    );
+  }
+  const {
+    years,
+    revenueGrowthPct,
+    marginChangePp,
+    startRevenue,
+    endRevenue,
+    startMargin,
+    endMargin,
+  } = history;
 
   const innerW = WIDTH - PADDING.left - PADDING.right;
   const innerH = HEIGHT - PADDING.top - PADDING.bottom;

@@ -1,4 +1,4 @@
-import type { Stock } from "./types";
+import type { Stock } from "@/domain/types";
 
 /**
  * 業界横断テーマ（特集）の定義。
@@ -124,7 +124,7 @@ export const themes: Theme[] = [
     ],
     rankBy: "usdjpy",
     rankAsc: false,
-    rankFilter: (s) => s.factorBetas.usdjpy >= 0.6,
+    rankFilter: (s) => (s.factorBetas?.usdjpy ?? -Infinity) >= 0.6,
     rankLabel: "USD/JPY ベータ",
     relatedIndustries: ["automotive", "retail", "semiconductor"],
     relatedPosts: ["primer-usdjpy-auto", "primer-factor-beta"],
@@ -201,7 +201,7 @@ export const themes: Theme[] = [
     ],
     rankBy: "sox",
     rankAsc: false,
-    rankFilter: (s) => s.factorBetas.sox >= 0.4,
+    rankFilter: (s) => (s.factorBetas?.sox ?? -Infinity) >= 0.4,
     rankLabel: "SOX ベータ",
     relatedIndustries: ["semiconductor", "telecom"],
     relatedPosts: ["primer-hi-na-euv", "primer-nav-discount-sbg"],
@@ -501,7 +501,7 @@ export const themes: Theme[] = [
     ],
     rankBy: "pbr",
     rankAsc: true,
-    rankFilter: (s) => s.pbr < 1.0,
+    rankFilter: (s) => s.pbr !== null && s.pbr < 1.0,
     rankLabel: "PBR（低いほど改善余地大）",
     relatedIndustries: ["chemicals", "finance", "automotive"],
     relatedPosts: ["primer-chemical-polarization", "primer-factor-beta"],
@@ -525,17 +525,17 @@ export function listThemes(): Theme[] {
 
 export type RankBy = Theme["rankBy"];
 
-/** rankBy で示されたファクター値を返す。 */
-export function themeRankValue(s: Stock, rankBy: RankBy): number {
+/** rankBy で示されたファクター値を返す。データ未取得なら null。 */
+export function themeRankValue(s: Stock, rankBy: RankBy): number | null {
   switch (rankBy) {
     case "usdjpy":
-      return s.factorBetas.usdjpy;
+      return s.factorBetas?.usdjpy ?? null;
     case "us10y":
-      return s.factorBetas.us10y;
+      return s.factorBetas?.us10y ?? null;
     case "sox":
-      return s.factorBetas.sox;
+      return s.factorBetas?.sox ?? null;
     case "china":
-      return s.factorBetas.china;
+      return s.factorBetas?.china ?? null;
     case "dividendYield":
       return s.dividendYield;
     case "pbr":
@@ -543,13 +543,14 @@ export function themeRankValue(s: Stock, rankBy: RankBy): number {
     case "roe":
       return s.roe;
     case "valuationScore":
-      return s.valuationCall.score;
+      return s.valuationCall?.score ?? null;
   }
 }
 
-/** ランキング表で表示する文字列。rankBy ごとに桁数や単位が変わる。 */
+/** ランキング表で表示する文字列。データ未取得なら "—"。 */
 export function formatThemeRankValue(s: Stock, rankBy: RankBy): string {
   const v = themeRankValue(s, rankBy);
+  if (v === null) return "—";
   switch (rankBy) {
     case "usdjpy":
     case "us10y":
@@ -568,15 +569,18 @@ export function formatThemeRankValue(s: Stock, rankBy: RankBy): string {
 
 /**
  * ランキング対象のテーマで、銘柄を rankFilter で絞り込んで sort する。
- * 呼び出し側は詳細型の銘柄一覧(オーバーレイ済み 68 件)を渡す。
+ * 呼び出し側は詳細型の銘柄一覧(オーバーレイ済み)を渡す。
+ * ランク値が null の銘柄は除外する(順序付けできないため)。
  */
 export function rankedStocksForTheme(theme: Theme, all: Stock[]): Stock[] {
-  const filtered = all.filter(theme.rankFilter);
-  return filtered.sort((a, b) => {
-    const av = themeRankValue(a, theme.rankBy);
-    const bv = themeRankValue(b, theme.rankBy);
-    return theme.rankAsc ? av - bv : bv - av;
-  });
+  return all
+    .filter(theme.rankFilter)
+    .filter((s) => themeRankValue(s, theme.rankBy) !== null)
+    .sort((a, b) => {
+      const av = themeRankValue(a, theme.rankBy) as number;
+      const bv = themeRankValue(b, theme.rankBy) as number;
+      return theme.rankAsc ? av - bv : bv - av;
+    });
 }
 
 /**

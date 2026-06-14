@@ -247,7 +247,7 @@ async function main() {
     for (const seg of s.segments) {
       segments.push({
         companyId,
-        period: s.segmentsPeriod,
+        period: s.segmentsPeriod ?? "",
         name: seg.name,
         revenueOku: seg.revenueOku,
         share: seg.share,
@@ -274,42 +274,50 @@ async function main() {
       }
     }
 
-    phases.push({
-      companyId,
-      launch: s.phaseScores.launch,
-      expansion: s.phaseScores.expansion,
-      mature: s.phaseScores.mature,
-      decline: s.phaseScores.decline,
-      rationale: s.phaseRationale ?? null,
-      updatedAt: generatedAtFallback,
-    });
-
-    factorBetas.push({
-      companyId,
-      usdjpy: s.factorBetas.usdjpy,
-      us10y: s.factorBetas.us10y,
-      oil: s.factorBetas.oil,
-      sox: s.factorBetas.sox,
-      china: s.factorBetas.china,
-      market: s.factorBetas.market,
-      size: s.factorBetas.size,
-      value: s.factorBetas.value,
-      momentum: s.factorBetas.momentum,
-      period: s.factorPeriod ?? null,
-    });
-
-    valuations.push({
-      companyId,
-      verdict: s.valuationCall.verdict,
-      score: s.valuationCall.score,
-      rationale: s.valuationCall.rationale ?? null,
-      updatedAt: generatedAtFallback,
-    });
-    for (const c of s.valuationCall.citations) {
-      valuationSources.push({
+    // data.ts のモックオーバーレイは AI 生成 3 ブロック(phase/factor/valuation)を必ず持つ前提。
+    // 万一欠けていたらその銘柄の該当行はスキップする。
+    if (s.phaseScores) {
+      phases.push({
         companyId,
-        sourceId: ensureSourceId(c),
+        launch: s.phaseScores.launch,
+        expansion: s.phaseScores.expansion,
+        mature: s.phaseScores.mature,
+        decline: s.phaseScores.decline,
+        rationale: s.phaseRationale ?? null,
+        updatedAt: generatedAtFallback,
       });
+    }
+
+    if (s.factorBetas) {
+      factorBetas.push({
+        companyId,
+        usdjpy: s.factorBetas.usdjpy,
+        us10y: s.factorBetas.us10y,
+        oil: s.factorBetas.oil,
+        sox: s.factorBetas.sox,
+        china: s.factorBetas.china,
+        market: s.factorBetas.market,
+        size: s.factorBetas.size,
+        value: s.factorBetas.value,
+        momentum: s.factorBetas.momentum,
+        period: s.factorPeriod ?? null,
+      });
+    }
+
+    if (s.valuationCall) {
+      valuations.push({
+        companyId,
+        verdict: s.valuationCall.verdict,
+        score: s.valuationCall.score,
+        rationale: s.valuationCall.rationale ?? null,
+        updatedAt: generatedAtFallback,
+      });
+      for (const c of s.valuationCall.citations) {
+        valuationSources.push({
+          companyId,
+          sourceId: ensureSourceId(c),
+        });
+      }
     }
   }
 

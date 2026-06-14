@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Post } from "@/lib/posts";
+import type { Post } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
 
 export function LatestPostsSection({ posts }: { posts: Post[] }) {

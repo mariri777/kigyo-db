@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Prediction } from "@/lib/predictions";
+import type { Prediction } from "@/content/predictions";
 import {
   getVote,
   setVote as persistVote,
@@ -10,7 +10,7 @@ import {
   recordResolution,
   type VoteRecord,
   type Stats,
-} from "@/lib/voteStore";
+} from "@/shared/client/voteStore";
 
 /**
  * 予測コミット用ボタン（localStorage 永続化）

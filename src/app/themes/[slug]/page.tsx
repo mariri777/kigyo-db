@@ -6,13 +6,13 @@ import {
   getTheme,
   pickedStocksForTheme,
   rankedStocksForTheme,
-} from "@/lib/themes";
-import { industries } from "@/lib/industries";
-import { posts } from "@/lib/posts";
-import { listOverlayStocks } from "@/lib/stocksRepo";
-import { formatPct1, formatPer } from "@/lib/format";
+} from "@/content/themes";
+import { industries } from "@/content/industries";
+import { posts } from "@/content/posts";
+import { listOverlayStocks } from "@/server/usecase";
+import { formatPct1Opt, formatPerOpt, formatOkuOpt } from "@/shared/format";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -21,10 +21,25 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const theme = getTheme(slug);
-  if (!theme) return { title: "見つかりません" };
+  if (!theme) return { title: "見つかりません", robots: { index: false, follow: false } };
+  const title = `${theme.name} — 業界横断テーマ特集`;
+  const description = theme.lede.slice(0, 140);
+  const url = `/themes/${theme.slug}`;
   return {
-    title: `${theme.name} — 業界横断テーマ特集`,
-    description: theme.lede.slice(0, 120),
+    title,
+    description,
+    keywords: [theme.name, "テーマ投資", theme.rankLabel, "業界横断"],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title,
+      description,
+      url,
+      siteName: "超!企業DB",
+      publishedTime: theme.updatedAt,
+      modifiedTime: theme.updatedAt,
+    },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -47,8 +62,39 @@ export default async function ThemePage({
     .map((s) => posts.find((p) => p.slug === s))
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
+  const themeJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
+        { "@type": "ListItem", position: 2, name: "特集", item: "https://kigyo.cho-super.com/themes" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: theme.name,
+          item: `https://kigyo.cho-super.com/themes/${theme.slug}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: theme.name,
+      url: `https://kigyo.cho-super.com/themes/${theme.slug}`,
+      description: theme.lede.slice(0, 160),
+      datePublished: theme.updatedAt,
+      dateModified: theme.updatedAt,
+      isPartOf: { "@type": "WebSite", name: "超!企業DB", url: "https://kigyo.cho-super.com" },
+    },
+  ];
+
   return (
     <article className="max-w-6xl mx-auto px-6 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(themeJsonLd) }}
+      />
       {/* ===== Hero ===== */}
       <header className="border-b border-border pb-10 mb-12">
         <p className="text-muted text-xs font-bold tracking-[0.2em] uppercase mb-4">
@@ -98,8 +144,8 @@ export default async function ThemePage({
                 <span className="text-[10px] text-dim shrink-0">{p.stock.sectorTSE}</span>
               </div>
               <div className="text-[11px] text-muted tabular mb-3">
-                時価総額 {p.stock.marketCapOku.toLocaleString()} 億円 / PER {formatPer(p.stock.per)} /
-                配当 {formatPct1(p.stock.dividendYield)}
+                時価総額 {formatOkuOpt(p.stock.marketCapOku)} / PER {formatPerOpt(p.stock.per)} /
+                配当 {formatPct1Opt(p.stock.dividendYield)}
               </div>
               <p className="text-[13px] leading-relaxed">{p.reason}</p>
             </Link>
@@ -196,13 +242,13 @@ export default async function ThemePage({
                       {formatThemeRankValue(s, theme.rankBy)}
                     </td>
                     <td className="px-4 py-3 text-right tabular text-muted hidden sm:table-cell">
-                      {s.per > 0 ? formatPer(s.per) : "—"}
+                      {formatPerOpt(s.per)}
                     </td>
                     <td className="px-4 py-3 text-right tabular text-muted hidden md:table-cell">
-                      {s.dividendYield > 0 ? formatPct1(s.dividendYield) : "—"}
+                      {formatPct1Opt(s.dividendYield)}
                     </td>
                     <td className="px-4 py-3 text-right tabular text-muted hidden md:table-cell">
-                      {s.marketCapOku.toLocaleString()} 億円
+                      {formatOkuOpt(s.marketCapOku)}
                     </td>
                   </tr>
                 );

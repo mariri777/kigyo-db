@@ -1,7 +1,7 @@
-import { listStockBriefs, listOverlayStocks } from "@/lib/stocksRepo";
-import { listPosts } from "@/lib/posts";
-import { industries, industryAggregates } from "@/lib/industries";
-import { listPredictions } from "@/lib/predictions";
+import { listHomeHighlights } from "@/server/usecase";
+import { listPosts } from "@/content/posts";
+import { industries, industryAggregates } from "@/content/industries";
+import { listPredictions } from "@/content/predictions";
 import { Hero } from "@/components/home/Hero";
 import { UndervaluedSection } from "@/components/home/UndervaluedSection";
 import { ExpansionSection } from "@/components/home/ExpansionSection";
@@ -12,22 +12,11 @@ import { FactorAnomaliesSection } from "@/components/home/FactorAnomaliesSection
 import { WhatYouCanDo } from "@/components/home/WhatYouCanDo";
 import { LatestPostsSection } from "@/components/home/LatestPostsSection";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const [briefs, detailedStocks] = await Promise.all([
-    listStockBriefs(),
-    listOverlayStocks(),
-  ]);
+  const { briefs, overlayStocks, undervalued, expansion } = await listHomeHighlights();
   const latestPosts = listPosts().slice(0, 3);
-
-  const undervaluedHighlights = [...detailedStocks]
-    .filter((s) => s.valuationCall.verdict === "割安")
-    .sort((a, b) => b.valuationCall.score - a.valuationCall.score)
-    .slice(0, 4);
-  const expansionHighlights = [...detailedStocks]
-    .sort((a, b) => b.phaseScores.expansion - a.phaseScores.expansion)
-    .slice(0, 4);
 
   const briefsByCode = new Map(briefs.map((b) => [b.code, b]));
   const coverage = industries.map((ind) => ({
@@ -41,7 +30,9 @@ export default async function Home() {
   const hits = resolved.filter((p) => p.resolution?.outcomeKey === p.aiReasoning.pick);
   const accuracy = resolved.length > 0 ? (hits.length / resolved.length) * 100 : 0;
   const recentResolved = [...resolved]
-    .sort((a, b) => (b.resolution?.resolvedAt ?? "").localeCompare(a.resolution?.resolvedAt ?? ""))
+    .sort((a, b) =>
+      (b.resolution?.resolvedAt ?? "").localeCompare(a.resolution?.resolvedAt ?? ""),
+    )
     .slice(0, 3);
   const liveOrUpcoming = allPredictions.filter((p) => p.status !== "resolved").length;
 
@@ -50,10 +41,10 @@ export default async function Home() {
       <Hero
         stockCount={briefs.length}
         industryCount={industries.length}
-        firstStock={detailedStocks[0] ?? briefs[0]}
+        firstStock={overlayStocks[0] ?? briefs[0]}
       />
-      <UndervaluedSection stocks={undervaluedHighlights} />
-      <ExpansionSection stocks={expansionHighlights} />
+      <UndervaluedSection stocks={undervalued} />
+      <ExpansionSection stocks={expansion} />
       <CoverageMap coverage={coverage} totalStocks={totalStocks} />
       <AiTrackRecordSection
         totalPredictions={allPredictions.length}

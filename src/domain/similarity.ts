@@ -134,17 +134,26 @@ function cosine(a: number[], b: number[]): number {
   return dot / (Math.sqrt(na) * Math.sqrt(nb));
 }
 export function phaseSimilarity(a: Stock, b: Stock): number {
-  return Math.round(cosine(phaseVec(a.phaseScores), phaseVec(b.phaseScores)) * 100);
+  if (!a.phaseScores || !b.phaseScores) return 0;
+  return Math.round(
+    cosine(phaseVec(a.phaseScores), phaseVec(b.phaseScores)) * 100,
+  );
 }
 
-// C 軸の対比：「同じ成長フェーズ・異なる業界の銘柄」を選ぶ
+// C 軸の対比:「同じ成長フェーズ・異なる業界の銘柄」を選ぶ
 export function phaseSimilarDifferentIndustry(
   self: Stock,
   pool: Stock[],
   top = 4,
 ): SimilarStock[] {
+  if (!self.phaseScores) return [];
   return pool
-    .filter((s) => s.code !== self.code && s.industryCluster !== self.industryCluster)
+    .filter(
+      (s) =>
+        s.code !== self.code &&
+        s.industryCluster !== self.industryCluster &&
+        s.phaseScores !== null,
+    )
     .map((s) => ({
       stock: s,
       score: phaseSimilarity(self, s),
@@ -155,7 +164,8 @@ export function phaseSimilarDifferentIndustry(
 }
 
 function phaseReason(a: Stock, b: Stock): string {
-  return `両社とも ${dominantPhase(a.phaseScores, true)} 寄り。異なる業界（${b.industryCluster}）で同じフェーズの動きを示している`;
+  if (!a.phaseScores) return `異なる業界(${b.industryCluster})の銘柄`;
+  return `両社とも ${dominantPhase(a.phaseScores, true)} 寄り。異なる業界(${b.industryCluster})で同じフェーズの動きを示している`;
 }
 
 // D 軸：ファクター感応度ベクトル間のユークリッド距離 → 0–100（近い）
@@ -168,13 +178,15 @@ function euclid(a: number[], b: number[]): number {
   return Math.sqrt(s);
 }
 export function factorSimilarity(a: Stock, b: Stock): number {
+  if (!a.factorBetas || !b.factorBetas) return 0;
   const d = euclid(factorVec(a.factorBetas), factorVec(b.factorBetas));
   // 経験的に 0〜5 のスケール想定でスコアリング
   const score = Math.max(0, 1 - d / 5);
   return Math.round(score * 100);
 }
-// 補完的（逆方向）スコア：両ベクトルの内積が負ほど高得点
+// 補完的(逆方向)スコア:両ベクトルの内積が負ほど高得点
 export function factorComplementarity(a: Stock, b: Stock): number {
+  if (!a.factorBetas || !b.factorBetas) return 0;
   const A = factorVec(a.factorBetas);
   const B = factorVec(b.factorBetas);
   let dot = 0,
@@ -191,6 +203,11 @@ export function factorComplementarity(a: Stock, b: Stock): number {
 }
 
 function factorReason(a: Stock, b: Stock): string {
+  if (!a.factorBetas || !b.factorBetas) {
+    return "ファクター感応度が未取得";
+  }
+  const A = a.factorBetas;
+  const B = b.factorBetas;
   // 差が大きいファクターを 2 つ拾って描写
   const labels: { key: keyof FactorBetas; ja: string }[] = [
     { key: "usdjpy", ja: "ドル円" },
@@ -206,23 +223,23 @@ function factorReason(a: Stock, b: Stock): string {
   const opposing = labels
     .map((l) => ({
       ja: l.ja,
-      a: a.factorBetas[l.key],
-      b: b.factorBetas[l.key],
-      signFlip: a.factorBetas[l.key] * b.factorBetas[l.key] < 0,
-      gap: Math.abs(a.factorBetas[l.key] - b.factorBetas[l.key]),
+      a: A[l.key],
+      b: B[l.key],
+      signFlip: A[l.key] * B[l.key] < 0,
+      gap: Math.abs(A[l.key] - B[l.key]),
     }))
     .filter((x) => x.signFlip)
     .sort((x, y) => y.gap - x.gap)
     .slice(0, 2);
   if (opposing.length === 0) {
     const close = labels
-      .map((l) => ({ ja: l.ja, gap: Math.abs(a.factorBetas[l.key] - b.factorBetas[l.key]) }))
+      .map((l) => ({ ja: l.ja, gap: Math.abs(A[l.key] - B[l.key]) }))
       .sort((x, y) => x.gap - y.gap)
       .slice(0, 2);
-    return `感応度が近い：${close.map((c) => c.ja).join("、")} で同方向の動き`;
+    return `感応度が近い:${close.map((c) => c.ja).join("、")} で同方向の動き`;
   }
-  return `感応度が逆方向：${opposing
-    .map((o) => `${o.ja}（${o.a.toFixed(2)} ↔ ${o.b.toFixed(2)}）`)
+  return `感応度が逆方向:${opposing
+    .map((o) => `${o.ja}(${o.a.toFixed(2)} ↔ ${o.b.toFixed(2)})`)
     .join("、")}`;
 }
 
@@ -243,14 +260,15 @@ export function similarStocksByBusiness(
     .slice(0, top);
 }
 
-// D 軸：類似と補完を両方返す（補完が中級以上への訴求）
+// D 軸:類似と補完を両方返す(補完が中級以上への訴求)
 export function riskComplementStocks(
   self: Stock,
   pool: Stock[],
   top = 4,
 ): SimilarStock[] {
+  if (!self.factorBetas) return [];
   return pool
-    .filter((s) => s.code !== self.code)
+    .filter((s) => s.code !== self.code && s.factorBetas !== null)
     .map((s) => ({
       stock: s,
       score: factorComplementarity(self, s),
@@ -265,8 +283,9 @@ export function riskSimilarStocks(
   pool: Stock[],
   top = 4,
 ): SimilarStock[] {
+  if (!self.factorBetas) return [];
   return pool
-    .filter((s) => s.code !== self.code)
+    .filter((s) => s.code !== self.code && s.factorBetas !== null)
     .map((s) => ({
       stock: s,
       score: factorSimilarity(self, s),

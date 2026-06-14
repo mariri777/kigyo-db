@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Prediction } from "@/lib/predictions";
-import { getVotes, getStats, clearAll, type Votes, type Stats } from "@/lib/voteStore";
+import type { Prediction } from "@/content/predictions";
+import { getVotes, getStats, clearAll, type Votes, type Stats } from "@/shared/client/voteStore";
 import { PredictionListItem } from "@/components/PredictionListItem";
 
 /**

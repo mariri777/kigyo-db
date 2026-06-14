@@ -2,31 +2,28 @@ import type { StockBrief } from "./types";
 
 /**
  * 業界横断ファンネル(スクリーン)の定義。
- * 全 3,572 銘柄(StockBrief)を対象に、PER/配当利回り/時価総額など stocks テーブルで取れるフィールドで抽出する。
- *
- * Note: 旧スクリーン(割安判定/拡大期/高 ROE/高利益率/高成長)は AI 生成データ・財務時系列を必要としていたため、
- *       全銘柄対応の seed が整うまで一時的に削除している。
- *       将来 company_financials_quarterly が seed されたら復活する。
+ * 全 3,572 銘柄(StockBrief)を対象に、PER/配当利回り/時価総額など stocks テーブルで取れる
+ * フィールドで抽出する。これらは Yahoo Finance 未収録銘柄では null なので、
+ * フィルタ/ソートは必ず null チェックを通す。
  */
 export type Screen = {
   slug: string;
-  /** ページタイトル */
   title: string;
-  /** カードや一覧で使う短いタイトル */
   shortTitle: string;
-  /** イントロ説明 */
   description: string;
-  /** 抽出方法(透明性 + SEO) */
   methodology: string;
-  /** SEO 用 meta description(短く) */
   metaDescription: string;
-  /** 強調表示するカラム */
   emphasis: "per" | "pbr" | "dividendYield" | "marketCap";
-  /** 抽出 predicate(true で対象) */
   filter: (s: StockBrief) => boolean;
-  /** ソート(昇順/降順) */
   sort: (a: StockBrief, b: StockBrief) => number;
 };
+
+/** ソート用に null を「最も不利な位置」へ落とす。昇順なら +∞、降順なら -∞ 扱い。 */
+function nullsLast(v: number | null, ascending: boolean): number {
+  if (v === null)
+    return ascending ? Number.POSITIVE_INFINITY : Number.NEGATIVE_INFINITY;
+  return v;
+}
 
 export const screens: Screen[] = [
   {
@@ -40,8 +37,9 @@ export const screens: Screen[] = [
     metaDescription:
       "配当利回り 3% 以上の高配当銘柄一覧。インカム狙いの投資先候補。",
     emphasis: "dividendYield",
-    filter: (s) => s.dividendYield >= 3.0,
-    sort: (a, b) => b.dividendYield - a.dividendYield,
+    filter: (s) => s.dividendYield !== null && s.dividendYield >= 3.0,
+    sort: (a, b) =>
+      nullsLast(b.dividendYield, false) - nullsLast(a.dividendYield, false),
   },
   {
     slug: "low-per",
@@ -54,8 +52,8 @@ export const screens: Screen[] = [
     metaDescription:
       "PER 15 倍以下の低 PER 銘柄一覧。利益に対して株価が抑制されている企業群。",
     emphasis: "per",
-    filter: (s) => s.per > 0 && s.per <= 15,
-    sort: (a, b) => a.per - b.per,
+    filter: (s) => s.per !== null && s.per > 0 && s.per <= 15,
+    sort: (a, b) => nullsLast(a.per, true) - nullsLast(b.per, true),
   },
   {
     slug: "low-pbr",
@@ -68,8 +66,8 @@ export const screens: Screen[] = [
     metaDescription:
       "PBR 1.0 倍以下の低 PBR 銘柄一覧。簿価ベースで割安水準の企業群。",
     emphasis: "pbr",
-    filter: (s) => s.pbr > 0 && s.pbr <= 1.0,
-    sort: (a, b) => a.pbr - b.pbr,
+    filter: (s) => s.pbr !== null && s.pbr > 0 && s.pbr <= 1.0,
+    sort: (a, b) => nullsLast(a.pbr, true) - nullsLast(b.pbr, true),
   },
   {
     slug: "mega-cap",
@@ -79,11 +77,11 @@ export const screens: Screen[] = [
       "時価総額 1 兆円以上の銘柄。日本を代表する大型企業群。流動性が高く、機関投資家のポートフォリオに組み込まれやすい。",
     methodology:
       "時価総額 10,000 億円(1 兆円)以上を抽出条件として、時価総額の大きい順に並べています。",
-    metaDescription:
-      "時価総額 1 兆円以上の日本の大型株一覧。",
+    metaDescription: "時価総額 1 兆円以上の日本の大型株一覧。",
     emphasis: "marketCap",
-    filter: (s) => s.marketCapOku >= 10000,
-    sort: (a, b) => b.marketCapOku - a.marketCapOku,
+    filter: (s) => s.marketCapOku !== null && s.marketCapOku >= 10000,
+    sort: (a, b) =>
+      nullsLast(b.marketCapOku, false) - nullsLast(a.marketCapOku, false),
   },
 ];
 

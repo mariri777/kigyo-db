@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { Industry } from "@/lib/industries";
-import { formatTrillionFromOku } from "@/lib/format";
+import type { Industry } from "@/content/industries";
+import { formatTrillionFromOku } from "@/shared/format";
 
 type Coverage = {
   industry: Industry;

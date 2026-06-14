@@ -1,4 +1,4 @@
-import type { Block } from "@/lib/posts";
+import type { Block } from "@/content/posts";
 import { Disclose } from "@/components/Disclose";
 
 function renderBlock(b: Block, key: string) {

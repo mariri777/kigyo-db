@@ -1,4 +1,4 @@
-import type { Stock } from "./types";
+import type { Stock } from "@/domain/types";
 
 // 半導体クラスタ Tier 1 のモックデータ。
 // 数値は設計プロトタイプ用の代表的なオーダー感で、実データではない。

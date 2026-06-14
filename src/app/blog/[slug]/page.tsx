@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CATEGORY_LABEL, getPost, listPosts } from "@/lib/posts";
-import { getStockBrief } from "@/lib/stocksRepo";
-import { getIndustry } from "@/lib/industries";
+import { CATEGORY_LABEL, getPost, listPosts } from "@/content/posts";
+import { getStockBrief } from "@/server/usecase";
+import { getIndustry } from "@/content/industries";
 import { PostContent } from "@/components/PostContent";
 import { PostCard } from "@/components/PostCard";
-import { formatJaDate } from "@/lib/format";
-import type { StockBrief } from "@/lib/types";
+import { formatJaDate } from "@/shared/format";
+import type { StockBrief } from "@/domain/types";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -18,8 +18,26 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const p = getPost(slug);
-  if (!p) return { title: "見つかりません" };
-  return { title: p.title, description: p.lede };
+  if (!p) return { title: "見つかりません", robots: { index: false, follow: false } };
+  const url = `/blog/${p.slug}`;
+  return {
+    title: p.title,
+    description: p.lede,
+    keywords: [CATEGORY_LABEL[p.category], "ブログ", "決算分析", "業界ウォッチ"],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: p.title,
+      description: p.lede,
+      url,
+      siteName: "超!企業DB",
+      publishedTime: p.publishedAt,
+      modifiedTime: p.publishedAt,
+      authors: [p.author === "ai-editor" ? "AI + 編集部レビュー" : "編集部"],
+      tags: [CATEGORY_LABEL[p.category]],
+    },
+    twitter: { card: "summary_large_image", title: p.title, description: p.lede },
+  };
 }
 
 export default async function PostPage({
@@ -39,9 +57,54 @@ export default async function PostPage({
     .filter((s): s is NonNullable<ReturnType<typeof getIndustry>> => Boolean(s));
 
   const others = listPosts().filter((p) => p.slug !== post.slug).slice(0, 3);
+  const postJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
+        { "@type": "ListItem", position: 2, name: "ブログ", item: "https://kigyo.cho-super.com/blog" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: post.title,
+          item: `https://kigyo.cho-super.com/blog/${post.slug}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Article",
+      headline: post.title,
+      description: post.lede,
+      url: `https://kigyo.cho-super.com/blog/${post.slug}`,
+      datePublished: post.publishedAt,
+      dateModified: post.publishedAt,
+      inLanguage: "ja",
+      articleSection: CATEGORY_LABEL[post.category],
+      keywords: [CATEGORY_LABEL[post.category], "投資", "銘柄分析"].join(", "),
+      author: {
+        "@type": "Organization",
+        name: post.author === "ai-editor" ? "超!企業DB 編集部(AI + レビュー)" : "超!企業DB 編集部",
+      },
+      publisher: {
+        "@type": "Organization",
+        name: "超!企業DB",
+        logo: { "@type": "ImageObject", url: "https://kigyo.cho-super.com/icon" },
+      },
+      mainEntityOfPage: {
+        "@type": "WebPage",
+        "@id": `https://kigyo.cho-super.com/blog/${post.slug}`,
+      },
+    },
+  ];
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(postJsonLd) }}
+      />
       <Link
         href="/blog"
         className="inline-block text-xs text-muted hover:text-foreground transition mb-8"

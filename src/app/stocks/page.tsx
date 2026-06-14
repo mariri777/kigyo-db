@@ -1,13 +1,21 @@
-import { listStockBriefs } from "@/lib/stocksRepo";
-import { industries } from "@/lib/industries";
+import type { Metadata } from "next";
+import { listStockBriefs } from "@/server/usecase";
+import { industries } from "@/content/industries";
 import { StockTable } from "@/components/StockTable";
 
-export const metadata = {
-  title: "銘柄一覧 — 業界・指標で絞り込む",
-  description:
-    "東証上場銘柄を業界・指標で絞り込み。現在 10 業界 + 全 3,572 社をカバー。",
+const title = "銘柄一覧 — 業界・指標で絞り込む";
+const description =
+  "東証上場銘柄を業界・PER・PBR・配当利回り・時価総額で絞り込み、並び替え。事業構造タグ・類似銘柄・AI 評価に 1 クリックでジャンプ。";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  keywords: ["銘柄一覧", "東証", "PER", "PBR", "配当利回り", "高配当", "時価総額", "スクリーニング"],
+  alternates: { canonical: "/stocks" },
+  openGraph: { title, description, url: "/stocks", type: "website" },
+  twitter: { card: "summary_large_image", title, description },
 };
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export default async function StocksListPage() {
   const stocks = await listStockBriefs();

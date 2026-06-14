@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { Stock } from "@/lib/types";
-import { formatPct1, formatSignedPct1 } from "@/lib/format";
+import type { Stock } from "@/domain/types";
+import { formatPct1Opt, formatSignedPct1Opt, formatPerOpt } from "@/shared/format";
 import { HighlightCard } from "./HighlightCard";
 
 export function ExpansionSection({ stocks }: { stocks: Stock[] }) {
@@ -45,13 +45,19 @@ export function ExpansionSection({ stocks }: { stocks: Stock[] }) {
               {
                 label: "売上成長",
                 value: (
-                  <span className={s.revenueGrowth3y >= 0 ? "text-positive" : "text-negative"}>
-                    {formatSignedPct1(s.revenueGrowth3y)}
+                  <span
+                    className={
+                      s.revenueGrowth3y !== null && s.revenueGrowth3y >= 0
+                        ? "text-positive"
+                        : "text-negative"
+                    }
+                  >
+                    {formatSignedPct1Opt(s.revenueGrowth3y)}
                   </span>
                 ),
               },
-              { label: "営業利益率", value: formatPct1(s.operatingMargin) },
-              { label: "PER", value: s.per.toFixed(1) },
+              { label: "営業利益率", value: formatPct1Opt(s.operatingMargin) },
+              { label: "PER", value: formatPerOpt(s.per) },
             ]}
           />
         ))}

@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { applyScreen, getScreen, screens } from "@/lib/screens";
-import type { StockBrief } from "@/lib/types";
-import { listStockBriefs } from "@/lib/stocksRepo";
-import { formatPbr, formatPct1, formatPer, formatPrice } from "@/lib/format";
+import { applyScreen, getScreen, screens } from "@/domain/screens";
+import type { StockBrief } from "@/domain/types";
+import { listStockBriefs } from "@/server/usecase";
+import { formatPbrOpt, formatPct1Opt, formatPerOpt, formatPriceOpt } from "@/shared/format";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -15,10 +15,25 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const screen = getScreen(slug);
-  if (!screen) return { title: "見つかりません" };
+  if (!screen) return { title: "見つかりません", robots: { index: false, follow: false } };
+  const url = `/screens/${screen.slug}`;
   return {
     title: screen.title,
     description: screen.metaDescription,
+    keywords: ["スクリーニング", screen.shortTitle, "東証", screen.emphasis],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "article",
+      title: screen.title,
+      description: screen.metaDescription,
+      url,
+      siteName: "超!企業DB",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: screen.title,
+      description: screen.metaDescription,
+    },
   };
 }
 
@@ -34,9 +49,37 @@ export default async function ScreenPage({
   const all = await listStockBriefs();
   const matching = applyScreen(screen, all).slice(0, 100);
   const otherScreens = screens.filter((s) => s.slug !== screen.slug);
+  const screenJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
+        { "@type": "ListItem", position: 2, name: "スクリーン", item: "https://kigyo.cho-super.com/screens" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: screen.shortTitle,
+          item: `https://kigyo.cho-super.com/screens/${screen.slug}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: screen.title,
+      url: `https://kigyo.cho-super.com/screens/${screen.slug}`,
+      description: screen.metaDescription,
+      isPartOf: { "@type": "WebSite", name: "超!企業DB", url: "https://kigyo.cho-super.com" },
+    },
+  ];
 
   return (
     <article className="max-w-5xl mx-auto px-6 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(screenJsonLd) }}
+      />
       <Link
         href="/screens"
         className="inline-block text-xs text-muted hover:text-foreground transition mb-6"
@@ -120,13 +163,13 @@ export default async function ScreenPage({
                   {s.sectorTSE}
                 </div>
                 <div className="text-right tabular font-mono">
-                  {formatPrice(s.priceJpy)}
+                  {formatPriceOpt(s.priceJpy)}
                 </div>
                 <div className="text-right tabular font-mono">
-                  {s.per > 0 ? s.per.toFixed(1) : "—"}
+                  {formatPerOpt(s.per)}
                 </div>
                 <div className="text-right tabular font-mono">
-                  {s.pbr > 0 ? s.pbr.toFixed(2) : "—"}
+                  {formatPbrOpt(s.pbr)}
                 </div>
                 <div className="text-right tabular font-mono">
                   <EmphasisCell stock={s} emphasis={screen.emphasis} />
@@ -186,17 +229,19 @@ function EmphasisCell({
 }) {
   switch (emphasis) {
     case "per":
-      return <span className="font-bold">{formatPer(stock.per)}</span>;
+      return <span className="font-bold">{formatPerOpt(stock.per)}</span>;
     case "pbr":
-      return <span className="font-bold">{formatPbr(stock.pbr)}</span>;
+      return <span className="font-bold">{formatPbrOpt(stock.pbr)}</span>;
     case "dividendYield":
       return (
-        <span className="font-bold">{formatPct1(stock.dividendYield)}</span>
+        <span className="font-bold">{formatPct1Opt(stock.dividendYield)}</span>
       );
     case "marketCap":
       return (
         <span className="font-bold">
-          {stock.marketCapOku.toLocaleString()}億
+          {stock.marketCapOku === null
+            ? "—"
+            : `${stock.marketCapOku.toLocaleString()}億`}
         </span>
       );
     default:

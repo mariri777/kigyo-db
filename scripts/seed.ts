@@ -31,7 +31,7 @@ import {
   parseFloatOrNull,
   emptyToNull,
 } from "./lib/csv.js";
-import * as schema from "../src/db/schema.js";
+import * as schema from "../src/server/db/schema.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SEED_DIR = join(ROOT, "scripts/seed");

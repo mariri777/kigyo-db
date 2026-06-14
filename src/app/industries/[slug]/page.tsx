@@ -5,16 +5,17 @@ import {
   getIndustry,
   getStocksForCluster,
   industryAggregates,
-} from "@/lib/industries";
+} from "@/content/industries";
 import { Section } from "@/components/Section";
 import { AiBadge, AiDisclaimer } from "@/components/AiNotice";
 import { SourceList } from "@/components/SourceChip";
 import { Disclose } from "@/components/Disclose";
-import { postsForIndustry } from "@/lib/posts";
+import { postsForIndustry } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
-import { listStockBriefs } from "@/lib/stocksRepo";
+import { listStockBriefs } from "@/server/usecase";
+import { formatPbrOpt, formatPct1Opt, formatPerOpt, formatPriceOpt } from "@/shared/format";
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -23,10 +24,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const ind = getIndustry(slug);
-  if (!ind) return { title: "見つかりません" };
+  if (!ind) return { title: "見つかりません", robots: { index: false, follow: false } };
+  const title = `${ind.name}業界マップ — 競争構造・主要企業・投資論点`;
+  const description = `${ind.name}業界の競争構造、主要 KPI、見落とし論点、上場企業一覧。${ind.description.slice(0, 70)}`;
+  const url = `/industries/${ind.slug}`;
   return {
-    title: `${ind.name} — 業界マップ・主要企業・投資論点`,
-    description: `${ind.name}業界の競争構造、主要KPI、見落とし論点、上場企業一覧。${ind.description.slice(0, 80)}`,
+    title,
+    description,
+    keywords: [ind.name, "業界マップ", "競争構造", ...ind.theme2025.slice(0, 4)],
+    alternates: { canonical: url },
+    openGraph: { type: "article", title, description, url, siteName: "超!企業DB" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -42,9 +50,38 @@ export default async function IndustryPage({
   const briefsByCode = new Map((await listStockBriefs()).map((b) => [b.code, b]));
   const agg = industryAggregates(industry, briefsByCode);
   const relatedPosts = postsForIndustry(industry.slug).slice(0, 3);
+  const industryJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
+        { "@type": "ListItem", position: 2, name: "業界マップ", item: "https://kigyo.cho-super.com/industries" },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: industry.name,
+          item: `https://kigyo.cho-super.com/industries/${industry.slug}`,
+        },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "CollectionPage",
+      name: `${industry.name}業界マップ`,
+      url: `https://kigyo.cho-super.com/industries/${industry.slug}`,
+      description: industry.description.slice(0, 160),
+      isPartOf: { "@type": "WebSite", name: "超!企業DB", url: "https://kigyo.cho-super.com" },
+      about: { "@type": "Thing", name: industry.name },
+    },
+  ];
 
   return (
     <article className="max-w-6xl mx-auto px-6 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(industryJsonLd) }}
+      />
       {/* ===== Hero ===== */}
       <header className="border-b border-border pb-10 mb-12">
         <p className="text-muted text-xs font-bold tracking-[0.2em] uppercase mb-4">
@@ -332,11 +369,11 @@ export default async function IndustryPage({
                         <div className="text-[11px] text-muted line-clamp-1">{s.sectorTSE}</div>
                       </div>
                       <div className="text-right tabular font-mono">
-                        ¥{s.priceJpy.toLocaleString()}
+                        {formatPriceOpt(s.priceJpy)}
                       </div>
-                      <div className="text-right tabular font-mono">{s.per.toFixed(1)}</div>
-                      <div className="text-right tabular font-mono">{s.pbr.toFixed(2)}</div>
-                      <div className="text-right tabular font-mono">{s.dividendYield.toFixed(2)}%</div>
+                      <div className="text-right tabular font-mono">{formatPerOpt(s.per)}</div>
+                      <div className="text-right tabular font-mono">{formatPbrOpt(s.pbr)}</div>
+                      <div className="text-right tabular font-mono">{formatPct1Opt(s.dividendYield)}</div>
                     </Link>
                   ))}
                 </div>

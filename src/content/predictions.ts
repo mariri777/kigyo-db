@@ -8,7 +8,7 @@
  * 各質問には「見るべきポイント」「考え方のフレーム」「過去パターン」「AI 推論」「用語」が紐づき、
  * 結果が出ると「教訓」が追加される。
  */
-import type { Source } from "./types";
+import type { Source } from "@/domain/types";
 
 export type PredictionStatus = "live" | "upcoming" | "resolved";
 

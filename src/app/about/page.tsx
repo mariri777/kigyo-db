@@ -1,4 +1,16 @@
-export const metadata = { title: "超！企業DBとは — 設計思想と提供価値" };
+import type { Metadata } from "next";
+
+const aboutTitle = "超!企業DBとは — 設計思想と提供価値";
+const aboutDescription =
+  "個人投資家のための、AI ネイティブな銘柄分析サービス。類似銘柄エンジン・見落とし論点抽出・業界マップ動的生成という独自のコア機能と、信頼性の三層構造を解説。";
+
+export const metadata: Metadata = {
+  title: aboutTitle,
+  description: aboutDescription,
+  alternates: { canonical: "/about" },
+  openGraph: { title: aboutTitle, description: aboutDescription, url: "/about", type: "website" },
+  twitter: { card: "summary_large_image", title: aboutTitle, description: aboutDescription },
+};
 
 export default function AboutPage() {
   return (

@@ -1,13 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { listThemes, pickedStocksForTheme } from "@/lib/themes";
-import { listOverlayStocks } from "@/lib/stocksRepo";
+import { listThemes, pickedStocksForTheme } from "@/content/themes";
+import { listOverlayStocks } from "@/server/usecase";
 
-export const metadata = {
-  title: "特集 — 業界横断テーマ別の銘柄キュレーション",
-  description:
-    "円安・AI 受益・金利上昇・訪日インバウンド・累進配当・PBR 改善など、マクロ・テーマ別に業界横断で銘柄をキュレーション。",
+const title = "特集 — 業界横断テーマ別の銘柄キュレーション";
+const description =
+  "円安・AI 受益・金利上昇・訪日インバウンド・累進配当・PBR 改善 — マクロ・テーマ別に業界横断で銘柄をキュレーション。各特集は推奨銘柄 + ファクターランキング + 関連業界の三層構成。";
+
+export const metadata: Metadata = {
+  title,
+  description,
+  keywords: ["特集", "テーマ投資", "円安", "AI 関連", "高配当", "PBR 改善", "インバウンド"],
+  alternates: { canonical: "/themes" },
+  openGraph: { title, description, url: "/themes", type: "website" },
+  twitter: { card: "summary_large_image", title, description },
 };
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export default async function ThemesHub() {
   const themes = listThemes();

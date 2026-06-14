@@ -1,6 +1,6 @@
 import Link from "next/link";
-import type { Stock } from "@/lib/types";
-import { formatPct1 } from "@/lib/format";
+import type { Stock } from "@/domain/types";
+import { formatPct1Opt, formatPerOpt } from "@/shared/format";
 import { HighlightCard } from "./HighlightCard";
 
 export function UndervaluedSection({ stocks }: { stocks: Stock[] }) {
@@ -37,14 +37,16 @@ export function UndervaluedSection({ stocks }: { stocks: Stock[] }) {
             key={s.code}
             stock={s}
             badge={
-              <span className="text-[10px] text-positive border border-positive/40 bg-positive/10 rounded px-1.5 py-0.5">
-                {s.valuationCall.verdict}
-              </span>
+              s.valuationCall ? (
+                <span className="text-[10px] text-positive border border-positive/40 bg-positive/10 rounded px-1.5 py-0.5">
+                  {s.valuationCall.verdict}
+                </span>
+              ) : null
             }
             metrics={[
-              { label: "PER", value: s.per.toFixed(1) },
-              { label: "配当", value: formatPct1(s.dividendYield) },
-              { label: "ROE", value: formatPct1(s.roe) },
+              { label: "PER", value: formatPerOpt(s.per) },
+              { label: "配当", value: formatPct1Opt(s.dividendYield) },
+              { label: "ROE", value: formatPct1Opt(s.roe) },
             ]}
           />
         ))}

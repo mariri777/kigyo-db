@@ -3,18 +3,19 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Stock } from "@/lib/types";
-import { analyzeComparison, type ComparisonObservation } from "@/lib/compare";
-import { VERDICT_STYLE } from "@/lib/verdict";
+import type { Stock } from "@/domain/types";
+import { analyzeComparison, type ComparisonObservation } from "@/domain/compare";
+import { VERDICT_STYLE } from "@/domain/verdict";
 import {
   formatBeta,
-  formatPbr,
-  formatPct1,
-  formatPer,
-  formatPrice,
-  formatSignedPct1,
-  formatSignedPct2,
-} from "@/lib/format";
+  formatOkuOpt,
+  formatPbrOpt,
+  formatPct1Opt,
+  formatPerOpt,
+  formatPriceOpt,
+  formatSignedPct1Opt,
+  formatSignedPct2Opt,
+} from "@/shared/format";
 
 const MAX_COMPARE = 3;
 
@@ -210,16 +211,29 @@ function ComparisonGrid({
         <CompGrid stocks={stocks}>
           {(s) => (
             <div>
-              <div className="mb-3">
-                <span
-                  className={`inline-block text-xs font-bold border rounded-full px-3 py-1 ${VERDICT_STYLE[s.valuationCall.verdict]}`}
-                >
-                  {s.valuationCall.verdict}
-                </span>
-                <div className="text-[10px] text-dim mt-2 tracking-wider">割安度スコア</div>
-                <div className="text-2xl font-bold tabular">{s.valuationCall.score}<span className="text-[10px] text-dim ml-1 font-normal">/100</span></div>
-              </div>
-              <p className="text-[12px] text-muted leading-relaxed">{s.valuationCall.rationale}</p>
+              {s.valuationCall ? (
+                <>
+                  <div className="mb-3">
+                    <span
+                      className={`inline-block text-xs font-bold border rounded-full px-3 py-1 ${VERDICT_STYLE[s.valuationCall.verdict]}`}
+                    >
+                      {s.valuationCall.verdict}
+                    </span>
+                    <div className="text-[10px] text-dim mt-2 tracking-wider">
+                      割安度スコア
+                    </div>
+                    <div className="text-2xl font-bold tabular">
+                      {s.valuationCall.score}
+                      <span className="text-[10px] text-dim ml-1 font-normal">/100</span>
+                    </div>
+                  </div>
+                  <p className="text-[12px] text-muted leading-relaxed">
+                    {s.valuationCall.rationale}
+                  </p>
+                </>
+              ) : (
+                <div className="text-[12px] text-dim">判断データ未取得</div>
+              )}
             </div>
           )}
         </CompGrid>
@@ -229,15 +243,42 @@ function ComparisonGrid({
       <CompSection title="数値指標">
         <CompTable
           rows={[
-            { label: "株価", get: (s) => formatPrice(s.priceJpy) },
-            { label: "前日比", get: (s) => formatSignedPct2(s.changePct), tone: (s) => (s.changePct >= 0 ? "positive" : "negative") },
-            { label: "時価総額", get: (s) => `${s.marketCapOku.toLocaleString()} 億円` },
-            { label: "PER", get: (s) => formatPer(s.per), highlight: highlightMin("per") },
-            { label: "PBR", get: (s) => formatPbr(s.pbr), highlight: highlightMin("pbr") },
-            { label: "配当利回り", get: (s) => formatPct1(s.dividendYield), highlight: highlightMax("dividendYield") },
-            { label: "ROE", get: (s) => formatPct1(s.roe), highlight: highlightMax("roe") },
-            { label: "営業利益率", get: (s) => formatPct1(s.operatingMargin), highlight: highlightMax("operatingMargin") },
-            { label: "売上 3 年 CAGR", get: (s) => formatSignedPct1(s.revenueGrowth3y), tone: (s) => (s.revenueGrowth3y >= 0 ? "positive" : "negative"), highlight: highlightMax("revenueGrowth3y") },
+            { label: "株価", get: (s) => formatPriceOpt(s.priceJpy) },
+            {
+              label: "前日比",
+              get: (s) => formatSignedPct2Opt(s.changePct),
+              tone: (s) =>
+                s.changePct === null
+                  ? undefined
+                  : s.changePct >= 0
+                    ? "positive"
+                    : "negative",
+            },
+            { label: "時価総額", get: (s) => formatOkuOpt(s.marketCapOku) },
+            { label: "PER", get: (s) => formatPerOpt(s.per), highlight: highlightMinNullable("per") },
+            { label: "PBR", get: (s) => formatPbrOpt(s.pbr), highlight: highlightMinNullable("pbr") },
+            {
+              label: "配当利回り",
+              get: (s) => formatPct1Opt(s.dividendYield),
+              highlight: highlightMaxNullable("dividendYield"),
+            },
+            { label: "ROE", get: (s) => formatPct1Opt(s.roe), highlight: highlightMaxNullable("roe") },
+            {
+              label: "営業利益率",
+              get: (s) => formatPct1Opt(s.operatingMargin),
+              highlight: highlightMaxNullable("operatingMargin"),
+            },
+            {
+              label: "売上 3 年 CAGR",
+              get: (s) => formatSignedPct1Opt(s.revenueGrowth3y),
+              tone: (s) =>
+                s.revenueGrowth3y === null
+                  ? undefined
+                  : s.revenueGrowth3y >= 0
+                    ? "positive"
+                    : "negative",
+              highlight: highlightMaxNullable("revenueGrowth3y"),
+            },
           ]}
           stocks={stocks}
         />
@@ -247,27 +288,27 @@ function ComparisonGrid({
       <CompSection title="成長フェーズ">
         <CompTable
           rows={[
-            { label: "ローンチ期", get: (s) => `${s.phaseScores.launch}`, highlight: highlightMaxPhase("launch") },
-            { label: "拡大期", get: (s) => `${s.phaseScores.expansion}`, highlight: highlightMaxPhase("expansion") },
-            { label: "成熟期", get: (s) => `${s.phaseScores.mature}`, highlight: highlightMaxPhase("mature") },
-            { label: "衰退期", get: (s) => `${s.phaseScores.decline}`, highlight: highlightMaxPhase("decline") },
+            { label: "ローンチ期", get: (s) => s.phaseScores ? `${s.phaseScores.launch}` : "—", highlight: highlightMaxPhase("launch") },
+            { label: "拡大期", get: (s) => s.phaseScores ? `${s.phaseScores.expansion}` : "—", highlight: highlightMaxPhase("expansion") },
+            { label: "成熟期", get: (s) => s.phaseScores ? `${s.phaseScores.mature}` : "—", highlight: highlightMaxPhase("mature") },
+            { label: "衰退期", get: (s) => s.phaseScores ? `${s.phaseScores.decline}` : "—", highlight: highlightMaxPhase("decline") },
           ]}
           stocks={stocks}
         />
       </CompSection>
 
       {/* ファクター感応度 */}
-      <CompSection title="ファクター感応度（ベータ）">
+      <CompSection title="ファクター感応度(ベータ)">
         <CompTable
           rows={[
-            { label: "ドル円", get: (s) => formatBeta(s.factorBetas.usdjpy), tone: (s) => signTone(s.factorBetas.usdjpy) },
-            { label: "米 10 年金利", get: (s) => formatBeta(s.factorBetas.us10y), tone: (s) => signTone(s.factorBetas.us10y) },
-            { label: "SOX", get: (s) => formatBeta(s.factorBetas.sox), tone: (s) => signTone(s.factorBetas.sox) },
-            { label: "中国経済", get: (s) => formatBeta(s.factorBetas.china), tone: (s) => signTone(s.factorBetas.china) },
-            { label: "市場ベータ", get: (s) => formatBeta(s.factorBetas.market), tone: (s) => signTone(s.factorBetas.market) },
-            { label: "サイズ", get: (s) => formatBeta(s.factorBetas.size), tone: (s) => signTone(s.factorBetas.size) },
-            { label: "バリュー", get: (s) => formatBeta(s.factorBetas.value), tone: (s) => signTone(s.factorBetas.value) },
-            { label: "モメンタム", get: (s) => formatBeta(s.factorBetas.momentum), tone: (s) => signTone(s.factorBetas.momentum) },
+            { label: "ドル円", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.usdjpy) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.usdjpy) : undefined },
+            { label: "米 10 年金利", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.us10y) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.us10y) : undefined },
+            { label: "SOX", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.sox) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.sox) : undefined },
+            { label: "中国経済", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.china) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.china) : undefined },
+            { label: "市場ベータ", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.market) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.market) : undefined },
+            { label: "サイズ", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.size) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.size) : undefined },
+            { label: "バリュー", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.value) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.value) : undefined },
+            { label: "モメンタム", get: (s) => s.factorBetas ? formatBeta(s.factorBetas.momentum) : "—", tone: (s) => s.factorBetas ? signTone(s.factorBetas.momentum) : undefined },
           ]}
           stocks={stocks}
         />
@@ -401,30 +442,45 @@ function signTone(v: number): "positive" | "negative" | undefined {
   return undefined;
 }
 
-function highlightMax(key: keyof Stock): (stocks: Stock[]) => string | undefined {
+/** number | null フィールドを対象にした max ハイライト。null の銘柄は除外。 */
+function highlightMaxNullable(
+  key: keyof Stock,
+): (stocks: Stock[]) => string | undefined {
   return (stocks) => {
     if (stocks.length < 2) return undefined;
-    const sorted = [...stocks].sort(
-      (a, b) => (b[key] as number) - (a[key] as number)
-    );
-    return sorted[0].code;
+    const valued = stocks
+      .map((s) => ({ s, v: s[key] as unknown }))
+      .filter((x): x is { s: Stock; v: number } => typeof x.v === "number");
+    if (valued.length < 2) return undefined;
+    valued.sort((a, b) => b.v - a.v);
+    return valued[0].s.code;
   };
 }
 
-function highlightMin(key: keyof Stock): (stocks: Stock[]) => string | undefined {
+function highlightMinNullable(
+  key: keyof Stock,
+): (stocks: Stock[]) => string | undefined {
   return (stocks) => {
     if (stocks.length < 2) return undefined;
-    const sorted = [...stocks].sort(
-      (a, b) => (a[key] as number) - (b[key] as number)
-    );
-    return sorted[0].code;
+    const valued = stocks
+      .map((s) => ({ s, v: s[key] as unknown }))
+      .filter((x): x is { s: Stock; v: number } => typeof x.v === "number");
+    if (valued.length < 2) return undefined;
+    valued.sort((a, b) => a.v - b.v);
+    return valued[0].s.code;
   };
 }
 
-function highlightMaxPhase(phase: "launch" | "expansion" | "mature" | "decline") {
+function highlightMaxPhase(
+  phase: "launch" | "expansion" | "mature" | "decline",
+) {
   return (stocks: Stock[]) => {
     if (stocks.length < 2) return undefined;
-    const sorted = [...stocks].sort((a, b) => b.phaseScores[phase] - a.phaseScores[phase]);
-    return sorted[0].code;
+    const valued = stocks
+      .map((s) => ({ s, v: s.phaseScores?.[phase] }))
+      .filter((x): x is { s: Stock; v: number } => typeof x.v === "number");
+    if (valued.length < 2) return undefined;
+    valued.sort((a, b) => b.v - a.v);
+    return valued[0].s.code;
   };
 }

@@ -1,9 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { industries, industryAggregates } from "@/lib/industries";
-import { listStockBriefs } from "@/lib/stocksRepo";
+import { industries, industryAggregates } from "@/content/industries";
+import { listStockBriefs } from "@/server/usecase";
 
-export const metadata = { title: "業界マップ — 業界ごとの徹底分析" };
-export const revalidate = 1800;
+const title = "業界マップ — 業界ごとの徹底分析";
+const description = `バリューチェーン・競争構造・主要 KPI・見落とし論点を業界別に深掘り。現在 ${industries.length} 業界をカバー。`;
+
+export const metadata: Metadata = {
+  title,
+  description,
+  keywords: ["業界マップ", "バリューチェーン", "競争構造", "業界分析", "サブクラスタ", "業界 KPI"],
+  alternates: { canonical: "/industries" },
+  openGraph: { title, description, url: "/industries", type: "website" },
+  twitter: { card: "summary_large_image", title, description },
+};
+export const dynamic = "force-dynamic";
 
 const COMING_SOON: { name: string; note: string }[] = [];
 

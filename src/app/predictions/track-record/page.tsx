@@ -5,15 +5,22 @@ import {
   trackRecordByEventType,
   trackRecordByConfidence,
   allResolvedPredictions,
-} from "@/lib/predictions";
-import type { TrackRecordRow } from "@/lib/predictions";
-import { eventLabelJa } from "@/lib/predictionLabels";
-import { formatIsoSlashDate } from "@/lib/format";
+} from "@/content/predictions";
+import type { TrackRecordRow } from "@/content/predictions";
+import { eventLabelJa } from "@/shared/predictionLabels";
+import { formatIsoSlashDate } from "@/shared/format";
+
+const trackTitle = "AI 予測の的中率 — 透明性ダッシュボード";
+const trackDescription =
+  "超!企業DB の AI 予測がどれくらい当たっているのか。イベント種別・確信度別の的中率を全公開。外しも隠さず、累積で検証可能に。";
 
 export const metadata: Metadata = {
-  title: "AI 予測の的中率 — 透明性ダッシュボード",
-  description:
-    "超！企業DB の AI 予測が、どれくらい当たっているのか。イベント種別・確信度別の的中率を全公開。外しも隠さず、累積で検証可能に。",
+  title: trackTitle,
+  description: trackDescription,
+  keywords: ["AI 予測", "的中率", "予測精度", "確信度別", "イベント別"],
+  alternates: { canonical: "/predictions/track-record" },
+  openGraph: { title: trackTitle, description: trackDescription, url: "/predictions/track-record", type: "website" },
+  twitter: { card: "summary_large_image", title: trackTitle, description: trackDescription },
 };
 
 export default function TrackRecordPage() {

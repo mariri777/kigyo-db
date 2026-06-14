@@ -6,9 +6,9 @@ import type {
   Prediction,
   PredictionChoice,
   DisclosureDetail,
-} from "@/lib/predictions";
-import { eventLabelFull } from "@/lib/predictionLabels";
-import { formatShortDateTime, formatTimeHms } from "@/lib/format";
+} from "@/content/predictions";
+import { eventLabelFull } from "@/shared/predictionLabels";
+import { formatShortDateTime, formatTimeHms } from "@/shared/format";
 
 /**
  * 予測カード = 学習カード。

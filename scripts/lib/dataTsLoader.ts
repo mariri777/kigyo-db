@@ -8,15 +8,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 // 動的 import で型を効かせる
 export async function loadDataTs() {
-  const mod = (await import(join(ROOT, "src/lib/data.ts"))) as typeof import(
-    "../../src/lib/data"
+  const mod = (await import(join(ROOT, "src/content/data.ts"))) as typeof import(
+    "../../src/content/data"
   );
   return mod;
 }
 
 export async function loadIndustriesTs() {
-  const mod = (await import(join(ROOT, "src/lib/industries.ts"))) as typeof import(
-    "../../src/lib/industries"
+  const mod = (await import(join(ROOT, "src/content/industries.ts"))) as typeof import(
+    "../../src/content/industries"
   );
   return mod;
 }

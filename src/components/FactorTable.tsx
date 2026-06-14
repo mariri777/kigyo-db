@@ -1,4 +1,4 @@
-import type { FactorBetas } from "@/lib/types";
+import type { FactorBetas } from "@/domain/types";
 
 const FACTORS: { key: keyof FactorBetas; label: string; desc: string }[] = [
   { key: "usdjpy", label: "ドル円", desc: "円安 +1σ で株価がどれだけ反応するか" },
@@ -31,7 +31,20 @@ function BetaBar({ value }: { value: number }) {
   );
 }
 
-export function FactorTable({ betas, period }: { betas: FactorBetas; period: string }) {
+export function FactorTable({
+  betas,
+  period,
+}: {
+  betas: FactorBetas | null;
+  period: string;
+}) {
+  if (!betas) {
+    return (
+      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+        この銘柄のファクター感応度はまだ算出されていません。
+      </div>
+    );
+  }
   return (
     <div>
       <div className="text-[11px] text-dim mb-3">期間：{period}</div>

@@ -33,8 +33,12 @@ function deterministicJitter(code: string, year: number, kind: number): number {
 /**
  * 銘柄の 5 年業績履歴を、現状値と 3 年 CAGR から決定的に生成する。
  * 本番では EDINET XBRL から実データを取得する想定。
+ * 必要データ(revenueGrowth3y / operatingMargin / segments)が無ければ null を返し、
+ * UI 側で「データ未取得」を表示する。
  */
-export function getStockHistory(stock: Stock): HistorySummary {
+export function getStockHistory(stock: Stock): HistorySummary | null {
+  if (stock.revenueGrowth3y === null || stock.operatingMargin === null) return null;
+  if (stock.segments.length === 0) return null;
   const currentRevenue = stock.segments.reduce((s, seg) => s + seg.revenueOku, 0) || 1;
   const cagrPct = stock.revenueGrowth3y;
   const cagr = 1 + cagrPct / 100;

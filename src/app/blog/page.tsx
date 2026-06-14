@@ -1,8 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { CATEGORY_LABEL, listPosts, type PostCategory } from "@/lib/posts";
+import { CATEGORY_LABEL, listPosts, type PostCategory } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
 
-export const metadata = { title: "ブログ — 投資の論点を日々追う" };
+const blogTitle = "ブログ — 投資の論点を日々追う";
+const blogDescription =
+  "決算分析・業界ウォッチ・テーマ解説・3 分でわかるシリーズ。AI が一次情報を読み込み、編集部がレビューしてから公開します。";
+
+export const metadata: Metadata = {
+  title: blogTitle,
+  description: blogDescription,
+  keywords: ["ブログ", "決算分析", "業界ウォッチ", "投資コラム", "プライマー"],
+  alternates: { canonical: "/blog" },
+  openGraph: { title: blogTitle, description: blogDescription, url: "/blog", type: "website" },
+  twitter: { card: "summary_large_image", title: blogTitle, description: blogDescription },
+};
 
 const CATEGORIES: PostCategory[] = ["earnings", "industry-watch", "analysis", "disclosure", "primer"];
 

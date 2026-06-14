@@ -1,16 +1,28 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { groupedPredictions } from "@/lib/predictions";
-import type { Prediction, PredictionBucket } from "@/lib/predictions";
+import { groupedPredictions } from "@/content/predictions";
+import type { Prediction, PredictionBucket } from "@/content/predictions";
 import { PredictionListItem } from "@/components/PredictionListItem";
 import { PredictionCard } from "@/components/PredictionCard";
 import { Term } from "@/components/Term";
-import { listStockBriefs } from "@/lib/stocksRepo";
+import { listStockBriefs } from "@/server/usecase";
+
+const predictionsTitle = "予測 — 結果で学ぶ確率思考";
+const predictionsDescription =
+  "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると「教訓」が追加されるミニ学習ユニットです。AI と編集部の的中率も累積で全公開。";
 
 export const metadata: Metadata = {
-  title: "予測 — 結果で学ぶ確率思考",
-  description:
-    "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると「教訓」が追加されるミニ学習ユニットです。",
+  title: predictionsTitle,
+  description: predictionsDescription,
+  keywords: ["予測", "確率思考", "決算予測", "適時開示", "マクロ", "AI 的中率"],
+  alternates: { canonical: "/predictions" },
+  openGraph: {
+    title: predictionsTitle,
+    description: predictionsDescription,
+    url: "/predictions",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image", title: predictionsTitle, description: predictionsDescription },
 };
 
 const BUCKET_LABEL: Record<
@@ -38,7 +50,7 @@ const BUCKET_ORDER: PredictionBucket[] = [
   "resolved",
 ];
 
-export const revalidate = 1800;
+export const dynamic = "force-dynamic";
 
 export default async function PredictionsHub() {
   const stockNameByCode = new Map(

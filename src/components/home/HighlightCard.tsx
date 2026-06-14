@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import type { Stock } from "@/lib/types";
+import type { Stock } from "@/domain/types";
 
 /** 「割安」「拡大期」ハイライト共通カード。Badge とメトリクス 3 つを描画。 */
 export function HighlightCard({

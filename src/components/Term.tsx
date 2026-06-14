@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { GLOSSARY } from "@/lib/glossary";
+import { GLOSSARY } from "@/shared/glossary";
 
 type Props = {
   /** 用語キー。指定しない場合は children のテキストをキーに使う */

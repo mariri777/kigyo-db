@@ -1,11 +1,19 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Disclose } from "@/components/Disclose";
 import { Term } from "@/components/Term";
 
-export const metadata = {
-  title: "ガイド — 投資を始めたばかりの方へ",
-  description:
-    "「超！企業DB」の使い方と、投資の基本指標をやさしく解説。これから投資を始める方への最初の入口。",
+const guideTitle = "ガイド — 投資を始めたばかりの方へ";
+const guideDescription =
+  "「超!企業DB」の使い方と、PER / PBR / 配当利回り / ROE など投資の基本指標をやさしく解説。これから投資を始める方への最初の入口。";
+
+export const metadata: Metadata = {
+  title: guideTitle,
+  description: guideDescription,
+  keywords: ["投資入門", "PER", "PBR", "ROE", "配当利回り", "用語解説"],
+  alternates: { canonical: "/guide" },
+  openGraph: { title: guideTitle, description: guideDescription, url: "/guide", type: "article" },
+  twitter: { card: "summary_large_image", title: guideTitle, description: guideDescription },
 };
 
 export default function GuidePage() {
