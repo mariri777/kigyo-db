@@ -3,6 +3,8 @@ import { Countdown } from "./Countdown";
 import { getStock } from "@/lib/data";
 import { daysFromToday } from "@/lib/predictions";
 import type { Prediction } from "@/lib/predictions";
+import { eventLabelShort } from "@/lib/predictionLabels";
+import { formatPredictionEventDate } from "@/lib/format";
 
 /**
  * ハブページ用のコンパクトな予測カード。
@@ -40,7 +42,7 @@ export function PredictionListItem({ prediction: p }: { prediction: Prediction }
               {p.status === "live" ? "🔴 LIVE" : isResolved ? "✓ Resolved" : "Upcoming"}
             </span>
             <span className="text-[10px] text-dim tracking-wide">
-              {eventLabel(p.eventType)}
+              {eventLabelShort(p.eventType)}
             </span>
             {stock && (
               <span className="text-[11px] text-muted">
@@ -101,7 +103,7 @@ export function PredictionListItem({ prediction: p }: { prediction: Prediction }
         <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-[11px]">
           <span className="text-dim">
             {isResolved ? "結果：" : days === 0 ? "本日" : days === 1 ? "明日" : `${days} 日後`}{" "}
-            <span className="text-muted">{formatDate(p.eventAt)}</span>
+            <span className="text-muted">{formatPredictionEventDate(p.eventAt)}</span>
           </span>
           {isResolved && p.resolution && (
             <span className="text-muted font-bold">{p.resolution.outcomeLabel.slice(0, 24)}</span>
@@ -112,20 +114,3 @@ export function PredictionListItem({ prediction: p }: { prediction: Prediction }
   );
 }
 
-function eventLabel(t: Prediction["eventType"]): string {
-  switch (t) {
-    case "earnings":
-      return "Earnings";
-    case "disclosure":
-      return "Disclosure";
-    case "macro":
-      return "Macro";
-    case "news":
-      return "News";
-  }
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}

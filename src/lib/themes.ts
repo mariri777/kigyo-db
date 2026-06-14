@@ -524,31 +524,54 @@ export function listThemes(): Theme[] {
   return themes;
 }
 
+export type RankBy = Theme["rankBy"];
+
+/** rankBy で示されたファクター値を返す。 */
+export function themeRankValue(s: Stock, rankBy: RankBy): number {
+  switch (rankBy) {
+    case "usdjpy":
+      return s.factorBetas.usdjpy;
+    case "us10y":
+      return s.factorBetas.us10y;
+    case "sox":
+      return s.factorBetas.sox;
+    case "china":
+      return s.factorBetas.china;
+    case "dividendYield":
+      return s.dividendYield;
+    case "pbr":
+      return s.pbr;
+    case "roe":
+      return s.roe;
+    case "valuationScore":
+      return s.valuationCall.score;
+  }
+}
+
+/** ランキング表で表示する文字列。rankBy ごとに桁数や単位が変わる。 */
+export function formatThemeRankValue(s: Stock, rankBy: RankBy): string {
+  const v = themeRankValue(s, rankBy);
+  switch (rankBy) {
+    case "usdjpy":
+    case "us10y":
+    case "sox":
+    case "china":
+      return v.toFixed(2);
+    case "dividendYield":
+    case "roe":
+      return `${v.toFixed(1)}%`;
+    case "pbr":
+      return `${v.toFixed(2)} 倍`;
+    case "valuationScore":
+      return `${v}/100`;
+  }
+}
+
 export function rankedStocksForTheme(theme: Theme): Stock[] {
   const filtered = stocks.filter(theme.rankFilter);
-  const getValue = (s: Stock): number => {
-    switch (theme.rankBy) {
-      case "usdjpy":
-        return s.factorBetas.usdjpy;
-      case "us10y":
-        return s.factorBetas.us10y;
-      case "sox":
-        return s.factorBetas.sox;
-      case "china":
-        return s.factorBetas.china;
-      case "dividendYield":
-        return s.dividendYield;
-      case "pbr":
-        return s.pbr;
-      case "roe":
-        return s.roe;
-      case "valuationScore":
-        return s.valuationCall.score;
-    }
-  };
   return filtered.sort((a, b) => {
-    const av = getValue(a);
-    const bv = getValue(b);
+    const av = themeRankValue(a, theme.rankBy);
+    const bv = themeRankValue(b, theme.rankBy);
     return theme.rankAsc ? av - bv : bv - av;
   });
 }

@@ -6,6 +6,7 @@ import { getStock } from "@/lib/data";
 import { getIndustry } from "@/lib/industries";
 import { PostContent } from "@/components/PostContent";
 import { PostCard } from "@/components/PostCard";
+import { formatJaDate } from "@/lib/format";
 
 export function generateStaticParams() {
   return allPosts.map((p) => ({ slug: p.slug }));
@@ -20,11 +21,6 @@ export async function generateMetadata({
   const p = getPost(slug);
   if (!p) return { title: "見つかりません" };
   return { title: p.title, description: p.lede };
-}
-
-function formatDate(d: string) {
-  const date = new Date(d + "T00:00:00+09:00");
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
 export default async function PostPage({
@@ -59,7 +55,7 @@ export default async function PostPage({
           <span className="text-foreground font-bold border border-foreground rounded-full px-2.5 py-0.5">
             {CATEGORY_LABEL[post.category]}
           </span>
-          <span className="text-dim">{formatDate(post.publishedAt)}</span>
+          <span className="text-dim">{formatJaDate(post.publishedAt)}</span>
           <span className="text-dim">·</span>
           <span className="text-dim">読了 {post.readTimeMin} 分</span>
           {post.author === "ai-editor" && (

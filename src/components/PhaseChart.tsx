@@ -1,11 +1,5 @@
 import type { PhaseScores } from "@/lib/types";
-
-const PHASES: { key: keyof PhaseScores; label: string }[] = [
-  { key: "launch", label: "ローンチ期" },
-  { key: "expansion", label: "拡大期" },
-  { key: "mature", label: "成熟期" },
-  { key: "decline", label: "衰退期" },
-];
+import { PHASES } from "@/lib/phase";
 
 export function PhaseChart({ scores, rationale }: { scores: PhaseScores; rationale: string }) {
   return (

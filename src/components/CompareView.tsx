@@ -6,15 +6,18 @@ import Link from "next/link";
 import { getStock, listStocks } from "@/lib/data";
 import type { Stock } from "@/lib/types";
 import { analyzeComparison, type ComparisonObservation } from "@/lib/compare";
+import { VERDICT_STYLE } from "@/lib/verdict";
+import {
+  formatBeta,
+  formatPbr,
+  formatPct1,
+  formatPer,
+  formatPrice,
+  formatSignedPct1,
+  formatSignedPct2,
+} from "@/lib/format";
 
 const MAX_COMPARE = 3;
-
-const VERDICT_STYLE: Record<string, string> = {
-  割安: "text-positive bg-positive/10 border-positive/30",
-  ほぼ妥当: "text-foreground bg-foreground/10 border-foreground/30",
-  やや割高: "text-negative/80 bg-negative/5 border-negative/30",
-  割高: "text-negative bg-negative/10 border-negative/30",
-};
 
 export function CompareView({ initialCodes }: { initialCodes: string[] }) {
   const router = useRouter();
@@ -215,15 +218,15 @@ function ComparisonGrid({
       <CompSection title="数値指標">
         <CompTable
           rows={[
-            { label: "株価", get: (s) => `¥${s.priceJpy.toLocaleString()}` },
-            { label: "前日比", get: (s) => `${s.changePct >= 0 ? "+" : ""}${s.changePct.toFixed(2)}%`, tone: (s) => (s.changePct >= 0 ? "positive" : "negative") },
+            { label: "株価", get: (s) => formatPrice(s.priceJpy) },
+            { label: "前日比", get: (s) => formatSignedPct2(s.changePct), tone: (s) => (s.changePct >= 0 ? "positive" : "negative") },
             { label: "時価総額", get: (s) => `${s.marketCapOku.toLocaleString()} 億円` },
-            { label: "PER", get: (s) => `${s.per.toFixed(1)} 倍`, highlight: highlightMin("per") },
-            { label: "PBR", get: (s) => `${s.pbr.toFixed(2)} 倍`, highlight: highlightMin("pbr") },
-            { label: "配当利回り", get: (s) => `${s.dividendYield.toFixed(1)}%`, highlight: highlightMax("dividendYield") },
-            { label: "ROE", get: (s) => `${s.roe.toFixed(1)}%`, highlight: highlightMax("roe") },
-            { label: "営業利益率", get: (s) => `${s.operatingMargin.toFixed(1)}%`, highlight: highlightMax("operatingMargin") },
-            { label: "売上 3 年 CAGR", get: (s) => `${s.revenueGrowth3y >= 0 ? "+" : ""}${s.revenueGrowth3y.toFixed(1)}%`, tone: (s) => (s.revenueGrowth3y >= 0 ? "positive" : "negative"), highlight: highlightMax("revenueGrowth3y") },
+            { label: "PER", get: (s) => formatPer(s.per), highlight: highlightMin("per") },
+            { label: "PBR", get: (s) => formatPbr(s.pbr), highlight: highlightMin("pbr") },
+            { label: "配当利回り", get: (s) => formatPct1(s.dividendYield), highlight: highlightMax("dividendYield") },
+            { label: "ROE", get: (s) => formatPct1(s.roe), highlight: highlightMax("roe") },
+            { label: "営業利益率", get: (s) => formatPct1(s.operatingMargin), highlight: highlightMax("operatingMargin") },
+            { label: "売上 3 年 CAGR", get: (s) => formatSignedPct1(s.revenueGrowth3y), tone: (s) => (s.revenueGrowth3y >= 0 ? "positive" : "negative"), highlight: highlightMax("revenueGrowth3y") },
           ]}
           stocks={stocks}
         />
@@ -246,14 +249,14 @@ function ComparisonGrid({
       <CompSection title="ファクター感応度（ベータ）">
         <CompTable
           rows={[
-            { label: "ドル円", get: (s) => s.factorBetas.usdjpy.toFixed(2), tone: (s) => signTone(s.factorBetas.usdjpy) },
-            { label: "米 10 年金利", get: (s) => s.factorBetas.us10y.toFixed(2), tone: (s) => signTone(s.factorBetas.us10y) },
-            { label: "SOX", get: (s) => s.factorBetas.sox.toFixed(2), tone: (s) => signTone(s.factorBetas.sox) },
-            { label: "中国経済", get: (s) => s.factorBetas.china.toFixed(2), tone: (s) => signTone(s.factorBetas.china) },
-            { label: "市場ベータ", get: (s) => s.factorBetas.market.toFixed(2), tone: (s) => signTone(s.factorBetas.market) },
-            { label: "サイズ", get: (s) => s.factorBetas.size.toFixed(2), tone: (s) => signTone(s.factorBetas.size) },
-            { label: "バリュー", get: (s) => s.factorBetas.value.toFixed(2), tone: (s) => signTone(s.factorBetas.value) },
-            { label: "モメンタム", get: (s) => s.factorBetas.momentum.toFixed(2), tone: (s) => signTone(s.factorBetas.momentum) },
+            { label: "ドル円", get: (s) => formatBeta(s.factorBetas.usdjpy), tone: (s) => signTone(s.factorBetas.usdjpy) },
+            { label: "米 10 年金利", get: (s) => formatBeta(s.factorBetas.us10y), tone: (s) => signTone(s.factorBetas.us10y) },
+            { label: "SOX", get: (s) => formatBeta(s.factorBetas.sox), tone: (s) => signTone(s.factorBetas.sox) },
+            { label: "中国経済", get: (s) => formatBeta(s.factorBetas.china), tone: (s) => signTone(s.factorBetas.china) },
+            { label: "市場ベータ", get: (s) => formatBeta(s.factorBetas.market), tone: (s) => signTone(s.factorBetas.market) },
+            { label: "サイズ", get: (s) => formatBeta(s.factorBetas.size), tone: (s) => signTone(s.factorBetas.size) },
+            { label: "バリュー", get: (s) => formatBeta(s.factorBetas.value), tone: (s) => signTone(s.factorBetas.value) },
+            { label: "モメンタム", get: (s) => formatBeta(s.factorBetas.momentum), tone: (s) => signTone(s.factorBetas.momentum) },
           ]}
           stocks={stocks}
         />

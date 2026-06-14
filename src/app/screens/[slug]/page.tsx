@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { applyScreen, getScreen, screens } from "@/lib/screens";
 import type { Stock } from "@/lib/types";
+import { VERDICT_STYLE } from "@/lib/verdict";
+import { formatPbr, formatPct1, formatPer, formatSignedPct1 } from "@/lib/format";
 
 export function generateStaticParams() {
   return screens.map((s) => ({ slug: s.slug }));
@@ -21,13 +23,6 @@ export async function generateMetadata({
     description: screen.metaDescription,
   };
 }
-
-const VERDICT_STYLE: Record<string, string> = {
-  割安: "text-positive bg-positive/10 border-positive/30",
-  ほぼ妥当: "text-foreground bg-foreground/10 border-foreground/30",
-  やや割高: "text-negative/80 bg-negative/5 border-negative/30",
-  割高: "text-negative bg-negative/10 border-negative/30",
-};
 
 export default async function ScreenPage({
   params,
@@ -102,8 +97,8 @@ export default async function ScreenPage({
                 </div>
                 <div className="text-[11px] text-muted hidden md:block truncate">{s.industryCluster}</div>
                 <div className="text-right tabular font-mono">{s.per.toFixed(1)}</div>
-                <div className="text-right tabular font-mono">{s.roe.toFixed(1)}%</div>
-                <div className="text-right tabular font-mono">{s.dividendYield.toFixed(1)}%</div>
+                <div className="text-right tabular font-mono">{formatPct1(s.roe)}</div>
+                <div className="text-right tabular font-mono">{formatPct1(s.dividendYield)}</div>
                 <div className="text-right tabular font-mono">
                   <EmphasisCell stock={s} emphasis={screen.emphasis} />
                 </div>
@@ -161,20 +156,19 @@ function emphasisLabel(e: string): string {
 function EmphasisCell({ stock, emphasis }: { stock: Stock; emphasis: string }) {
   switch (emphasis) {
     case "per":
-      return <span className="font-bold">{stock.per.toFixed(1)} 倍</span>;
+      return <span className="font-bold">{formatPer(stock.per)}</span>;
     case "pbr":
-      return <span className="font-bold">{stock.pbr.toFixed(2)} 倍</span>;
+      return <span className="font-bold">{formatPbr(stock.pbr)}</span>;
     case "dividendYield":
-      return <span className="font-bold">{stock.dividendYield.toFixed(1)}%</span>;
+      return <span className="font-bold">{formatPct1(stock.dividendYield)}</span>;
     case "roe":
-      return <span className="font-bold">{stock.roe.toFixed(1)}%</span>;
+      return <span className="font-bold">{formatPct1(stock.roe)}</span>;
     case "operatingMargin":
-      return <span className="font-bold">{stock.operatingMargin.toFixed(1)}%</span>;
+      return <span className="font-bold">{formatPct1(stock.operatingMargin)}</span>;
     case "revenueGrowth3y":
       return (
         <span className={`font-bold ${stock.revenueGrowth3y >= 0 ? "text-positive" : "text-negative"}`}>
-          {stock.revenueGrowth3y >= 0 ? "+" : ""}
-          {stock.revenueGrowth3y.toFixed(1)}%
+          {formatSignedPct1(stock.revenueGrowth3y)}
         </span>
       );
     case "expansion":

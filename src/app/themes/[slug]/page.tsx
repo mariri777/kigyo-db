@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
+  formatThemeRankValue,
   getTheme,
   listThemes,
   pickedStocksForTheme,
@@ -9,7 +10,7 @@ import {
 } from "@/lib/themes";
 import { industries } from "@/lib/industries";
 import { posts } from "@/lib/posts";
-import type { Stock } from "@/lib/types";
+import { formatPct1, formatPer } from "@/lib/format";
 
 export function generateStaticParams() {
   return listThemes().map((t) => ({ slug: t.slug }));
@@ -27,49 +28,6 @@ export async function generateMetadata({
     title: `${theme.name} — 業界横断テーマ特集`,
     description: theme.lede.slice(0, 120),
   };
-}
-
-function rankValue(s: Stock, rankBy: string): number {
-  switch (rankBy) {
-    case "usdjpy":
-      return s.factorBetas.usdjpy;
-    case "us10y":
-      return s.factorBetas.us10y;
-    case "sox":
-      return s.factorBetas.sox;
-    case "china":
-      return s.factorBetas.china;
-    case "dividendYield":
-      return s.dividendYield;
-    case "pbr":
-      return s.pbr;
-    case "roe":
-      return s.roe;
-    case "valuationScore":
-      return s.valuationCall.score;
-    default:
-      return 0;
-  }
-}
-
-function formatRankValue(s: Stock, rankBy: string): string {
-  const v = rankValue(s, rankBy);
-  switch (rankBy) {
-    case "usdjpy":
-    case "us10y":
-    case "sox":
-    case "china":
-      return v.toFixed(2);
-    case "dividendYield":
-    case "roe":
-      return `${v.toFixed(1)}%`;
-    case "pbr":
-      return `${v.toFixed(2)} 倍`;
-    case "valuationScore":
-      return `${v}/100`;
-    default:
-      return v.toFixed(2);
-  }
 }
 
 export default async function ThemePage({
@@ -141,8 +99,8 @@ export default async function ThemePage({
                 <span className="text-[10px] text-dim shrink-0">{p.stock.sectorTSE}</span>
               </div>
               <div className="text-[11px] text-muted tabular mb-3">
-                時価総額 {p.stock.marketCapOku.toLocaleString()} 億円 / PER {p.stock.per.toFixed(1)} 倍 /
-                配当 {p.stock.dividendYield.toFixed(1)}%
+                時価総額 {p.stock.marketCapOku.toLocaleString()} 億円 / PER {formatPer(p.stock.per)} /
+                配当 {formatPct1(p.stock.dividendYield)}
               </div>
               <p className="text-[13px] leading-relaxed">{p.reason}</p>
             </Link>
@@ -236,13 +194,13 @@ export default async function ThemePage({
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-right tabular font-bold">
-                      {formatRankValue(s, theme.rankBy)}
+                      {formatThemeRankValue(s, theme.rankBy)}
                     </td>
                     <td className="px-4 py-3 text-right tabular text-muted hidden sm:table-cell">
-                      {s.per > 0 ? `${s.per.toFixed(1)} 倍` : "—"}
+                      {s.per > 0 ? formatPer(s.per) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right tabular text-muted hidden md:table-cell">
-                      {s.dividendYield > 0 ? `${s.dividendYield.toFixed(1)}%` : "—"}
+                      {s.dividendYield > 0 ? formatPct1(s.dividendYield) : "—"}
                     </td>
                     <td className="px-4 py-3 text-right tabular text-muted hidden md:table-cell">
                       {s.marketCapOku.toLocaleString()} 億円

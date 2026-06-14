@@ -3,18 +3,11 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import type { Stock, ValuationCall } from "@/lib/types";
+import { VERDICTS, VERDICT_STYLE } from "@/lib/verdict";
+import { formatPrice, formatPct1, formatSignedPct1 } from "@/lib/format";
 
 type SortKey = "code" | "priceJpy" | "marketCapOku" | "per" | "pbr" | "dividendYield" | "roe" | "revenueGrowth3y";
 type SortDir = "asc" | "desc";
-
-const VERDICTS: ValuationCall["verdict"][] = ["割安", "ほぼ妥当", "やや割高", "割高"];
-
-const VERDICT_STYLE: Record<ValuationCall["verdict"], string> = {
-  割安: "text-positive bg-positive/10 border-positive/30",
-  ほぼ妥当: "text-foreground bg-foreground/10 border-foreground/30",
-  やや割高: "text-negative/80 bg-negative/5 border-negative/30",
-  割高: "text-negative bg-negative/10 border-negative/30",
-};
 
 export function StockTable({
   stocks,
@@ -155,18 +148,17 @@ export function StockTable({
             </div>
             <div className="text-[11px] text-muted hidden md:block truncate">{s.industryCluster}</div>
             <div className="text-right tabular font-mono text-xs sm:text-sm">
-              ¥{s.priceJpy.toLocaleString()}
+              {formatPrice(s.priceJpy)}
             </div>
             <div className="text-right tabular font-mono">{s.per.toFixed(1)}</div>
-            <div className="text-right tabular font-mono">{s.roe.toFixed(1)}%</div>
-            <div className="text-right tabular font-mono">{s.dividendYield.toFixed(1)}%</div>
+            <div className="text-right tabular font-mono">{formatPct1(s.roe)}</div>
+            <div className="text-right tabular font-mono">{formatPct1(s.dividendYield)}</div>
             <div
               className={`text-right tabular font-mono ${
                 s.revenueGrowth3y >= 0 ? "text-positive" : "text-negative"
               }`}
             >
-              {s.revenueGrowth3y >= 0 ? "+" : ""}
-              {s.revenueGrowth3y.toFixed(1)}%
+              {formatSignedPct1(s.revenueGrowth3y)}
             </div>
             <div className="text-right">
               <span

@@ -1,4 +1,5 @@
-import type { FactorBetas, PhaseScores, Stock, ValuationCall } from "./types";
+import type { FactorBetas, Stock, ValuationCall } from "./types";
+import { dominantPhase } from "./phase";
 
 export type ComparisonObservation = {
   key: string;
@@ -120,16 +121,6 @@ export function analyzeComparison(stocks: Stock[]): ComparisonObservation[] {
   }
 
   // 成長フェーズの違い
-  const dominantPhase = (p: PhaseScores) => {
-    const entries: [string, number][] = [
-      ["ローンチ期", p.launch],
-      ["拡大期", p.expansion],
-      ["成熟期", p.mature],
-      ["衰退期", p.decline],
-    ];
-    entries.sort((a, b) => b[1] - a[1]);
-    return entries[0][0];
-  };
   const phases = stocks.map((s) => ({ stock: s, phase: dominantPhase(s.phaseScores) }));
   const uniquePhases = new Set(phases.map((p) => p.phase));
   if (uniquePhases.size >= 2) {

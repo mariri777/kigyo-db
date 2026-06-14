@@ -1,10 +1,6 @@
 import Link from "next/link";
 import { CATEGORY_LABEL, type Post } from "@/lib/posts";
-
-function formatDate(d: string) {
-  const date = new Date(d + "T00:00:00+09:00");
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-}
+import { formatJaDate } from "@/lib/format";
 
 export function PostCard({ post, compact = false }: { post: Post; compact?: boolean }) {
   return (
@@ -16,7 +12,7 @@ export function PostCard({ post, compact = false }: { post: Post; compact?: bool
         <span className="text-foreground font-bold border border-foreground rounded-full px-2 py-0.5">
           {CATEGORY_LABEL[post.category]}
         </span>
-        <span className="text-dim">{formatDate(post.publishedAt)}</span>
+        <span className="text-dim">{formatJaDate(post.publishedAt)}</span>
         <span className="text-dim">·</span>
         <span className="text-dim">読了 {post.readTimeMin} 分</span>
         {post.author === "ai-editor" && (

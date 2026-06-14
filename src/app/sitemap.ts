@@ -1,7 +1,5 @@
-// sitemap.xml を自動生成する特別ファイル（Next.js の規約）
-// https://kigyo.cho-super.com/sitemap.xml として配信され、
-// Google などの検索エンジンに「うちにはこんなページがあります」と伝える地図になる
-// 銘柄や特集を追加すると、次のビルドで自動的に地図にも載る
+// /sitemap.xml を生成する Next.js 規約ファイル。
+// ハブ・固定ページ・データ由来の詳細ページを列挙し、検索エンジンに通知する。
 
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
@@ -15,7 +13,6 @@ import { listPosts } from "@/lib/posts";
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  // ハブページ（一覧の入り口）。更新頻度が高く重要度も高い
   const hubs: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
     { url: `${SITE_URL}/stocks`, lastModified: now, changeFrequency: "daily", priority: 0.8 },
@@ -27,7 +24,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/blog`, lastModified: now, changeFrequency: "weekly", priority: 0.7 },
   ];
 
-  // 固定ページ
   const statics: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/guide`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
     { url: `${SITE_URL}/about`, lastModified: now, changeFrequency: "monthly", priority: 0.5 },
@@ -38,7 +34,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/legal/editorial-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  // 詳細ページ（データから自動列挙）
   const stockPages: MetadataRoute.Sitemap = listStocks().map((s) => ({
     url: `${SITE_URL}/stocks/${s.code}`,
     lastModified: now,
@@ -76,7 +71,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  // /profile（個人用ページ）と /db-test（動作確認用）は意図的に載せない
+  // /profile はインデックス対象外 (robots.ts で disallow)
   return [
     ...hubs,
     ...statics,

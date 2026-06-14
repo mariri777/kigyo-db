@@ -1,4 +1,10 @@
-// 出典：定量データと AI 生成コンテンツの両方に必須
+/**
+ * Stock を構成する型の定義。
+ * Industry / Post / Prediction / Theme などの型は、それぞれデータと同居している
+ * `lib/industries.ts` `lib/posts.ts` `lib/predictions.ts` `lib/themes.ts` 側を参照する。
+ */
+
+/** 引用元。定量データと AI 生成コンテンツの両方で必須。 */
 export type Source = {
   doc: string;
   page?: number;
@@ -6,7 +12,7 @@ export type Source = {
   url?: string;
 };
 
-// A 軸：事業・収益モデルのタグ（タグマスター語彙）
+/** A 軸: 事業・収益モデルのタグ次元。 */
 export type TagDimension =
   | "product"
   | "customer"
@@ -28,7 +34,7 @@ export type Segment = {
   operatingMargin?: number;
 };
 
-// C 軸：成長フェーズの連続スコア（業界内正規化済み）
+/** C 軸: 成長フェーズの連続スコア (業界内正規化済み)。 */
 export type PhaseScores = {
   launch: number;
   expansion: number;
@@ -36,7 +42,7 @@ export type PhaseScores = {
   decline: number;
 };
 
-// D 軸：ファクター感応度ベータ（時系列回帰の出力）
+/** D 軸: ファクター感応度ベータ (時系列回帰の出力)。 */
 export type FactorBetas = {
   usdjpy: number;
   us10y: number;

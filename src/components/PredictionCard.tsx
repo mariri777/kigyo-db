@@ -7,6 +7,8 @@ import type {
   PredictionChoice,
   DisclosureDetail,
 } from "@/lib/predictions";
+import { eventLabelFull } from "@/lib/predictionLabels";
+import { formatShortDateTime, formatTimeHms } from "@/lib/format";
 
 /**
  * 予測カード = 学習カード。
@@ -34,7 +36,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
             {p.status === "live" ? "🔴 LIVE" : isResolved ? "✓ Resolved" : "Upcoming"}
           </span>
           <span className="text-[11px] text-background/70">|</span>
-          <span className="text-[11px] text-background/80">{eventLabel(p.eventType)}</span>
+          <span className="text-[11px] text-background/80">{eventLabelFull(p.eventType)}</span>
         </div>
         {!isResolved && (
           <div className="bg-background text-foreground px-2.5 py-1 rounded-sm">
@@ -79,7 +81,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
             <div className="text-lg font-bold mb-1">{p.resolution.outcomeLabel}</div>
             <div className="flex items-center gap-3 flex-wrap mt-2">
               <span className="text-[11px] text-dim">
-                {formatDateTime(p.resolution.resolvedAt)}
+                {formatShortDateTime(p.resolution.resolvedAt)}
               </span>
               {aiPickChoice && (
                 <span
@@ -106,7 +108,7 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
               {p.shifts.map((s, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span className="text-[10px] text-dim tabular mt-1 shrink-0 w-24">
-                    {formatDateTime(s.at)}
+                    {formatShortDateTime(s.at)}
                   </span>
                   <span
                     className={`text-[11px] font-bold tabular shrink-0 w-12 ${
@@ -311,36 +313,6 @@ export function PredictionCard({ prediction: p }: { prediction: Prediction }) {
   );
 }
 
-function eventLabel(t: Prediction["eventType"]): string {
-  switch (t) {
-    case "earnings":
-      return "Earnings / 決算";
-    case "disclosure":
-      return "Disclosure / 適時開示";
-    case "macro":
-      return "Macro / マクロ";
-    case "news":
-      return "News / ニュース";
-  }
-}
-
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${mm}/${dd} ${hh}:${mi}`;
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
-  return `${hh}:${mi}:${ss}`;
-}
-
 /**
  * 適時開示の生データ + AI 解読パネル。
  * disclosureDetail を持つ予測（eventType === "disclosure"）でのみ表示される。
@@ -375,7 +347,7 @@ function DisclosurePanel({ detail }: { detail: DisclosureDetail }) {
               📰 TDnet 適時開示
             </span>
             <span className="text-[10px] tabular text-dim">
-              {formatTime(detail.releasedAt)}
+              {formatTimeHms(detail.releasedAt)}
             </span>
           </div>
           <span className="text-[10px] font-bold border border-border bg-surface px-1.5 py-0.5 rounded-sm text-foreground">
@@ -402,7 +374,7 @@ function DisclosurePanel({ detail }: { detail: DisclosureDetail }) {
               🤖 AI による即時解読
             </span>
             <span className="text-[10px] tabular text-dim">
-              {formatTime(detail.aiInterpretation.interpretedAt)}
+              {formatTimeHms(detail.aiInterpretation.interpretedAt)}
               <span className="text-dim ml-1">
                 （開示後 {interpDelaySec} 秒）
               </span>
@@ -460,7 +432,7 @@ function DisclosurePanel({ detail }: { detail: DisclosureDetail }) {
               {detail.resultMeasure.priceChange.toFixed(1)}%
             </span>
             <span className="text-[11px] text-muted">
-              {formatTime(detail.resultMeasure.measuredAt)} 時点
+              {formatTimeHms(detail.resultMeasure.measuredAt)} 時点
               {detail.resultMeasure.note && (
                 <span className="text-dim ml-2">／ {detail.resultMeasure.note}</span>
               )}

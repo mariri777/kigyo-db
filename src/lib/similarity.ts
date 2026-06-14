@@ -7,6 +7,7 @@ import type {
   TagDimension,
 } from "./types";
 import { stocks } from "./data";
+import { dominantPhase } from "./phase";
 
 // A 軸：タグ次元ごとの重み（開発者決め打ち）
 const DIM_WEIGHTS: Record<TagDimension, number> = {
@@ -150,19 +151,8 @@ export function phaseSimilarDifferentIndustry(self: Stock, top = 4): SimilarStoc
     .slice(0, top);
 }
 
-function dominantPhase(p: PhaseScores): string {
-  const entries: [string, number][] = [
-    ["ローンチ期", p.launch],
-    ["拡大期", p.expansion],
-    ["成熟期", p.mature],
-    ["衰退期", p.decline],
-  ];
-  entries.sort((a, b) => b[1] - a[1]);
-  if (entries[0][1] - entries[1][1] < 18) return `${entries[0][0]}／${entries[1][0]}併存`;
-  return entries[0][0];
-}
 function phaseReason(a: Stock, b: Stock): string {
-  return `両社とも ${dominantPhase(a.phaseScores)} 寄り。異なる業界（${b.industryCluster}）で同じフェーズの動きを示している`;
+  return `両社とも ${dominantPhase(a.phaseScores, true)} 寄り。異なる業界（${b.industryCluster}）で同じフェーズの動きを示している`;
 }
 
 // D 軸：ファクター感応度ベクトル間のユークリッド距離 → 0–100（近い）

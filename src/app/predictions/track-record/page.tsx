@@ -7,6 +7,8 @@ import {
   allResolvedPredictions,
 } from "@/lib/predictions";
 import type { TrackRecordRow } from "@/lib/predictions";
+import { eventLabelJa } from "@/lib/predictionLabels";
+import { formatIsoSlashDate } from "@/lib/format";
 
 export const metadata: Metadata = {
   title: "AI 予測の的中率 — 透明性ダッシュボード",
@@ -133,7 +135,7 @@ export default function TrackRecordPage() {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-[10px] text-dim tracking-wider mb-1">
-                        {eventLabel(p.eventType)} ・ {formatDate(p.resolution!.resolvedAt)}
+                        {eventLabelJa(p.eventType)} ・ {formatIsoSlashDate(p.resolution!.resolvedAt)}
                       </div>
                       <div className="text-sm font-bold group-hover:underline">{p.eventName}</div>
                       <div className="text-[11px] text-muted mt-0.5">{p.question}</div>
@@ -285,22 +287,3 @@ function BarTable({ rows, emptyHint }: { rows: TrackRecordRow[]; emptyHint: stri
   );
 }
 
-function eventLabel(t: string): string {
-  switch (t) {
-    case "earnings":
-      return "決算";
-    case "disclosure":
-      return "適時開示";
-    case "macro":
-      return "マクロ";
-    case "news":
-      return "ニュース";
-    default:
-      return t;
-  }
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
-}

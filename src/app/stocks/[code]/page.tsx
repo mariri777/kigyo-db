@@ -20,10 +20,13 @@ import { postsForStock } from "@/lib/posts";
 import { PostCard } from "@/components/PostCard";
 import { industries } from "@/lib/industries";
 import { Disclose } from "@/components/Disclose";
-import type { Insight } from "@/lib/types";
 import { HistoryChart } from "@/components/HistoryChart";
 import { getPredictionsByStock } from "@/lib/predictions";
 import { PredictionCard } from "@/components/PredictionCard";
+import { verdictBlockClass } from "@/lib/verdict";
+import { formatOku, formatPct1, formatPrice, formatSignedPct2 } from "@/lib/format";
+import { Metric } from "@/components/stock/Metric";
+import { splitInsight } from "@/lib/insight";
 
 export function generateStaticParams() {
   return listStocks().map((s) => ({ code: s.code }));
@@ -59,13 +62,6 @@ function groupTags(tags: BusinessTag[]) {
     (groups[t.dimension] ??= []).push(t);
   }
   return groups;
-}
-
-function verdictColor(v: string) {
-  if (v === "割安") return "text-positive border-positive/40 bg-positive/10";
-  if (v === "ほぼ妥当") return "text-accent border-accent/40 bg-accent/10";
-  if (v === "やや割高") return "text-negative/80 border-negative/40 bg-negative/5";
-  return "text-negative border-negative/40 bg-negative/10";
 }
 
 export default async function StockPage({
@@ -179,18 +175,18 @@ export default async function StockPage({
         </details>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mt-6">
-          <Metric label="株価" value={`¥${stock.priceJpy.toLocaleString()}`} sub={stock.priceDate} accent />
+          <Metric label="株価" value={formatPrice(stock.priceJpy)} sub={stock.priceDate} accent />
           <Metric
             label="前日比"
-            value={`${stock.changePct >= 0 ? "+" : ""}${stock.changePct.toFixed(2)}%`}
+            value={formatSignedPct2(stock.changePct)}
             sub=""
             tone={stock.changePct >= 0 ? "positive" : "negative"}
           />
-          <Metric labelNode={<Term>時価総額</Term>} value={`${stock.marketCapOku.toLocaleString()}億円`} sub="" />
+          <Metric labelNode={<Term>時価総額</Term>} value={formatOku(stock.marketCapOku)} sub="" />
           <Metric labelNode={<Term>PER</Term>} value={`${stock.per.toFixed(1)}倍`} sub="実績" />
           <Metric labelNode={<Term>PBR</Term>} value={`${stock.pbr.toFixed(2)}倍`} sub="" />
-          <Metric labelNode={<Term>配当利回り</Term>} value={`${stock.dividendYield.toFixed(1)}%`} sub="予想" />
-          <Metric labelNode={<Term>ROE</Term>} value={`${stock.roe.toFixed(1)}%`} sub="" />
+          <Metric labelNode={<Term>配当利回り</Term>} value={formatPct1(stock.dividendYield)} sub="予想" />
+          <Metric labelNode={<Term>ROE</Term>} value={formatPct1(stock.roe)} sub="" />
         </div>
         <div className="mt-3 text-[10px] text-dim leading-relaxed">
           指標：{stock.segmentsPeriod} 期実績ベース。出典は EDINET XBRL / J-Quants。
@@ -250,7 +246,7 @@ export default async function StockPage({
         rightSlot={<AiBadge />}
         ai
       >
-        <div className={`border rounded-md p-5 ${verdictColor(stock.valuationCall.verdict)}`}>
+        <div className={`border rounded-md p-5 ${verdictBlockClass(stock.valuationCall.verdict)}`}>
           <div className="flex items-baseline gap-4 mb-3">
             <div>
               <div className="text-[11px] uppercase tracking-widest opacity-80">評価</div>
@@ -496,53 +492,3 @@ export default async function StockPage({
   );
 }
 
-/**
- * 論点を {lede, rest} に分割する。
- * - 明示的に lede があればそれを使用、残りを rest に
- * - なければ body の最初の 1〜2 文を lede として自動抽出、残りを rest に
- * - 1 文しかない短い論点なら rest = null
- */
-function splitInsight(ins: Insight): { lede: string; rest: string | null } {
-  if (ins.lede) {
-    return { lede: ins.lede, rest: ins.body };
-  }
-  // 最初の文（最大 2 文まで）を lede として抽出
-  const sentences = ins.body.match(/[^。]+。/g);
-  if (!sentences || sentences.length === 0) {
-    return { lede: ins.body, rest: null };
-  }
-  if (sentences.length === 1) {
-    return { lede: ins.body.trim(), rest: null };
-  }
-  // 1 文目が短い（80 文字未満）なら 2 文使う
-  const first = sentences[0].trim();
-  const lede = first.length < 80 ? (sentences[0] + sentences[1]).trim() : first;
-  const usedLength = lede.length;
-  const rest = ins.body.slice(usedLength).trim();
-  return { lede, rest: rest || null };
-}
-
-function Metric({
-  label,
-  labelNode,
-  value,
-  sub,
-  tone,
-  accent,
-}: {
-  label?: string;
-  labelNode?: React.ReactNode;
-  value: string;
-  sub: string;
-  tone?: "positive" | "negative";
-  accent?: boolean;
-}) {
-  const valueClass = tone === "positive" ? "text-positive" : tone === "negative" ? "text-negative" : accent ? "text-accent" : "text-foreground";
-  return (
-    <div className="bg-surface border border-border rounded-md px-3 py-2">
-      <div className="text-[10px] text-dim tracking-wider">{labelNode ?? label}</div>
-      <div className={`text-lg font-bold tabular font-mono ${valueClass}`}>{value}</div>
-      {sub && <div className="text-[10px] text-dim">{sub}</div>}
-    </div>
-  );
-}
