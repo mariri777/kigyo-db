@@ -2,7 +2,15 @@ import { LegalDoc, LegalSection } from "@/components/LegalDoc";
 
 export const metadata = {
   title: "プライバシーポリシー",
-  description: "超！企業DB における個人情報の取扱方針を定めるものです。",
+  description:
+    "超!企業DB における個人情報の取扱方針。取得情報、利用目的、Cookie、第三者提供、開示請求の手続きを記載します。",
+  alternates: { canonical: "/legal/privacy" },
+  openGraph: {
+    title: "プライバシーポリシー | 超!企業DB",
+    description: "超!企業DB における個人情報の取扱方針。",
+    url: "/legal/privacy",
+    type: "article",
+  },
 };
 
 export default function PrivacyPage() {

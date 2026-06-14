@@ -10,9 +10,9 @@ import type { TrackRecordRow } from "@/content/predictions";
 import { eventLabelJa } from "@/shared/predictionLabels";
 import { formatIsoSlashDate } from "@/shared/format";
 
-const trackTitle = "AI 予測の的中率 — 透明性ダッシュボード";
+const trackTitle = "AI 予測の的中率ダッシュボード — 全件公開";
 const trackDescription =
-  "超!企業DB の AI 予測がどれくらい当たっているのか。イベント種別・確信度別の的中率を全公開。外しも隠さず、累積で検証可能に。";
+  "超!企業DB の AI 予測がどれくらい当たっているのか。決算・適時開示・マクロといったイベント種別、確信度ブラケット別の的中率を全件公開。外した予測も隠さず、累積で検証可能に。";
 
 export const metadata: Metadata = {
   title: trackTitle,

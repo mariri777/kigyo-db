@@ -3,9 +3,9 @@ import Link from "next/link";
 import { CATEGORY_LABEL, listPosts, type PostCategory } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
 
-const blogTitle = "ブログ — 投資の論点を日々追う";
+const blogTitle = "ブログ — 決算・業界・テーマを毎日深掘り";
 const blogDescription =
-  "決算分析・業界ウォッチ・テーマ解説・3 分でわかるシリーズ。AI が一次情報を読み込み、編集部がレビューしてから公開します。";
+  "決算分析・業界ウォッチ・テーマ解説・『3 分でわかる』入門シリーズ。AI が有報・決算説明会・適時開示を読み込み、編集部がレビューしてから公開する銘柄分析ブログ。";
 
 export const metadata: Metadata = {
   title: blogTitle,

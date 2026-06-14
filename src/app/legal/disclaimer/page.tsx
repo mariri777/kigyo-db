@@ -4,7 +4,14 @@ import { LegalDoc, LegalSection } from "@/components/LegalDoc";
 export const metadata = {
   title: "免責事項",
   description:
-    "本サービスは投資助言業に該当する個別助言ではありません。投資判断はご自身の責任で行ってください。",
+    "超!企業DB は投資助言業に該当する個別助言ではなく、不特定多数向けの一般情報提供サービスです。投資判断は必ずご自身の責任で行ってください。",
+  alternates: { canonical: "/legal/disclaimer" },
+  openGraph: {
+    title: "免責事項 | 超!企業DB",
+    description: "投資判断はご自身の責任で。一般情報提供サービスとしての立場を明示します。",
+    url: "/legal/disclaimer",
+    type: "article",
+  },
 };
 
 export default function DisclaimerPage() {

@@ -4,7 +4,14 @@ import { LegalDoc, LegalSection } from "@/components/LegalDoc";
 export const metadata = {
   title: "編集方針 — どう書き、どう判断しているか",
   description:
-    "規範的判断（割安・割高）の出し方、見落とし論点の抽出方法、品質階層、訂正ポリシーを公開します。",
+    "規範的判断(割安・割高)の出し方、見落とし論点の抽出方法、AI と編集部の責任分担、品質階層、訂正ポリシーまでを公開。透明性そのものをプロダクトに織り込みます。",
+  alternates: { canonical: "/legal/editorial-policy" },
+  openGraph: {
+    title: "編集方針 — どう書き、どう判断しているか | 超!企業DB",
+    description: "規範的判断の出し方、見落とし論点の抽出方法、訂正ポリシーまで公開。",
+    url: "/legal/editorial-policy",
+    type: "article",
+  },
 };
 
 export default function EditorialPolicyPage() {

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { Disclose } from "@/components/Disclose";
 import { Term } from "@/components/Term";
 
-const guideTitle = "ガイド — 投資を始めたばかりの方へ";
+const guideTitle = "初めての方へ — 投資の基本指標と超!企業DBの歩き方";
 const guideDescription =
-  "「超!企業DB」の使い方と、PER / PBR / 配当利回り / ROE など投資の基本指標をやさしく解説。これから投資を始める方への最初の入口。";
+  "PER / PBR / 配当利回り / ROE といった投資の基本指標を、図解とミニ事例でやさしく解説。あわせて『超!企業DB』の使い方も紹介します。これから投資を始める方向けの入口ページ。";
 
 export const metadata: Metadata = {
   title: guideTitle,

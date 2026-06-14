@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getPrediction } from "@/content/predictions";
+import { getStockBrief } from "@/server/usecase";
 import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/shared/og";
 
 export const alt = "予測カード | 超!企業DB";
@@ -17,19 +18,23 @@ export default async function Image({ params }: { params: Promise<{ id: string }
       { ...size },
     );
   }
+  const stock = prediction.stockCode ? await getStockBrief(prediction.stockCode) : null;
   const badge =
     prediction.status === "resolved"
       ? "RESOLVED"
       : prediction.status === "live"
         ? "LIVE"
         : "UPCOMING";
+  const sectionLabel = stock
+    ? `Prediction · ${stock.name}(${stock.code})`
+    : `Prediction · ${prediction.eventName}`;
   return new ImageResponse(
     (
       <OgCard
-        sectionLabel="Prediction"
+        sectionLabel={sectionLabel}
         title={prediction.question}
         subtitle={prediction.questionNote ?? prediction.eventName}
-        chips={["AI 推論公開", "教訓付き", "結果公開"]}
+        chips={["AI 推論公開", "確信度付き", "結果公開", "教訓付き"]}
         badge={badge}
       />
     ),

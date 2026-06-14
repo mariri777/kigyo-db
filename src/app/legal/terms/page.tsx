@@ -3,7 +3,15 @@ import { LegalDoc, LegalSection } from "@/components/LegalDoc";
 
 export const metadata = {
   title: "利用規約",
-  description: "超！企業DB の利用にあたっての規約です。ご利用前にお読みください。",
+  description:
+    "超!企業DB の利用にあたっての規約。サービス内容、禁止事項、免責、規約改定などを定めています。ご利用前にお読みください。",
+  alternates: { canonical: "/legal/terms" },
+  openGraph: {
+    title: "利用規約 | 超!企業DB",
+    description: "超!企業DB の利用にあたっての規約。",
+    url: "/legal/terms",
+    type: "article",
+  },
 };
 
 export default function TermsPage() {
