@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { industries, industryAggregates } from "@/lib/industries";
+import { listStockBriefs } from "@/lib/stocksRepo";
 
 export const metadata = { title: "業界マップ — 業界ごとの徹底分析" };
+export const revalidate = 1800;
 
 const COMING_SOON: { name: string; note: string }[] = [];
 
-export default function IndustriesHub() {
+export default async function IndustriesHub() {
+  const briefsByCode = new Map((await listStockBriefs()).map((b) => [b.code, b]));
   return (
     <article className="max-w-6xl mx-auto px-6 py-12">
       <header className="pb-10 border-b border-border mb-12">
@@ -27,7 +30,7 @@ export default function IndustriesHub() {
         <h2 className="text-xl font-bold mb-6">公開中</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {industries.map((ind) => {
-            const agg = industryAggregates(ind);
+            const agg = industryAggregates(ind, briefsByCode);
             return (
               <Link
                 key={ind.slug}

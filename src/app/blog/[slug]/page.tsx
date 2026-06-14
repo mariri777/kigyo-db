@@ -1,16 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CATEGORY_LABEL, getPost, posts as allPosts, listPosts } from "@/lib/posts";
-import { getStock } from "@/lib/data";
+import { CATEGORY_LABEL, getPost, listPosts } from "@/lib/posts";
+import { getStockBrief } from "@/lib/stocksRepo";
 import { getIndustry } from "@/lib/industries";
 import { PostContent } from "@/components/PostContent";
 import { PostCard } from "@/components/PostCard";
 import { formatJaDate } from "@/lib/format";
+import type { StockBrief } from "@/lib/types";
 
-export function generateStaticParams() {
-  return allPosts.map((p) => ({ slug: p.slug }));
-}
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,
@@ -32,9 +31,9 @@ export default async function PostPage({
   const post = getPost(slug);
   if (!post) notFound();
 
-  const relatedStocks = post.relatedStocks
-    .map((c) => getStock(c))
-    .filter((s): s is NonNullable<ReturnType<typeof getStock>> => Boolean(s));
+  const relatedStocks = (
+    await Promise.all(post.relatedStocks.map((c) => getStockBrief(c)))
+  ).filter((s): s is StockBrief => s !== null);
   const relatedIndustries = post.relatedIndustries
     .map((s) => getIndustry(s))
     .filter((s): s is NonNullable<ReturnType<typeof getIndustry>> => Boolean(s));

@@ -8,11 +8,9 @@ import {
 } from "@/lib/predictions";
 import { PredictionCard } from "@/components/PredictionCard";
 import { PredictionListItem } from "@/components/PredictionListItem";
-import { getStock } from "@/lib/data";
+import { getStockBrief } from "@/lib/stocksRepo";
 
-export function generateStaticParams() {
-  return listPredictions().map((p) => ({ id: p.id }));
-}
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,
@@ -22,7 +20,9 @@ export async function generateMetadata({
   const { id } = await params;
   const prediction = getPrediction(id);
   if (!prediction) return { title: "見つかりません" };
-  const stock = prediction.stockCode ? getStock(prediction.stockCode) : null;
+  const stock = prediction.stockCode
+    ? await getStockBrief(prediction.stockCode)
+    : null;
   const title = stock
     ? `${stock.name}（${stock.code}） — ${prediction.question}`
     : prediction.question;
@@ -41,7 +41,9 @@ export default async function PredictionDetailPage({
   const raw = getPrediction(id);
   if (!raw) notFound();
   const prediction = predictionWithLiveStatus(raw);
-  const stock = prediction.stockCode ? getStock(prediction.stockCode) : null;
+  const stock = prediction.stockCode
+    ? await getStockBrief(prediction.stockCode)
+    : null;
 
   // 同銘柄の他予測（最大 3 件）
   const sameStock = prediction.stockCode
@@ -98,7 +100,11 @@ export default async function PredictionDetailPage({
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {sameStock.map((p) => (
-              <PredictionListItem key={p.id} prediction={p} />
+              <PredictionListItem
+                key={p.id}
+                prediction={p}
+                stockName={p.stockCode === prediction.stockCode ? stock?.name : null}
+              />
             ))}
           </div>
         </section>
@@ -112,7 +118,11 @@ export default async function PredictionDetailPage({
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {others.map((p) => (
-              <PredictionListItem key={p.id} prediction={p} />
+              <PredictionListItem
+                key={p.id}
+                prediction={p}
+                stockName={p.stockCode === prediction.stockCode ? stock?.name : null}
+              />
             ))}
           </div>
         </section>

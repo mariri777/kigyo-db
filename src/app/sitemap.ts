@@ -3,14 +3,14 @@
 
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
-import { listStocks } from "@/lib/data";
+import { listStockBriefs } from "@/lib/stocksRepo";
 import { industries } from "@/lib/industries";
 import { screens } from "@/lib/screens";
 import { listThemes } from "@/lib/themes";
 import { listPredictions } from "@/lib/predictions";
 import { listPosts } from "@/lib/posts";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const hubs: MetadataRoute.Sitemap = [
@@ -34,7 +34,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/legal/editorial-policy`, lastModified: now, changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  const stockPages: MetadataRoute.Sitemap = listStocks().map((s) => ({
+  const stockPages: MetadataRoute.Sitemap = (await listStockBriefs()).map((s) => ({
     url: `${SITE_URL}/stocks/${s.code}`,
     lastModified: now,
     changeFrequency: "weekly",

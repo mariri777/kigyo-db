@@ -2,46 +2,18 @@
 
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
-import { stocks } from "@/lib/data";
-import { industries } from "@/lib/industries";
-import { listPosts, CATEGORY_LABEL } from "@/lib/posts";
 
-type StockHit = { type: "stock"; code: string; name: string; nameEn?: string; cluster: string };
-type IndustryHit = { type: "industry"; slug: string; name: string };
-type PostHit = { type: "post"; slug: string; title: string; category: string };
-type Hit = StockHit | IndustryHit | PostHit;
+export type StockHit = { type: "stock"; code: string; name: string; nameEn?: string; cluster: string };
+export type IndustryHit = { type: "industry"; slug: string; name: string };
+export type PostHit = { type: "post"; slug: string; title: string; category: string };
+export type Hit = StockHit | IndustryHit | PostHit;
 
-export function SearchBox() {
+export function SearchBox({ index }: { index: Hit[] }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  const index = useMemo<Hit[]>(() => {
-    const items: Hit[] = [];
-    for (const s of stocks) {
-      items.push({
-        type: "stock",
-        code: s.code,
-        name: s.name,
-        nameEn: s.nameEn,
-        cluster: s.industryCluster,
-      });
-    }
-    for (const i of industries) {
-      items.push({ type: "industry", slug: i.slug, name: i.name });
-    }
-    for (const p of listPosts()) {
-      items.push({
-        type: "post",
-        slug: p.slug,
-        title: p.title,
-        category: CATEGORY_LABEL[p.category],
-      });
-    }
-    return items;
-  }, []);
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();

@@ -2,25 +2,29 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import type { Stock, ValuationCall } from "@/lib/types";
-import { VERDICTS, VERDICT_STYLE } from "@/lib/verdict";
-import { formatPrice, formatPct1, formatSignedPct1 } from "@/lib/format";
+import type { StockBrief } from "@/lib/types";
+import { formatPrice, formatPct1 } from "@/lib/format";
 
-type SortKey = "code" | "priceJpy" | "marketCapOku" | "per" | "pbr" | "dividendYield" | "roe" | "revenueGrowth3y";
+type SortKey =
+  | "code"
+  | "priceJpy"
+  | "marketCapOku"
+  | "per"
+  | "pbr"
+  | "dividendYield";
 type SortDir = "asc" | "desc";
 
 export function StockTable({
   stocks,
   industryOptions,
 }: {
-  stocks: Stock[];
-  /** 業界カテゴリ（半導体 / 医薬品 等）と所属銘柄コード */
+  stocks: StockBrief[];
+  /** 業界カテゴリ(半導体 / 医薬品 等)と所属銘柄コード */
   industryOptions: { slug: string; name: string; codes: string[] }[];
 }) {
   const [industryFilter, setIndustryFilter] = useState<string[]>([]);
-  const [verdictFilter, setVerdictFilter] = useState<ValuationCall["verdict"][]>([]);
-  const [sortKey, setSortKey] = useState<SortKey>("code");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortKey, setSortKey] = useState<SortKey>("marketCapOku");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const filtered = useMemo(() => {
     let list = [...stocks];
@@ -29,12 +33,9 @@ export function StockTable({
       const allowed = new Set(
         industryOptions
           .filter((o) => industryFilter.includes(o.slug))
-          .flatMap((o) => o.codes)
+          .flatMap((o) => o.codes),
       );
       list = list.filter((s) => allowed.has(s.code));
-    }
-    if (verdictFilter.length > 0) {
-      list = list.filter((s) => verdictFilter.includes(s.valuationCall.verdict));
     }
 
     list.sort((a, b) => {
@@ -43,11 +44,13 @@ export function StockTable({
       if (typeof av === "string" && typeof bv === "string") {
         return sortDir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
       }
-      return sortDir === "asc" ? (av as number) - (bv as number) : (bv as number) - (av as number);
+      return sortDir === "asc"
+        ? (av as number) - (bv as number)
+        : (bv as number) - (av as number);
     });
 
     return list;
-  }, [stocks, industryOptions, industryFilter, verdictFilter, sortKey, sortDir]);
+  }, [stocks, industryOptions, industryFilter, sortKey, sortDir]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -59,7 +62,11 @@ export function StockTable({
   };
 
   const toggleArr = <T,>(setter: (v: T[]) => void, current: T[], value: T) => {
-    setter(current.includes(value) ? current.filter((v) => v !== value) : [...current, value]);
+    setter(
+      current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value],
+    );
   };
 
   return (
@@ -67,7 +74,7 @@ export function StockTable({
       {/* フィルタバー */}
       <div className="mb-5 space-y-3">
         <div className="flex items-center flex-wrap gap-2">
-          <span className="text-[11px] text-dim w-16">業界：</span>
+          <span className="text-[11px] text-dim w-16">業界:</span>
           {industryOptions.map((opt) => {
             const active = industryFilter.includes(opt.slug);
             return (
@@ -80,37 +87,15 @@ export function StockTable({
                     : "border-border text-muted hover:border-border-strong hover:text-foreground"
                 }`}
               >
-                {opt.name} <span className="opacity-60 ml-1 tabular">{opt.codes.length}</span>
+                {opt.name}{" "}
+                <span className="opacity-60 ml-1 tabular">{opt.codes.length}</span>
               </button>
             );
           })}
         </div>
-        <div className="flex items-center flex-wrap gap-2">
-          <span className="text-[11px] text-dim w-16">評価：</span>
-          {VERDICTS.map((v) => {
-            const active = verdictFilter.includes(v);
-            const count = stocks.filter((s) => s.valuationCall.verdict === v).length;
-            return (
-              <button
-                key={v}
-                onClick={() => toggleArr(setVerdictFilter, verdictFilter, v)}
-                className={`text-[11px] rounded-full px-3 py-1 border transition ${
-                  active
-                    ? "bg-foreground text-background border-foreground"
-                    : `border-border text-muted hover:border-border-strong hover:text-foreground`
-                }`}
-              >
-                {v} <span className="opacity-60 ml-1 tabular">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-        {(industryFilter.length > 0 || verdictFilter.length > 0) && (
+        {industryFilter.length > 0 && (
           <button
-            onClick={() => {
-              setIndustryFilter([]);
-              setVerdictFilter([]);
-            }}
+            onClick={() => setIndustryFilter([])}
             className="text-[11px] text-dim hover:text-foreground transition underline decoration-dotted"
           >
             すべてクリア
@@ -124,54 +109,53 @@ export function StockTable({
 
       {/* テーブル */}
       <div className="bg-surface border border-border rounded-md overflow-hidden">
-        <div className="hidden md:grid grid-cols-[70px_1fr_140px_100px_60px_60px_80px_80px_90px] text-[11px] text-dim border-b border-border bg-surface-elev px-4 py-2 gap-2">
+        <div className="hidden md:grid grid-cols-[70px_1fr_140px_100px_70px_70px_80px_100px] text-[11px] text-dim border-b border-border bg-surface-elev px-4 py-2 gap-2">
           <SortHeader label="コード" k="code" current={sortKey} dir={sortDir} onClick={toggleSort} />
           <div>銘柄</div>
-          <div>業界クラスタ</div>
+          <div>業種</div>
           <SortHeader label="株価" k="priceJpy" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
           <SortHeader label="PER" k="per" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <SortHeader label="ROE" k="roe" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
+          <SortHeader label="PBR" k="pbr" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
           <SortHeader label="配当" k="dividendYield" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <SortHeader label="3年成長" k="revenueGrowth3y" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
-          <div className="text-right">評価</div>
+          <SortHeader label="時価総額" k="marketCapOku" current={sortKey} dir={sortDir} onClick={toggleSort} align="right" />
         </div>
-        {filtered.map((s) => (
+        {filtered.slice(0, 200).map((s) => (
           <Link
             key={s.code}
             href={`/stocks/${s.code}`}
-            className="grid grid-cols-1 md:grid-cols-[70px_1fr_140px_100px_60px_60px_80px_80px_90px] gap-2 md:gap-2 items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-elev transition group text-sm"
+            className="grid grid-cols-1 md:grid-cols-[70px_1fr_140px_100px_70px_70px_80px_100px] gap-2 md:gap-2 items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-elev transition group text-sm"
           >
             <div className="text-dim tabular text-xs">{s.code}</div>
             <div>
               <div className="font-medium group-hover:underline">{s.name}</div>
-              <div className="text-[11px] text-dim md:hidden">{s.industryCluster}</div>
+              <div className="text-[11px] text-dim md:hidden">{s.sectorTSE}</div>
             </div>
-            <div className="text-[11px] text-muted hidden md:block truncate">{s.industryCluster}</div>
+            <div className="text-[11px] text-muted hidden md:block truncate">{s.sectorTSE}</div>
             <div className="text-right tabular font-mono text-xs sm:text-sm">
               {formatPrice(s.priceJpy)}
             </div>
-            <div className="text-right tabular font-mono">{s.per.toFixed(1)}</div>
-            <div className="text-right tabular font-mono">{formatPct1(s.roe)}</div>
-            <div className="text-right tabular font-mono">{formatPct1(s.dividendYield)}</div>
-            <div
-              className={`text-right tabular font-mono ${
-                s.revenueGrowth3y >= 0 ? "text-positive" : "text-negative"
-              }`}
-            >
-              {formatSignedPct1(s.revenueGrowth3y)}
+            <div className="text-right tabular font-mono">
+              {s.per > 0 ? s.per.toFixed(1) : "—"}
             </div>
-            <div className="text-right">
-              <span
-                className={`inline-block text-[10px] border rounded px-1.5 py-0.5 ${VERDICT_STYLE[s.valuationCall.verdict]}`}
-              >
-                {s.valuationCall.verdict}
-              </span>
+            <div className="text-right tabular font-mono">
+              {s.pbr > 0 ? s.pbr.toFixed(2) : "—"}
+            </div>
+            <div className="text-right tabular font-mono">
+              {s.dividendYield > 0 ? formatPct1(s.dividendYield) : "—"}
+            </div>
+            <div className="text-right tabular font-mono text-xs">
+              {s.marketCapOku > 0 ? `${s.marketCapOku.toLocaleString()}億` : "—"}
             </div>
           </Link>
         ))}
         {filtered.length === 0 && (
           <div className="px-4 py-8 text-center text-sm text-dim">
             条件に合う銘柄がありません。フィルタを調整してください。
+          </div>
+        )}
+        {filtered.length > 200 && (
+          <div className="px-4 py-3 text-[11px] text-dim text-center border-t border-border">
+            上位 200 件を表示中(全 {filtered.length} 社)。絞り込みで件数を減らしてください。
           </div>
         )}
       </div>

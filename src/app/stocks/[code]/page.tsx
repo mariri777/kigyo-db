@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getStock, listStocks } from "@/lib/data";
+import { getStock, listOverlayStocks } from "@/lib/stocksRepo";
 import {
   similarStocksByBusiness,
   phaseSimilarDifferentIndustry,
@@ -28,9 +28,7 @@ import { formatOku, formatPct1, formatPrice, formatSignedPct2 } from "@/lib/form
 import { Metric } from "@/components/stock/Metric";
 import { splitInsight } from "@/lib/insight";
 
-export function generateStaticParams() {
-  return listStocks().map((s) => ({ code: s.code }));
-}
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,
@@ -38,7 +36,7 @@ export async function generateMetadata({
   params: Promise<{ code: string }>;
 }): Promise<Metadata> {
   const { code } = await params;
-  const stock = getStock(code);
+  const stock = await getStock(code);
   if (!stock) return { title: "見つかりません" };
   return {
     title: `${stock.name}（${stock.code}）— 競合・類似銘柄・見落とし論点`,
@@ -70,12 +68,13 @@ export default async function StockPage({
   params: Promise<{ code: string }>;
 }) {
   const { code } = await params;
-  const stock = getStock(code);
+  const stock = await getStock(code);
   if (!stock) notFound();
 
-  const similar = similarStocksByBusiness(stock, 5);
-  const phaseAdj = phaseSimilarDifferentIndustry(stock, 4);
-  const riskComp = riskComplementStocks(stock, 4);
+  const pool = await listOverlayStocks();
+  const similar = similarStocksByBusiness(stock, pool, 5);
+  const phaseAdj = phaseSimilarDifferentIndustry(stock, pool, 4);
+  const riskComp = riskComplementStocks(stock, pool, 4);
   const tagGroups = groupTags(stock.tags);
   const relatedPosts = postsForStock(stock.code).slice(0, 3);
   const containingIndustry = industries.find((ind) =>

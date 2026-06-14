@@ -5,6 +5,7 @@ import type { Prediction, PredictionBucket } from "@/lib/predictions";
 import { PredictionListItem } from "@/components/PredictionListItem";
 import { PredictionCard } from "@/components/PredictionCard";
 import { Term } from "@/components/Term";
+import { listStockBriefs } from "@/lib/stocksRepo";
 
 export const metadata: Metadata = {
   title: "予測 — 結果で学ぶ確率思考",
@@ -37,7 +38,12 @@ const BUCKET_ORDER: PredictionBucket[] = [
   "resolved",
 ];
 
-export default function PredictionsHub() {
+export const revalidate = 1800;
+
+export default async function PredictionsHub() {
+  const stockNameByCode = new Map(
+    (await listStockBriefs()).map((s) => [s.code, s.name]),
+  );
   const buckets = groupedPredictions();
   const total = Object.values(buckets).flat().length;
   const upcomingCount =
@@ -136,7 +142,11 @@ export default function PredictionsHub() {
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
               {items.map((p) => (
-                <PredictionListItem key={p.id} prediction={p} />
+                <PredictionListItem
+                  key={p.id}
+                  prediction={p}
+                  stockName={p.stockCode ? stockNameByCode.get(p.stockCode) ?? null : null}
+                />
               ))}
             </div>
           </section>

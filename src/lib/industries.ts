@@ -1,5 +1,4 @@
-import { stocks } from "./data";
-import type { Stock } from "./types";
+import type { StockBrief } from "./types";
 
 export type ChainPosition =
   // 製造業（半導体・医薬等）のバリューチェーン位置
@@ -2429,17 +2428,35 @@ export function getIndustry(slug: string): Industry | undefined {
   return industries.find((i) => i.slug === slug);
 }
 
-export function getStocksForCluster(sub: SubCluster): Stock[] {
+/**
+ * クラスタに所属する銘柄(StockBrief)を返す。
+ * 呼び出し側であらかじめ取得した銘柄マップ(code → StockBrief)を渡す。
+ */
+export function getStocksForCluster(
+  sub: SubCluster,
+  briefsByCode: Map<string, StockBrief>,
+): StockBrief[] {
   return sub.companyCodes
-    .map((c) => stocks.find((s) => s.code === c))
-    .filter((s): s is Stock => Boolean(s));
+    .map((c) => briefsByCode.get(c))
+    .filter((s): s is StockBrief => Boolean(s));
 }
 
-export function industryAggregates(industry: Industry) {
+/**
+ * 業界の集計(銘柄数・時価総額合計・平均 PER)。
+ * ROE は DB から取れないため返り値から外している(将来 financials テーブル拡張時に復活)。
+ */
+export function industryAggregates(
+  industry: Industry,
+  briefsByCode: Map<string, StockBrief>,
+) {
   const codes = new Set(industry.subClusters.flatMap((s) => s.companyCodes));
-  const list = stocks.filter((s) => codes.has(s.code));
+  const list: StockBrief[] = [];
+  for (const c of codes) {
+    const b = briefsByCode.get(c);
+    if (b) list.push(b);
+  }
   const totalMcap = list.reduce((acc, s) => acc + s.marketCapOku, 0);
-  const avgPer = list.reduce((acc, s) => acc + s.per, 0) / list.length;
-  const avgRoe = list.reduce((acc, s) => acc + s.roe, 0) / list.length;
-  return { count: list.length, totalMcap, avgPer, avgRoe };
+  const avgPer =
+    list.length > 0 ? list.reduce((acc, s) => acc + s.per, 0) / list.length : 0;
+  return { count: list.length, totalMcap, avgPer };
 }

@@ -6,7 +6,6 @@ import type {
   Stock,
   TagDimension,
 } from "./types";
-import { stocks } from "./data";
 import { dominantPhase } from "./phase";
 
 // A 軸：タグ次元ごとの重み（開発者決め打ち）
@@ -139,8 +138,12 @@ export function phaseSimilarity(a: Stock, b: Stock): number {
 }
 
 // C 軸の対比：「同じ成長フェーズ・異なる業界の銘柄」を選ぶ
-export function phaseSimilarDifferentIndustry(self: Stock, top = 4): SimilarStock[] {
-  return stocks
+export function phaseSimilarDifferentIndustry(
+  self: Stock,
+  pool: Stock[],
+  top = 4,
+): SimilarStock[] {
+  return pool
     .filter((s) => s.code !== self.code && s.industryCluster !== self.industryCluster)
     .map((s) => ({
       stock: s,
@@ -223,9 +226,13 @@ function factorReason(a: Stock, b: Stock): string {
     .join("、")}`;
 }
 
-// メイン関数
-export function similarStocksByBusiness(self: Stock, top = 5): SimilarStock[] {
-  return stocks
+// メイン関数(類似計算の対象プール pool を呼び出し側から渡す。通常はオーバーレイ済み 68 銘柄)
+export function similarStocksByBusiness(
+  self: Stock,
+  pool: Stock[],
+  top = 5,
+): SimilarStock[] {
+  return pool
     .filter((s) => s.code !== self.code)
     .map((s) => ({
       stock: s,
@@ -237,8 +244,12 @@ export function similarStocksByBusiness(self: Stock, top = 5): SimilarStock[] {
 }
 
 // D 軸：類似と補完を両方返す（補完が中級以上への訴求）
-export function riskComplementStocks(self: Stock, top = 4): SimilarStock[] {
-  return stocks
+export function riskComplementStocks(
+  self: Stock,
+  pool: Stock[],
+  top = 4,
+): SimilarStock[] {
+  return pool
     .filter((s) => s.code !== self.code)
     .map((s) => ({
       stock: s,
@@ -249,8 +260,12 @@ export function riskComplementStocks(self: Stock, top = 4): SimilarStock[] {
     .slice(0, top);
 }
 
-export function riskSimilarStocks(self: Stock, top = 4): SimilarStock[] {
-  return stocks
+export function riskSimilarStocks(
+  self: Stock,
+  pool: Stock[],
+  top = 4,
+): SimilarStock[] {
+  return pool
     .filter((s) => s.code !== self.code)
     .map((s) => ({
       stock: s,

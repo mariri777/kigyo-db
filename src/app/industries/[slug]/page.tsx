@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import {
   getIndustry,
   getStocksForCluster,
-  industries,
   industryAggregates,
 } from "@/lib/industries";
 import { Section } from "@/components/Section";
@@ -13,10 +12,9 @@ import { SourceList } from "@/components/SourceChip";
 import { Disclose } from "@/components/Disclose";
 import { postsForIndustry } from "@/lib/posts";
 import { PostCard } from "@/components/PostCard";
+import { listStockBriefs } from "@/lib/stocksRepo";
 
-export function generateStaticParams() {
-  return industries.map((i) => ({ slug: i.slug }));
-}
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,
@@ -41,7 +39,8 @@ export default async function IndustryPage({
   const industry = getIndustry(slug);
   if (!industry) notFound();
 
-  const agg = industryAggregates(industry);
+  const briefsByCode = new Map((await listStockBriefs()).map((b) => [b.code, b]));
+  const agg = industryAggregates(industry, briefsByCode);
   const relatedPosts = postsForIndustry(industry.slug).slice(0, 3);
 
   return (
@@ -88,9 +87,7 @@ export default async function IndustryPage({
           </div>
           <div className="bg-background p-4">
             <div className="text-[10px] text-dim tracking-wider mb-1">カバー銘柄の平均</div>
-            <div className="font-bold tabular">
-              PER {agg.avgPer.toFixed(1)} 倍 / ROE {agg.avgRoe.toFixed(1)}%
-            </div>
+            <div className="font-bold tabular">PER {agg.avgPer.toFixed(1)} 倍</div>
             <div className="text-[11px] text-muted mt-1">{industry.marketScale.breakdown}</div>
           </div>
         </div>
@@ -119,7 +116,7 @@ export default async function IndustryPage({
                 </div>
                 <div className="space-y-4">
                   {subs.map((sub) => {
-                    const stocks = getStocksForCluster(sub);
+                    const stocks = getStocksForCluster(sub, briefsByCode);
                     return (
                       <div key={sub.key}>
                         <div className="flex items-baseline justify-between gap-2 mb-1">
@@ -306,7 +303,7 @@ export default async function IndustryPage({
       >
         <div className="space-y-8">
           {industry.subClusters.map((sub) => {
-            const stocks = getStocksForCluster(sub);
+            const stocks = getStocksForCluster(sub, briefsByCode);
             if (stocks.length === 0) return null;
             return (
               <div key={sub.key}>
@@ -320,8 +317,8 @@ export default async function IndustryPage({
                     <div>銘柄</div>
                     <div className="text-right">株価</div>
                     <div className="text-right">PER</div>
-                    <div className="text-right">ROE</div>
-                    <div className="text-right">3年成長</div>
+                    <div className="text-right">PBR</div>
+                    <div className="text-right">配当</div>
                   </div>
                   {stocks.map((s) => (
                     <Link
@@ -332,21 +329,14 @@ export default async function IndustryPage({
                       <div className="text-dim tabular text-xs">{s.code}</div>
                       <div>
                         <div className="font-medium group-hover:underline">{s.name}</div>
-                        <div className="text-[11px] text-muted line-clamp-1">{s.description.slice(0, 60)}…</div>
+                        <div className="text-[11px] text-muted line-clamp-1">{s.sectorTSE}</div>
                       </div>
                       <div className="text-right tabular font-mono">
                         ¥{s.priceJpy.toLocaleString()}
                       </div>
                       <div className="text-right tabular font-mono">{s.per.toFixed(1)}</div>
-                      <div className="text-right tabular font-mono">{s.roe.toFixed(1)}%</div>
-                      <div
-                        className={`text-right tabular font-mono ${
-                          s.revenueGrowth3y >= 0 ? "text-positive" : "text-negative"
-                        }`}
-                      >
-                        {s.revenueGrowth3y >= 0 ? "+" : ""}
-                        {s.revenueGrowth3y.toFixed(1)}%
-                      </div>
+                      <div className="text-right tabular font-mono">{s.pbr.toFixed(2)}</div>
+                      <div className="text-right tabular font-mono">{s.dividendYield.toFixed(2)}%</div>
                     </Link>
                   ))}
                 </div>

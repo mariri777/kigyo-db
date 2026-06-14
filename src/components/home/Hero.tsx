@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Stock } from "@/lib/types";
+import type { StockBrief } from "@/lib/types";
 
 /** トップページのヒーローセクション。 */
 export function Hero({
@@ -9,7 +9,7 @@ export function Hero({
 }: {
   stockCount: number;
   industryCount: number;
-  firstStock: Stock;
+  firstStock: StockBrief;
 }) {
   return (
     <section className="mb-20 pb-16 border-b border-border">

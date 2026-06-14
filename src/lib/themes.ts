@@ -1,5 +1,4 @@
 import type { Stock } from "./types";
-import { stocks } from "./data";
 
 /**
  * 業界横断テーマ（特集）の定義。
@@ -567,8 +566,12 @@ export function formatThemeRankValue(s: Stock, rankBy: RankBy): string {
   }
 }
 
-export function rankedStocksForTheme(theme: Theme): Stock[] {
-  const filtered = stocks.filter(theme.rankFilter);
+/**
+ * ランキング対象のテーマで、銘柄を rankFilter で絞り込んで sort する。
+ * 呼び出し側は詳細型の銘柄一覧(オーバーレイ済み 68 件)を渡す。
+ */
+export function rankedStocksForTheme(theme: Theme, all: Stock[]): Stock[] {
+  const filtered = all.filter(theme.rankFilter);
   return filtered.sort((a, b) => {
     const av = themeRankValue(a, theme.rankBy);
     const bv = themeRankValue(b, theme.rankBy);
@@ -576,10 +579,18 @@ export function rankedStocksForTheme(theme: Theme): Stock[] {
   });
 }
 
-export function pickedStocksForTheme(theme: Theme): { stock: Stock; reason: string }[] {
+/**
+ * テーマの picks(編集部キュレーション)を Stock オブジェクトに解決して返す。
+ * 詳細型の銘柄一覧(オーバーレイ済み)を渡す。picks に該当する銘柄が無い場合は除外される。
+ */
+export function pickedStocksForTheme(
+  theme: Theme,
+  all: Stock[],
+): { stock: Stock; reason: string }[] {
+  const byCode = new Map(all.map((s) => [s.code, s]));
   return theme.picks
     .map((p) => {
-      const stock = stocks.find((s) => s.code === p.code);
+      const stock = byCode.get(p.code);
       return stock ? { stock, reason: p.reason } : null;
     })
     .filter((x): x is { stock: Stock; reason: string } => x !== null);

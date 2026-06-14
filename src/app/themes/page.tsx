@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { listThemes, pickedStocksForTheme } from "@/lib/themes";
+import { listOverlayStocks } from "@/lib/stocksRepo";
 
 export const metadata = {
   title: "特集 — 業界横断テーマ別の銘柄キュレーション",
   description:
     "円安・AI 受益・金利上昇・訪日インバウンド・累進配当・PBR 改善など、マクロ・テーマ別に業界横断で銘柄をキュレーション。",
 };
+export const revalidate = 1800;
 
-export default function ThemesHub() {
+export default async function ThemesHub() {
   const themes = listThemes();
+  const overlayStocks = await listOverlayStocks();
   return (
     <article className="max-w-6xl mx-auto px-6 py-12">
       <header className="pb-10 border-b border-border mb-12">
@@ -29,7 +32,7 @@ export default function ThemesHub() {
 
       <section className="grid sm:grid-cols-2 gap-5">
         {themes.map((theme) => {
-          const picks = pickedStocksForTheme(theme);
+          const picks = pickedStocksForTheme(theme, overlayStocks);
           return (
             <Link
               key={theme.slug}

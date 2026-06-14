@@ -4,7 +4,7 @@ import { formatTrillionFromOku } from "@/lib/format";
 
 type Coverage = {
   industry: Industry;
-  agg: { count: number; totalMcap: number; avgPer: number; avgRoe: number };
+  agg: { count: number; totalMcap: number; avgPer: number };
 };
 
 export function CoverageMap({
@@ -43,15 +43,9 @@ export function CoverageMap({
               <div className="font-bold text-sm group-hover:underline">{industry.shortName}</div>
               <div className="text-[10px] text-dim tabular">{agg.count} 社</div>
             </div>
-            <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] mb-2">
-              <div>
-                <div className="text-dim">平均 PER</div>
-                <div className="tabular font-mono font-bold">{agg.avgPer.toFixed(1)}</div>
-              </div>
-              <div>
-                <div className="text-dim">平均 ROE</div>
-                <div className="tabular font-mono font-bold">{agg.avgRoe.toFixed(1)}%</div>
-              </div>
+            <div className="text-[10px] mb-2">
+              <div className="text-dim">平均 PER</div>
+              <div className="tabular font-mono font-bold">{agg.avgPer.toFixed(1)}</div>
             </div>
             <div className="text-[10px] text-muted tabular">
               時価総額 {formatTrillionFromOku(agg.totalMcap)}

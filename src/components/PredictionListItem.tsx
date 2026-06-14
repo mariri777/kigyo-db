@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Countdown } from "./Countdown";
-import { getStock } from "@/lib/data";
 import { daysFromToday } from "@/lib/predictions";
 import type { Prediction } from "@/lib/predictions";
 import { eventLabelShort } from "@/lib/predictionLabels";
@@ -9,9 +8,19 @@ import { formatPredictionEventDate } from "@/lib/format";
 /**
  * ハブページ用のコンパクトな予測カード。
  * クリックで該当銘柄ページの予測セクションへスクロール、または個別予測ページへ。
+ *
+ * stockName は呼び出し側でマップして渡す(client/server どちらからも使えるように、
+ * このコンポーネント自体は DB を叩かない)。
  */
-export function PredictionListItem({ prediction: p }: { prediction: Prediction }) {
-  const stock = p.stockCode ? getStock(p.stockCode) : null;
+export function PredictionListItem({
+  prediction: p,
+  stockName,
+}: {
+  prediction: Prediction;
+  stockName?: string | null;
+}) {
+  const stock =
+    p.stockCode && stockName ? { code: p.stockCode, name: stockName } : null;
   const aiPick = p.choices.find((c) => c.key === p.aiReasoning.pick);
   const topChoice = [...p.choices].sort((a, b) => b.probability - a.probability)[0];
   const isResolved = p.status === "resolved" && p.resolution;

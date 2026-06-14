@@ -4,17 +4,15 @@ import type { Metadata } from "next";
 import {
   formatThemeRankValue,
   getTheme,
-  listThemes,
   pickedStocksForTheme,
   rankedStocksForTheme,
 } from "@/lib/themes";
 import { industries } from "@/lib/industries";
 import { posts } from "@/lib/posts";
+import { listOverlayStocks } from "@/lib/stocksRepo";
 import { formatPct1, formatPer } from "@/lib/format";
 
-export function generateStaticParams() {
-  return listThemes().map((t) => ({ slug: t.slug }));
-}
+export const revalidate = 1800;
 
 export async function generateMetadata({
   params,
@@ -39,8 +37,9 @@ export default async function ThemePage({
   const theme = getTheme(slug);
   if (!theme) notFound();
 
-  const picks = pickedStocksForTheme(theme);
-  const ranked = rankedStocksForTheme(theme).slice(0, 15);
+  const overlayStocks = await listOverlayStocks();
+  const picks = pickedStocksForTheme(theme, overlayStocks);
+  const ranked = rankedStocksForTheme(theme, overlayStocks).slice(0, 15);
   const relatedIndustries = theme.relatedIndustries
     .map((s) => industries.find((i) => i.slug === s))
     .filter((i): i is NonNullable<typeof i> => Boolean(i));

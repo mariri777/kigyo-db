@@ -3,7 +3,6 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { getStock, listStocks } from "@/lib/data";
 import type { Stock } from "@/lib/types";
 import { analyzeComparison, type ComparisonObservation } from "@/lib/compare";
 import { VERDICT_STYLE } from "@/lib/verdict";
@@ -19,16 +18,28 @@ import {
 
 const MAX_COMPARE = 3;
 
-export function CompareView({ initialCodes }: { initialCodes: string[] }) {
+export function CompareView({
+  initialCodes,
+  allStocks,
+}: {
+  initialCodes: string[];
+  allStocks: Stock[];
+}) {
   const router = useRouter();
   const [codes, setCodes] = useState<string[]>(initialCodes);
 
-  const stocks = useMemo(
-    () => codes.map((c) => getStock(c)).filter((s): s is Stock => Boolean(s)),
-    [codes]
+  const stocksByCode = useMemo(
+    () => new Map(allStocks.map((s) => [s.code, s])),
+    [allStocks],
   );
-  const all = listStocks();
-  const available = all.filter((s) => !codes.includes(s.code));
+  const stocks = useMemo(
+    () =>
+      codes
+        .map((c) => stocksByCode.get(c))
+        .filter((s): s is Stock => Boolean(s)),
+    [codes, stocksByCode],
+  );
+  const available = allStocks.filter((s) => !codes.includes(s.code));
 
   const updateUrl = (next: string[]) => {
     if (next.length === 0) router.replace(`/compare`);

@@ -2,9 +2,38 @@ import type { Metadata } from "next";
 import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
 import Link from "next/link";
 import Script from "next/script";
-import { SearchBox } from "@/components/SearchBox";
+import { SearchBox, type Hit } from "@/components/SearchBox";
 import { SITE_URL, SITE_NAME } from "@/lib/site";
+import { listStockBriefs } from "@/lib/stocksRepo";
+import { industries } from "@/lib/industries";
+import { listPosts, CATEGORY_LABEL } from "@/lib/posts";
 import "./globals.css";
+
+async function buildSearchIndex(): Promise<Hit[]> {
+  const stocks = await listStockBriefs();
+  const items: Hit[] = [];
+  for (const s of stocks) {
+    items.push({
+      type: "stock",
+      code: s.code,
+      name: s.name,
+      nameEn: s.nameEn,
+      cluster: s.sectorTSE,
+    });
+  }
+  for (const i of industries) {
+    items.push({ type: "industry", slug: i.slug, name: i.name });
+  }
+  for (const p of listPosts()) {
+    items.push({
+      type: "post",
+      slug: p.slug,
+      title: p.title,
+      category: CATEGORY_LABEL[p.category],
+    });
+  }
+  return items;
+}
 
 const notoJp = Noto_Sans_JP({
   variable: "--font-noto-jp",
@@ -41,7 +70,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const searchIndex = await buildSearchIndex();
   return (
     <html lang="ja" className={`${notoJp.variable} ${jbMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
@@ -103,7 +133,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                   🎯
                 </span>
               </Link>
-              <SearchBox />
+              <SearchBox index={searchIndex} />
             </nav>
           </div>
         </header>

@@ -1,4 +1,4 @@
-import { listStocks } from "@/lib/data";
+import { listStockBriefs, listOverlayStocks } from "@/lib/stocksRepo";
 import { listPosts } from "@/lib/posts";
 import { industries, industryAggregates } from "@/lib/industries";
 import { listPredictions } from "@/lib/predictions";
@@ -12,21 +12,27 @@ import { FactorAnomaliesSection } from "@/components/home/FactorAnomaliesSection
 import { WhatYouCanDo } from "@/components/home/WhatYouCanDo";
 import { LatestPostsSection } from "@/components/home/LatestPostsSection";
 
-export default function Home() {
-  const stocks = listStocks();
+export const revalidate = 1800;
+
+export default async function Home() {
+  const [briefs, detailedStocks] = await Promise.all([
+    listStockBriefs(),
+    listOverlayStocks(),
+  ]);
   const latestPosts = listPosts().slice(0, 3);
 
-  const undervaluedHighlights = [...stocks]
+  const undervaluedHighlights = [...detailedStocks]
     .filter((s) => s.valuationCall.verdict === "割安")
     .sort((a, b) => b.valuationCall.score - a.valuationCall.score)
     .slice(0, 4);
-  const expansionHighlights = [...stocks]
+  const expansionHighlights = [...detailedStocks]
     .sort((a, b) => b.phaseScores.expansion - a.phaseScores.expansion)
     .slice(0, 4);
 
+  const briefsByCode = new Map(briefs.map((b) => [b.code, b]));
   const coverage = industries.map((ind) => ({
     industry: ind,
-    agg: industryAggregates(ind),
+    agg: industryAggregates(ind, briefsByCode),
   }));
   const totalStocks = coverage.reduce((acc, c) => acc + c.agg.count, 0);
 
@@ -42,9 +48,9 @@ export default function Home() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-12">
       <Hero
-        stockCount={stocks.length}
+        stockCount={briefs.length}
         industryCount={industries.length}
-        firstStock={stocks[0]}
+        firstStock={detailedStocks[0] ?? briefs[0]}
       />
       <UndervaluedSection stocks={undervaluedHighlights} />
       <ExpansionSection stocks={expansionHighlights} />
