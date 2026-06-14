@@ -2,8 +2,8 @@ import type { Source } from "@/domain/types";
 
 export function SourceChip({ source }: { source: Source }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] text-dim border border-border rounded px-1.5 py-0.5 align-middle">
-      <span className="text-accent">出典</span>
+    <span className="inline-flex items-center gap-1 text-[10px] text-foreground/60 border border-border rounded px-1.5 py-0.5 align-middle">
+      <span className="text-foreground">出典</span>
       <span>
         {source.doc}
         {source.page ? ` p.${source.page}` : ""}

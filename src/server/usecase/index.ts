@@ -10,6 +10,7 @@ import "server-only";
 export {
   listStockBriefs,
   getStockBrief,
+  getStockBriefsByCodes,
   listStockBriefsPaginated,
 } from "./stockBriefs";
 export { getStockDetail } from "./getStockDetail";

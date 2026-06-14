@@ -1,16 +1,54 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * デザイントークン (light モード固定)。
+ *
+ * 命名は shadcn/ui に揃える。既存サイト固有の意味を持つ token (surface, ai 等)
+ * は追加して保持。dark モードは現状未提供。
+ */
 :root {
+  /* ─ shadcn ロール token (light) ─ */
   --background: #ffffff;
-  --surface: #ffffff;
-  --surface-elev: #fafafa;
-  --border: #e7e7e7;
-  --border-strong: #d4d4d4;
   --foreground: #0a0a0a;
-  --foreground-muted: #525252;
-  --foreground-dim: #9ca3af;
-  --accent: #0a0a0a;
-  --accent-soft: #f5f5f5;
+  --card: #ffffff;
+  --card-foreground: #0a0a0a;
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f5f5f5;
+  --muted-foreground: #525252;
+  --accent: #f5f5f5;
+  --accent-foreground: #0a0a0a;
+  --destructive: #b91c1c;
+  --border: #e7e7e7;
+  --input: #e7e7e7;
+  --ring: #9ca3af;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: #fafafa;
+  --sidebar-foreground: #0a0a0a;
+  --sidebar-primary: #0a0a0a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f5f5;
+  --sidebar-accent-foreground: #0a0a0a;
+  --sidebar-border: #e7e7e7;
+  --sidebar-ring: #9ca3af;
+
+  /* ─ サイト固有の追加 token (shadcn にない概念) ─ */
+  --surface: #ffffff;       /* カードより 1 段深い「平らな面」用 */
+  --surface-elev: #fafafa;  /* 浮いたパネル用 */
+  --border-strong: #d4d4d4; /* ホバー時の境界用 */
   --positive: #15803d;
   --negative: #b91c1c;
   --ai: #404040;
@@ -18,22 +56,61 @@
 }
 
 @theme inline {
+  /* ─ shadcn ロール token を Tailwind カラーに公開 ─ */
   --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ─ サイト固有 token を Tailwind カラーに公開 ─ */
   --color-surface: var(--surface);
   --color-surface-elev: var(--surface-elev);
-  --color-border: var(--border);
   --color-border-strong: var(--border-strong);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--foreground-muted);
-  --color-dim: var(--foreground-dim);
-  --color-accent: var(--accent);
-  --color-accent-soft: var(--accent-soft);
   --color-positive: var(--positive);
   --color-negative: var(--negative);
   --color-ai: var(--ai);
   --color-ai-soft: var(--ai-soft);
+
+  /* ─ フォント ─ */
   --font-sans: var(--font-noto-jp);
   --font-mono: var(--font-jb-mono);
+  --font-heading: var(--font-noto-jp);
+
+  /* ─ radius スケール ─ */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 html {
@@ -89,3 +166,46 @@ p, li, dd, summary {
 
 /* リンク・インタラクション基本 */
 ::selection { background: var(--foreground); color: var(--background); }
+
+/* 管理画面 WYSIWYG 用の最小限スタイル
+ * 公開ページ側は Tailwind クラスを付与した HTML を保存しているのでそのまま
+ * 表示できるが、editor の中ではユーザーが ENTER で作る生の <p>/<h2>/<ul> に
+ * もある程度の見た目を与えたい。 */
+.prose-editor h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.25rem;
+}
+.prose-editor h3 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
+}
+.prose-editor p {
+  margin: 0.75rem 0;
+}
+.prose-editor ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.prose-editor ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+  margin: 0.5rem 0;
+}
+.prose-editor blockquote {
+  border-left: 2px solid var(--foreground);
+  padding-left: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 1rem 0;
+}
+.prose-editor a {
+  color: var(--foreground);
+  text-decoration: underline;
+}
+.prose-editor aside {
+  margin: 1rem 0;
+}

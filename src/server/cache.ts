@@ -30,7 +30,18 @@ export async function withEdgeCache(
 ): Promise<Response> {
   if (request.method !== "GET") return origin();
 
-  const cache = caches.default;
+  // Workers ランタイム外 (next dev = Node) では `caches` global が存在しない。
+  // その場合はキャッシュをスキップして origin() の結果をそのまま返す。
+  // 本番 Workers では withEdgeCache 経由の Cloudflare Cache API による
+  // 共有キャッシュが効く。
+  const cache =
+    typeof caches !== "undefined" && "default" in caches
+      ? (caches as unknown as { default: Cache }).default
+      : null;
+  if (!cache) {
+    return origin();
+  }
+
   const cacheKey = new Request(request.url, { method: "GET" });
   const cached = await cache.match(cacheKey);
   if (cached) {

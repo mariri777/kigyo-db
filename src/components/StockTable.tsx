@@ -125,7 +125,7 @@ export function StockTable({
       {/* フィルタバー */}
       <div className="mb-5 space-y-3">
         <div className="flex items-center flex-wrap gap-2">
-          <span className="text-[11px] text-dim w-16">業界:</span>
+          <span className="text-[11px] text-foreground/60 w-16">業界:</span>
           {industryOptions.map((opt) => {
             const active = industryFilter.includes(opt.slug);
             return (
@@ -137,7 +137,7 @@ export function StockTable({
                 className={`text-[11px] rounded-full px-3 py-1 border transition ${
                   active
                     ? "bg-foreground text-background border-foreground"
-                    : "border-border text-muted hover:border-border-strong hover:text-foreground"
+                    : "border-border text-muted-foreground hover:border-border-strong hover:text-foreground"
                 }`}
               >
                 {opt.name}{" "}
@@ -151,20 +151,20 @@ export function StockTable({
         {industryFilter.length > 0 && (
           <button
             onClick={() => setIndustryFilter([])}
-            className="text-[11px] text-dim hover:text-foreground transition underline decoration-dotted"
+            className="text-[11px] text-foreground/60 hover:text-foreground transition underline decoration-dotted"
           >
             すべてクリア
           </button>
         )}
       </div>
 
-      <div className="text-[11px] text-dim mb-2 tabular">
+      <div className="text-[11px] text-foreground/60 mb-2 tabular">
         {stocks.length} 社 表示中{loading && "(更新中…)"}
       </div>
 
       {/* テーブル */}
       <div className="bg-surface border border-border rounded-md overflow-hidden">
-        <div className="hidden md:grid grid-cols-[70px_1fr_140px_100px_70px_70px_80px_100px] text-[11px] text-dim border-b border-border bg-surface-elev px-4 py-2 gap-2">
+        <div className="hidden md:grid grid-cols-[70px_1fr_140px_100px_70px_70px_80px_100px] text-[11px] text-foreground/60 border-b border-border bg-surface-elev px-4 py-2 gap-2">
           <SortHeader
             label="コード"
             k="code"
@@ -221,14 +221,14 @@ export function StockTable({
             href={`/stocks/${s.code}`}
             className="grid grid-cols-1 md:grid-cols-[70px_1fr_140px_100px_70px_70px_80px_100px] gap-2 md:gap-2 items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-elev transition group text-sm"
           >
-            <div className="text-dim tabular text-xs">{s.code}</div>
+            <div className="text-foreground/60 tabular text-xs">{s.code}</div>
             <div>
               <div className="font-medium group-hover:underline">{s.name}</div>
-              <div className="text-[11px] text-dim md:hidden">
+              <div className="text-[11px] text-foreground/60 md:hidden">
                 {s.sectorTSE}
               </div>
             </div>
-            <div className="text-[11px] text-muted hidden md:block truncate">
+            <div className="text-[11px] text-muted-foreground hidden md:block truncate">
               {s.sectorTSE}
             </div>
             <div className="text-right tabular font-mono text-xs sm:text-sm">
@@ -251,7 +251,7 @@ export function StockTable({
           </Link>
         ))}
         {stocks.length === 0 && !loading && (
-          <div className="px-4 py-8 text-center text-sm text-dim">
+          <div className="px-4 py-8 text-center text-sm text-foreground/60">
             条件に合う銘柄がありません。フィルタを調整してください。
           </div>
         )}
@@ -294,7 +294,7 @@ function SortHeader({
       onClick={() => onClick(k)}
       className={`text-[11px] hover:text-foreground transition flex items-center gap-0.5 ${
         align === "right" ? "justify-end" : ""
-      } ${active ? "text-foreground" : "text-dim"}`}
+      } ${active ? "text-foreground" : "text-foreground/60"}`}
     >
       {label}
       {active && (

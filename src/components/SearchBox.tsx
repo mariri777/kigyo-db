@@ -112,7 +112,7 @@ export function SearchBox() {
     <div ref={wrapRef} className="relative">
       <div className="relative">
         <svg
-          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim pointer-events-none"
+          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-foreground/60 pointer-events-none"
           width="14"
           height="14"
           viewBox="0 0 16 16"
@@ -145,9 +145,9 @@ export function SearchBox() {
       {open && query.trim() && (
         <div className="absolute right-0 top-full mt-2 w-80 max-w-[92vw] bg-background border border-border rounded-md shadow-xl z-50 max-h-[70vh] overflow-y-auto">
           {loading && results.length === 0 ? (
-            <div className="px-3 py-4 text-xs text-dim">検索中…</div>
+            <div className="px-3 py-4 text-xs text-foreground/60">検索中…</div>
           ) : results.length === 0 ? (
-            <div className="px-3 py-4 text-xs text-dim">該当なし</div>
+            <div className="px-3 py-4 text-xs text-foreground/60">該当なし</div>
           ) : (
             <ul className="py-1">
               {results.map((hit, i) => (
@@ -163,13 +163,13 @@ export function SearchBox() {
                     }`}
                   >
                     <div className="flex items-baseline gap-2">
-                      <span className="text-[10px] text-dim tabular w-10">
+                      <span className="text-[10px] text-foreground/60 tabular w-10">
                         {hit.code}
                       </span>
                       <span className="text-sm font-medium flex-1 truncate">
                         {hit.name}
                       </span>
-                      <span className="text-[10px] text-dim shrink-0 ml-2">
+                      <span className="text-[10px] text-foreground/60 shrink-0 ml-2">
                         {hit.sectorTSE}
                       </span>
                     </div>
@@ -178,7 +178,7 @@ export function SearchBox() {
               ))}
             </ul>
           )}
-          <div className="border-t border-border px-3 py-2 text-[10px] text-dim flex items-center justify-between">
+          <div className="border-t border-border px-3 py-2 text-[10px] text-foreground/60 flex items-center justify-between">
             <span>
               <kbd className="font-mono border border-border rounded px-1">
                 ↑↓

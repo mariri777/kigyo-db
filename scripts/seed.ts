@@ -13,10 +13,10 @@
 
 import {
   existsSync,
+  mkdirSync,
   readdirSync,
   readFileSync,
   statSync,
-  rmSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join, dirname } from "node:path";
@@ -56,6 +56,17 @@ function readCsv(name: string): Record<string, string>[] {
   return csvRowsToObjects(parseCsv(text));
 }
 
+/**
+ * 任意 CSV(存在しなければ空配列)。新規に追加した seed テーブル(admin_users 等)で
+ * CSV が未生成のまま seed が走るケースに備えるためのガード版。
+ */
+function readCsvOptional(name: string): Record<string, string>[] {
+  const path = join(SEED_DIR, name);
+  if (!existsSync(path)) return [];
+  const text = readFileSync(path, "utf8");
+  return csvRowsToObjects(parseCsv(text));
+}
+
 function chunked<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -63,14 +74,21 @@ function chunked<T>(arr: T[], size: number): T[][] {
 }
 
 // ──────────────────────────────────────────────────
-// 1) ローカル D1 ファイルを削除して再マイグレーション
+// 1) ローカル D1 ファイルを「同じ inode のまま」リセットする
+//
+// dev サーバ(`next dev`)が起動中だと、miniflare が既に SQLite ファイルを
+// 開いている。以前は seed のたびにディレクトリごと rm -rf していたが、
+// 旧 inode を miniflare が掴んだまま新ファイルが作られると次回クエリ時に
+// `SQLITE_CANTOPEN: unable to open database file` が出る。
+//
+// 修正: ファイルを物理削除せず、ファイルそのものを `BEGIN` で開いた接続から
+//   1) 既存テーブルを全て DROP
+//   2) drizzle/*.sql を順に流して再作成
+// する。同一 inode を維持するので dev サーバの接続を壊さない。
+// マイグレーションが未適用な「真の初回」は wrangler migrations apply に委譲。
 // ──────────────────────────────────────────────────
 
-function resetLocalD1() {
-  if (existsSync(D1_LOCAL_DIR)) {
-    rmSync(D1_LOCAL_DIR, { recursive: true, force: true });
-    console.log(`🗑️  ${D1_LOCAL_DIR} を削除`);
-  }
+function runWranglerMigrations() {
   console.log(`🚀 wrangler d1 migrations apply ${D1_NAME} --local`);
   const result = spawnSync(
     "npx",
@@ -82,7 +100,8 @@ function resetLocalD1() {
   }
 }
 
-function findLocalD1File(): string {
+function findLocalD1File(): string | null {
+  if (!existsSync(D1_LOCAL_DIR)) return null;
   const entries = readdirSync(D1_LOCAL_DIR);
   for (const f of entries) {
     if (!f.endsWith(".sqlite") || f === "metadata.sqlite") continue;
@@ -98,9 +117,61 @@ function findLocalD1File(): string {
       db.close();
     }
   }
-  throw new Error(
-    `companies テーブルを持つ D1 ファイルが見つかりません: ${D1_LOCAL_DIR}`,
-  );
+  return null;
+}
+
+function loadMigrationSql(): string[] {
+  const migrationsDir = join(ROOT, "drizzle");
+  return readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => readFileSync(join(migrationsDir, f), "utf8"));
+}
+
+function resetLocalD1Inplace(dbPath: string) {
+  const sqlite = new Database(dbPath);
+  try {
+    sqlite.pragma("foreign_keys = OFF");
+    const tableNames = sqlite
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE 'd1_%' AND name NOT LIKE '_cf_%'",
+      )
+      .all()
+      .map((r) => (r as { name: string }).name);
+    const tx = sqlite.transaction(() => {
+      for (const name of tableNames) {
+        sqlite.exec(`DROP TABLE IF EXISTS \`${name}\``);
+      }
+      for (const sql of loadMigrationSql()) {
+        sqlite.exec(sql);
+      }
+    });
+    tx();
+    sqlite.pragma("foreign_keys = ON");
+    console.log(
+      `🧹 既存テーブルを DROP → drizzle/*.sql を流して再作成 (inode 維持)`,
+    );
+  } finally {
+    sqlite.close();
+  }
+}
+
+function prepareLocalD1(): string {
+  mkdirSync(D1_LOCAL_DIR, { recursive: true });
+  const existing = findLocalD1File();
+  if (existing) {
+    resetLocalD1Inplace(existing);
+    return existing;
+  }
+  // 初回は wrangler に作らせる
+  runWranglerMigrations();
+  const created = findLocalD1File();
+  if (!created) {
+    throw new Error(
+      `companies テーブルを持つ D1 ファイルが見つかりません: ${D1_LOCAL_DIR}`,
+    );
+  }
+  return created;
 }
 
 // ──────────────────────────────────────────────────
@@ -108,9 +179,7 @@ function findLocalD1File(): string {
 // ──────────────────────────────────────────────────
 
 async function main() {
-  resetLocalD1();
-
-  const dbPath = findLocalD1File();
+  const dbPath = prepareLocalD1();
   const sizeKb = (statSync(dbPath).size / 1024).toFixed(1);
   console.log(`📂 ローカル D1: ${dbPath} (${sizeKb} KB)`);
 
@@ -356,6 +425,77 @@ async function main() {
         db.insert(schema.valuationSources).values(chunk).run();
       }
     }
+
+    // ─ admin_users ─
+    const adminUsers = readCsvOptional("admin_users.csv").map((r) => ({
+      id: parseIntOrNull(r.id)!,
+      email: r.email,
+      name: r.name,
+      passwordHash: r.password_hash,
+      passwordSalt: r.password_salt,
+      passwordIterations: parseIntOrNull(r.password_iterations)!,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }));
+    if (adminUsers.length > 0) {
+      for (const chunk of chunked(adminUsers, INSERT_CHUNK)) {
+        db.insert(schema.adminUsers).values(chunk).run();
+      }
+    }
+
+    // ─ posts ─
+    const posts = readCsvOptional("posts.csv").map((r) => ({
+      id: parseIntOrNull(r.id)!,
+      slug: r.slug,
+      title: r.title,
+      lede: r.lede,
+      bodyHtml: r.body_html,
+      category: r.category as
+        | "earnings"
+        | "industry-watch"
+        | "analysis"
+        | "disclosure"
+        | "primer",
+      status: r.status as "draft" | "published",
+      author: r.author as "editor" | "ai-editor",
+      readTimeMin: parseIntOrNull(r.read_time_min)!,
+      fiscalPeriod: emptyToNull(r.fiscal_period),
+      relatedStocksJson: r.related_stocks_json || "[]",
+      relatedIndustriesJson: r.related_industries_json || "[]",
+      publishedAt: emptyToNull(r.published_at),
+      authorUserId: parseIntOrNull(r.author_user_id),
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }));
+    if (posts.length > 0) {
+      for (const chunk of chunked(posts, INSERT_CHUNK)) {
+        db.insert(schema.posts).values(chunk).run();
+      }
+    }
+
+    // ─ tags ─
+    const tagsRows = readCsvOptional("tags.csv").map((r) => ({
+      id: parseIntOrNull(r.id)!,
+      slug: r.slug,
+      name: r.name,
+      createdAt: r.created_at,
+    }));
+    if (tagsRows.length > 0) {
+      for (const chunk of chunked(tagsRows, INSERT_CHUNK)) {
+        db.insert(schema.tags).values(chunk).run();
+      }
+    }
+
+    // ─ post_tags ─
+    const postTagsRows = readCsvOptional("post_tags.csv").map((r) => ({
+      postId: parseIntOrNull(r.post_id)!,
+      tagId: parseIntOrNull(r.tag_id)!,
+    }));
+    if (postTagsRows.length > 0) {
+      for (const chunk of chunked(postTagsRows, INSERT_CHUNK)) {
+        db.insert(schema.postTags).values(chunk).run();
+      }
+    }
   });
 
   tx();
@@ -371,6 +511,10 @@ async function main() {
     clusters: (sqlite.prepare("SELECT COUNT(*) c FROM industry_clusters").get() as { c: number }).c,
     tags: (sqlite.prepare("SELECT COUNT(*) c FROM business_tags").get() as { c: number }).c,
     insights: (sqlite.prepare("SELECT COUNT(*) c FROM company_insights").get() as { c: number }).c,
+    adminUsers: (sqlite.prepare("SELECT COUNT(*) c FROM admin_users").get() as { c: number }).c,
+    posts: (sqlite.prepare("SELECT COUNT(*) c FROM posts").get() as { c: number }).c,
+    blogTags: (sqlite.prepare("SELECT COUNT(*) c FROM tags").get() as { c: number }).c,
+    postTags: (sqlite.prepare("SELECT COUNT(*) c FROM post_tags").get() as { c: number }).c,
   };
 
   console.log(`\n✅ seed 完了 (${elapsed}ms)`);
@@ -382,6 +526,10 @@ async function main() {
   console.log(`   industry_clusters  : ${counts.clusters}`);
   console.log(`   business_tags      : ${counts.tags}`);
   console.log(`   company_insights   : ${counts.insights}`);
+  console.log(`   admin_users        : ${counts.adminUsers}`);
+  console.log(`   posts              : ${counts.posts}`);
+  console.log(`   tags               : ${counts.blogTags}`);
+  console.log(`   post_tags          : ${counts.postTags}`);
 
   sqlite.close();
 }

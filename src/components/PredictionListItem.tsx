@@ -44,27 +44,27 @@ export function PredictionListItem({
                 p.status === "live"
                   ? "bg-foreground text-background"
                   : isResolved
-                    ? "bg-accent-soft text-muted border border-border"
-                    : "text-muted border border-border"
+                    ? "bg-muted text-muted-foreground border border-border"
+                    : "text-muted-foreground border border-border"
               }`}
             >
               {p.status === "live" ? "🔴 LIVE" : isResolved ? "✓ Resolved" : "Upcoming"}
             </span>
-            <span className="text-[10px] text-dim tracking-wide">
+            <span className="text-[10px] text-foreground/60 tracking-wide">
               {eventLabelShort(p.eventType)}
             </span>
             {stock && (
-              <span className="text-[11px] text-muted">
-                <span className="tabular text-dim">{stock.code}</span>{" "}
+              <span className="text-[11px] text-muted-foreground">
+                <span className="tabular text-foreground/60">{stock.code}</span>{" "}
                 <span>{stock.name}</span>
               </span>
             )}
             {!stock && (
-              <span className="text-[11px] text-muted">マクロ（全銘柄横断）</span>
+              <span className="text-[11px] text-muted-foreground">マクロ（全銘柄横断）</span>
             )}
           </div>
           {!isResolved && (
-            <span className="text-[11px] text-muted">
+            <span className="text-[11px] text-muted-foreground">
               <Countdown target={p.deadlineAt} />
             </span>
           )}
@@ -79,9 +79,9 @@ export function PredictionListItem({
         <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 text-[11px]">
           <span className="font-bold text-base tabular tracking-tight">
             {topChoice.probability}%
-            <span className="text-[10px] text-muted ml-1 font-normal">{topChoice.label}</span>
+            <span className="text-[10px] text-muted-foreground ml-1 font-normal">{topChoice.label}</span>
           </span>
-          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-muted">
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
             {p.choices
               .filter((c) => c.key !== topChoice.key)
               .map((c) => (
@@ -93,14 +93,14 @@ export function PredictionListItem({
           </div>
           {/* AI 見立て */}
           {!isResolved && aiPick && (
-            <span className="text-[10px] text-dim whitespace-nowrap">
+            <span className="text-[10px] text-foreground/60 whitespace-nowrap">
               AI: <span className="text-foreground">{aiPick.label}</span>
             </span>
           )}
           {isResolved && (
             <span
               className={`text-[10px] font-bold whitespace-nowrap ${
-                aiHit ? "text-foreground" : "text-muted"
+                aiHit ? "text-foreground" : "text-muted-foreground"
               }`}
             >
               AI {aiHit ? "✓" : "✗"}
@@ -110,12 +110,12 @@ export function PredictionListItem({
 
         {/* イベント日付 / resolved label */}
         <div className="mt-3 pt-3 border-t border-border flex items-center justify-between text-[11px]">
-          <span className="text-dim">
+          <span className="text-foreground/60">
             {isResolved ? "結果：" : days === 0 ? "本日" : days === 1 ? "明日" : `${days} 日後`}{" "}
-            <span className="text-muted">{formatPredictionEventDate(p.eventAt)}</span>
+            <span className="text-muted-foreground">{formatPredictionEventDate(p.eventAt)}</span>
           </span>
           {isResolved && p.resolution && (
-            <span className="text-muted font-bold">{p.resolution.outcomeLabel.slice(0, 24)}</span>
+            <span className="text-muted-foreground font-bold">{p.resolution.outcomeLabel.slice(0, 24)}</span>
           )}
         </div>
       </div>

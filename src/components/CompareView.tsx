@@ -65,11 +65,11 @@ export function CompareView({
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
       <header className="pb-8 border-b border-border mb-8">
-        <p className="text-muted text-xs font-bold tracking-[0.2em] uppercase mb-3">Compare</p>
+        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-3">Compare</p>
         <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tighter mb-4">
           銘柄を並べて比較
         </h1>
-        <p className="text-muted leading-relaxed max-w-2xl">
+        <p className="text-muted-foreground leading-relaxed max-w-2xl">
           最大 3 銘柄を選んで、基本情報・規範的判断・指標・成長フェーズ・リスクプロファイルを横並びで確認。
           「違いの分析」セクションで、AI が比較対象の特徴的な差を抽出します。
         </p>
@@ -77,14 +77,14 @@ export function CompareView({
 
       {/* 選択中の銘柄バー */}
       <section className="mb-8">
-        <div className="text-[11px] text-dim tracking-widest mb-3">SELECTED ({codes.length}/{MAX_COMPARE})</div>
+        <div className="text-[11px] text-foreground/60 tracking-widest mb-3">SELECTED ({codes.length}/{MAX_COMPARE})</div>
         <div className="flex flex-wrap gap-2 items-center">
           {stocks.map((s) => (
             <div
               key={s.code}
               className="inline-flex items-center gap-2 bg-surface border border-border-strong rounded-md pl-3 pr-1 py-1.5"
             >
-              <span className="text-[10px] text-dim tabular">{s.code}</span>
+              <span className="text-[10px] text-foreground/60 tabular">{s.code}</span>
               <Link
                 href={`/stocks/${s.code}`}
                 className="text-sm font-medium hover:underline"
@@ -93,7 +93,7 @@ export function CompareView({
               </Link>
               <button
                 onClick={() => removeCode(s.code)}
-                className="text-dim hover:text-foreground w-5 h-5 rounded inline-flex items-center justify-center transition"
+                className="text-foreground/60 hover:text-foreground w-5 h-5 rounded inline-flex items-center justify-center transition"
                 aria-label="削除"
               >
                 ×
@@ -128,7 +128,7 @@ export function CompareView({
         <ComparisonGrid stocks={stocks} observations={observations} />
       )}
 
-      <div className="mt-12 text-[11px] text-dim leading-relaxed">
+      <div className="mt-12 text-[11px] text-foreground/60 leading-relaxed">
         ※「違いの分析」は決定的なロジックで自動抽出された観察です。AI 生成ではなく、PER・ROE 等の数値差・業界クラスタ・成長フェーズなどから機械的に算出しています。
       </div>
     </div>
@@ -138,8 +138,8 @@ export function CompareView({
 function EmptyState() {
   return (
     <div className="bg-surface border border-border border-dashed rounded-md p-12 text-center">
-      <p className="text-muted mb-2">銘柄を 2 つ以上選んで比較を始めてください。</p>
-      <p className="text-[12px] text-dim">
+      <p className="text-muted-foreground mb-2">銘柄を 2 つ以上選んで比較を始めてください。</p>
+      <p className="text-[12px] text-foreground/60">
         上の「+ 銘柄を追加」から選択するか、銘柄ページの「比較する」ボタンからもアクセスできます。
       </p>
     </div>
@@ -149,10 +149,10 @@ function EmptyState() {
 function SingleStockHint({ stock }: { stock: Stock }) {
   return (
     <div className="bg-surface border border-border border-dashed rounded-md p-8 text-center">
-      <p className="text-muted mb-1">
+      <p className="text-muted-foreground mb-1">
         現在 <strong className="text-foreground">{stock.name}</strong> のみ選択中。
       </p>
-      <p className="text-[12px] text-dim">あと 1 銘柄以上選択すると比較が表示されます。</p>
+      <p className="text-[12px] text-foreground/60">あと 1 銘柄以上選択すると比較が表示されます。</p>
     </div>
   );
 }
@@ -175,10 +175,10 @@ function ComparisonGrid({
                 key={ob.key}
                 className="bg-surface border border-border rounded-md p-4 grid sm:grid-cols-[120px_1fr] gap-2 sm:gap-4"
               >
-                <div className="text-[10px] text-dim tracking-wider self-start">{ob.category}</div>
+                <div className="text-[10px] text-foreground/60 tracking-wider self-start">{ob.category}</div>
                 <div>
                   <h3 className="font-bold text-sm mb-1">{ob.headline}</h3>
-                  <p className="text-[13px] leading-relaxed text-muted">{ob.detail}</p>
+                  <p className="text-[13px] leading-relaxed text-muted-foreground">{ob.detail}</p>
                 </div>
               </div>
             ))}
@@ -191,14 +191,14 @@ function ComparisonGrid({
         <CompGrid stocks={stocks}>
           {(s) => (
             <div className="space-y-2">
-              <div className="text-[11px] text-dim tabular">{s.code}</div>
+              <div className="text-[11px] text-foreground/60 tabular">{s.code}</div>
               <div className="text-xl font-bold leading-tight">{s.name}</div>
-              {s.nameEn && <div className="text-[11px] text-muted">{s.nameEn}</div>}
-              <div className="text-[11px] text-muted">{s.industryCluster}</div>
+              {s.nameEn && <div className="text-[11px] text-muted-foreground">{s.nameEn}</div>}
+              <div className="text-[11px] text-muted-foreground">{s.industryCluster}</div>
               <div className="text-[10px] text-foreground border border-border rounded inline-block px-1.5 py-0.5">
                 東証 {s.exchange}
               </div>
-              <p className="text-[12px] text-muted leading-relaxed mt-3 line-clamp-4">
+              <p className="text-[12px] text-muted-foreground leading-relaxed mt-3 line-clamp-4">
                 {s.oneLiner}
               </p>
             </div>
@@ -219,20 +219,20 @@ function ComparisonGrid({
                     >
                       {s.valuationCall.verdict}
                     </span>
-                    <div className="text-[10px] text-dim mt-2 tracking-wider">
+                    <div className="text-[10px] text-foreground/60 mt-2 tracking-wider">
                       割安度スコア
                     </div>
                     <div className="text-2xl font-bold tabular">
                       {s.valuationCall.score}
-                      <span className="text-[10px] text-dim ml-1 font-normal">/100</span>
+                      <span className="text-[10px] text-foreground/60 ml-1 font-normal">/100</span>
                     </div>
                   </div>
-                  <p className="text-[12px] text-muted leading-relaxed">
+                  <p className="text-[12px] text-muted-foreground leading-relaxed">
                     {s.valuationCall.rationale}
                   </p>
                 </>
               ) : (
-                <div className="text-[12px] text-dim">判断データ未取得</div>
+                <div className="text-[12px] text-foreground/60">判断データ未取得</div>
               )}
             </div>
           )}
@@ -323,9 +323,9 @@ function ComparisonGrid({
               href={`/stocks/${s.code}`}
               className="block bg-surface border border-border rounded-md p-4 hover:border-border-strong hover:bg-surface-elev transition group"
             >
-              <div className="text-[11px] text-dim tabular">{s.code}</div>
+              <div className="text-[11px] text-foreground/60 tabular">{s.code}</div>
               <div className="font-bold group-hover:underline">{s.name}</div>
-              <div className="text-[11px] text-muted mt-2">個別銘柄ページへ →</div>
+              <div className="text-[11px] text-muted-foreground mt-2">個別銘柄ページへ →</div>
             </Link>
           ))}
         </div>
@@ -347,7 +347,7 @@ function CompSection({
     <section className="mb-10">
       <header className="mb-4">
         <h2 className="text-xl font-bold leading-tight">{title}</h2>
-        {subtitle && <p className="text-xs text-muted mt-1">{subtitle}</p>}
+        {subtitle && <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>}
       </header>
       {children}
     </section>
@@ -389,7 +389,7 @@ function CompTable({ rows, stocks }: { rows: Row[]; stocks: Stock[] }) {
         className="grid items-center px-4 py-2 border-b border-border bg-surface-elev gap-3"
         style={{ gridTemplateColumns: `140px repeat(${stocks.length}, minmax(0, 1fr))` }}
       >
-        <div className="text-[11px] text-dim">指標</div>
+        <div className="text-[11px] text-foreground/60">指標</div>
         {stocks.map((s) => (
           <div key={s.code} className="text-[11px] font-bold truncate">
             {s.name}
@@ -404,7 +404,7 @@ function CompTable({ rows, stocks }: { rows: Row[]; stocks: Stock[] }) {
             className="grid items-baseline px-4 py-2.5 border-b border-border last:border-b-0 text-sm gap-3"
             style={{ gridTemplateColumns: `140px repeat(${stocks.length}, minmax(0, 1fr))` }}
           >
-            <div className="text-[12px] text-muted">{row.label}</div>
+            <div className="text-[12px] text-muted-foreground">{row.label}</div>
             {stocks.map((s) => {
               const tone = row.tone?.(s);
               const isHighlight = highlightCode === s.code;

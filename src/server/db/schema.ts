@@ -345,3 +345,129 @@ export const valuationSources = sqliteTable(
     pk: primaryKey({ columns: [t.companyId, t.sourceId] }),
   }),
 );
+
+// ─────────────────────────────────────────────────────────
+// ブログ / 管理画面
+// ─────────────────────────────────────────────────────────
+
+/**
+ * 管理画面の認証ユーザー。
+ * password_hash と password_salt は PBKDF2-SHA256(イテレーション 200,000)で生成。
+ * Workers / Node どちらでも Web Crypto SubtleCrypto 経由で同一実装が動く。
+ */
+export const adminUsers = sqliteTable(
+  "admin_users",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    /** Base64 (PBKDF2-SHA256 出力 32 バイト) */
+    passwordHash: text("password_hash").notNull(),
+    /** Base64 (16 バイト ランダム salt) */
+    passwordSalt: text("password_salt").notNull(),
+    /** PBKDF2 イテレーション回数。将来上げたとき検証ロジックを保つために行ごとに持つ */
+    passwordIterations: integer("password_iterations").notNull(),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => ({
+    uqEmail: uniqueIndex("uq_admin_users_email").on(t.email),
+  }),
+);
+
+/**
+ * ログインセッション。Cookie には id だけ載せ、DB を都度引いて検証する。
+ */
+export const adminSessions = sqliteTable(
+  "admin_sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => adminUsers.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (t) => ({
+    idxExpires: index("idx_admin_sessions_expires").on(t.expiresAt),
+    idxUserId: index("idx_admin_sessions_user_id").on(t.userId),
+  }),
+);
+
+/**
+ * ブログ記事本体。本文は WYSIWYG エディタから出力された HTML を保存する。
+ * 関連銘柄・関連業界は、企業マスタとの強い FK ではなく JSON 配列として保持する
+ * (公開ページ側で getStockBrief で照会する従来挙動と互換)。
+ */
+export const posts = sqliteTable(
+  "posts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    /** 一覧・OG・記事冒頭で使うリード文 */
+    lede: text("lede").notNull(),
+    /** WYSIWYG が吐く HTML。サニタイズしてから保存する */
+    bodyHtml: text("body_html").notNull(),
+    category: text("category", {
+      enum: ["earnings", "industry-watch", "analysis", "disclosure", "primer"],
+    }).notNull(),
+    status: text("status", { enum: ["draft", "published"] })
+      .notNull()
+      .default("draft"),
+    author: text("author", { enum: ["editor", "ai-editor"] })
+      .notNull()
+      .default("editor"),
+    readTimeMin: integer("read_time_min").notNull().default(3),
+    fiscalPeriod: text("fiscal_period"),
+    /** JSON 配列 (例 ["7203","8035"])。公開ページが getStockBrief で照会 */
+    relatedStocksJson: text("related_stocks_json").notNull().default("[]"),
+    /** JSON 配列 (例 ["semiconductor"])。公開ページが getIndustry で照会 */
+    relatedIndustriesJson: text("related_industries_json").notNull().default("[]"),
+    /** 下書き時は null。公開済みは公開日(YYYY-MM-DD) */
+    publishedAt: text("published_at"),
+    /** 作成者(管理者ユーザー)。NULL は seed 由来の互換記事 */
+    authorUserId: integer("author_user_id").references(() => adminUsers.id, {
+      onDelete: "set null",
+    }),
+    createdAt: text("created_at").notNull(),
+    updatedAt: text("updated_at").notNull(),
+  },
+  (t) => ({
+    uqSlug: uniqueIndex("uq_posts_slug").on(t.slug),
+    idxStatusPublished: index("idx_posts_status_published_at").on(
+      t.status,
+      t.publishedAt,
+    ),
+    idxCategory: index("idx_posts_category").on(t.category),
+  }),
+);
+
+export const tags = sqliteTable(
+  "tags",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (t) => ({
+    uqSlug: uniqueIndex("uq_tags_slug").on(t.slug),
+  }),
+);
+
+export const postTags = sqliteTable(
+  "post_tags",
+  {
+    postId: integer("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    tagId: integer("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.postId, t.tagId] }),
+    idxTagId: index("idx_post_tags_tag_id").on(t.tagId),
+  }),
+);

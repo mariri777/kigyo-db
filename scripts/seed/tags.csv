@@ -1,0 +1,11 @@
+id,slug,name,created_at
+1,retail,retail,2026-01-01T00:00:00.000Z
+2,chemicals,chemicals,2026-01-01T00:00:00.000Z
+3,semiconductor,semiconductor,2026-01-01T00:00:00.000Z
+4,telecom,telecom,2026-01-01T00:00:00.000Z
+5,finance,finance,2026-01-01T00:00:00.000Z
+6,real-estate,real-estate,2026-01-01T00:00:00.000Z
+7,trading-house,trading-house,2026-01-01T00:00:00.000Z
+8,automotive,automotive,2026-01-01T00:00:00.000Z
+9,pharmaceutical,pharmaceutical,2026-01-01T00:00:00.000Z
+10,saas,saas,2026-01-01T00:00:00.000Z

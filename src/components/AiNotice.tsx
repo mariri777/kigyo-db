@@ -11,10 +11,10 @@ export function AiBadge() {
 
 export function AiDisclaimer() {
   return (
-    <p className="text-[11px] text-dim leading-relaxed mt-3">
+    <p className="text-[11px] text-foreground/60 leading-relaxed mt-3">
       ※ この内容は生成 AI による分析です。すべての引用は別パイプラインで検証済み（未検証の出力は非表示）。
       投資判断の根拠としてはご利用前に必ず一次情報をご確認ください。
-      抽出方法の詳細は <a href="/legal/editorial-policy" className="underline hover:text-muted">編集方針</a> をご確認ください。
+      抽出方法の詳細は <a href="/legal/editorial-policy" className="underline hover:text-muted-foreground">編集方針</a> をご確認ください。
     </p>
   );
 }

@@ -40,16 +40,16 @@ export function FactorTable({
 }) {
   if (!betas) {
     return (
-      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-foreground/60">
         この銘柄のファクター感応度はまだ算出されていません。
       </div>
     );
   }
   return (
     <div>
-      <div className="text-[11px] text-dim mb-3">期間：{period}</div>
+      <div className="text-[11px] text-foreground/60 mb-3">期間：{period}</div>
       <div className="bg-surface border border-border rounded-md overflow-hidden">
-        <div className="hidden sm:grid grid-cols-[140px_1fr_70px] text-[11px] text-dim border-b border-border bg-surface-elev px-4 py-2">
+        <div className="hidden sm:grid grid-cols-[140px_1fr_70px] text-[11px] text-foreground/60 border-b border-border bg-surface-elev px-4 py-2">
           <div>ファクター</div>
           <div>感応度ベータ</div>
           <div className="text-right">値</div>
@@ -61,7 +61,7 @@ export function FactorTable({
           >
             <div>
               <div className="font-medium">{f.label}</div>
-              <div className="text-[10px] text-dim leading-tight">{f.desc}</div>
+              <div className="text-[10px] text-foreground/60 leading-tight">{f.desc}</div>
             </div>
             <BetaBar value={betas[f.key]} />
             <div className="text-right tabular font-mono text-sm">{betas[f.key].toFixed(2)}</div>

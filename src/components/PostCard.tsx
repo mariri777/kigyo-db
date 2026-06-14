@@ -12,11 +12,11 @@ export function PostCard({ post, compact = false }: { post: Post; compact?: bool
         <span className="text-foreground font-bold border border-foreground rounded-full px-2 py-0.5">
           {CATEGORY_LABEL[post.category]}
         </span>
-        <span className="text-dim">{formatJaDate(post.publishedAt)}</span>
-        <span className="text-dim">·</span>
-        <span className="text-dim">読了 {post.readTimeMin} 分</span>
+        <span className="text-foreground/60">{formatJaDate(post.publishedAt)}</span>
+        <span className="text-foreground/60">·</span>
+        <span className="text-foreground/60">読了 {post.readTimeMin} 分</span>
         {post.author === "ai-editor" && (
-          <span className="text-dim">· AI + 編集</span>
+          <span className="text-foreground/60">· AI + 編集</span>
         )}
       </div>
 
@@ -29,7 +29,7 @@ export function PostCard({ post, compact = false }: { post: Post; compact?: bool
       </h3>
 
       {!compact && (
-        <p className="text-sm text-muted leading-relaxed mt-3">{post.lede}</p>
+        <p className="text-sm text-muted-foreground leading-relaxed mt-3">{post.lede}</p>
       )}
     </Link>
   );

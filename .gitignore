@@ -56,3 +56,5 @@ scripts/seed/*.sql
 # IDE
 .vscode/
 .idea/
+
+tmp

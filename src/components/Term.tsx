@@ -36,7 +36,7 @@ export function Term({ term, children }: Props) {
         aria-label={`${key} の解説を表示`}
       >
         {children}
-        <span className="ml-0.5 text-[9px] text-muted align-super select-none">?</span>
+        <span className="ml-0.5 text-[9px] text-muted-foreground align-super select-none">?</span>
       </button>
       {open && (
         <span

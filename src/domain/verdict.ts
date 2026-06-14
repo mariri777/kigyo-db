@@ -29,7 +29,7 @@ export function verdictBlockClass(v: ValuationCall["verdict"]): string {
     case "割安":
       return "text-positive border-positive/40 bg-positive/10";
     case "ほぼ妥当":
-      return "text-accent border-accent/40 bg-accent/10";
+      return "text-foreground border-accent/40 bg-foreground/10";
     case "やや割高":
       return "text-negative/80 border-negative/40 bg-negative/5";
     case "割高":

@@ -77,6 +77,30 @@ export async function listByCompanyIds(
 }
 
 /**
+ * 銘柄コードの配列から StockRow[] を一括取得する。
+ * D1 のパラメータ上限を避けるため chunkedFetch を経由する。
+ * 並び順は code の渡された順を保証する。
+ */
+export async function listByCodes(
+  db: Db,
+  codes: string[],
+): Promise<StockRow[]> {
+  if (codes.length === 0) return [];
+  const rows = await chunkedFetch(codes, (chunk) =>
+    db
+      .select(SELECT_COLUMNS)
+      .from(s.stocks)
+      .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+      .where(inArray(s.stocks.code, chunk)) as unknown as Promise<StockRow[]>,
+  );
+  // 呼び出し側で order が壊れないように、引数の codes 順に整列する
+  const map = new Map(rows.map((r) => [r.code, r]));
+  return codes
+    .map((c) => map.get(c))
+    .filter((r): r is StockRow => r != null);
+}
+
+/**
  * /stocks 一覧のページネーション付き取得。
  *
  * 仕様:

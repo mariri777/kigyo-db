@@ -10,19 +10,19 @@ export function SimilarCard({ s, scoreLabel = "類似度" }: { s: SimilarStock; 
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-[11px] text-dim tabular">{s.stock.code}</div>
-          <div className="font-medium leading-tight group-hover:text-accent transition">{s.stock.name}</div>
-          <div className="text-[11px] text-muted mt-0.5">{s.stock.industryCluster}</div>
+          <div className="text-[11px] text-foreground/60 tabular">{s.stock.code}</div>
+          <div className="font-medium leading-tight group-hover:text-foreground transition">{s.stock.name}</div>
+          <div className="text-[11px] text-muted-foreground mt-0.5">{s.stock.industryCluster}</div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] text-dim">{scoreLabel}</div>
-          <div className="text-lg font-bold tabular text-accent leading-none">{s.score}</div>
+          <div className="text-[10px] text-foreground/60">{scoreLabel}</div>
+          <div className="text-lg font-bold tabular text-foreground leading-none">{s.score}</div>
         </div>
       </div>
       <div className="mt-3">
         <ScoreBar score={s.score} />
       </div>
-      <p className="text-[12px] text-muted mt-3 leading-relaxed">{s.reason}</p>
+      <p className="text-[12px] text-muted-foreground mt-3 leading-relaxed">{s.reason}</p>
     </Link>
   );
 }

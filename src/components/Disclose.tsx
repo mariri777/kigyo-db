@@ -18,7 +18,7 @@ export function Disclose({
 }) {
   return (
     <details className={`group/disclose mt-3 ${className}`}>
-      <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-foreground select-none transition">
+      <summary className="list-none cursor-pointer inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground select-none transition">
         <span className="inline-block transition-transform duration-150 group-open/disclose:rotate-90 text-foreground/70">
           ▸
         </span>

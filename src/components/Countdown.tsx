@@ -46,25 +46,25 @@ export function Countdown({ target }: { target: string }) {
     body = (
       <>
         <span className="tabular">{days}</span>
-        <span className="text-dim mx-0.5">日</span>
+        <span className="text-foreground/60 mx-0.5">日</span>
         <span className="tabular">{hours}</span>
-        <span className="text-dim mx-0.5">時間</span>
+        <span className="text-foreground/60 mx-0.5">時間</span>
       </>
     );
   } else if (hours >= 1) {
     body = (
       <>
         <span className="tabular">{hours}</span>
-        <span className="text-dim mx-0.5">時間</span>
+        <span className="text-foreground/60 mx-0.5">時間</span>
         <span className="tabular">{String(minutes).padStart(2, "0")}</span>
-        <span className="text-dim mx-0.5">分</span>
+        <span className="text-foreground/60 mx-0.5">分</span>
       </>
     );
   } else {
     body = (
       <>
         <span className="tabular tabular-nums">{String(minutes).padStart(2, "0")}</span>
-        <span className="text-dim">:</span>
+        <span className="text-foreground/60">:</span>
         <span className="tabular tabular-nums">{String(seconds).padStart(2, "0")}</span>
       </>
     );

@@ -4,6 +4,8 @@
 declare global {
   interface CloudflareEnv {
     DB: D1Database;
+    /** opennextjs-cloudflare が生成する静的アセット用 fetcher (wrangler.toml の [assets]) */
+    ASSETS: Fetcher;
   }
 
   // Cloudflare Workers の Cache API。標準 CacheStorage には default プロパティが

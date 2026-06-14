@@ -13,7 +13,7 @@ export function HistoryChart({ stock }: { stock: Stock }) {
   const history = getStockHistory(stock);
   if (!history) {
     return (
-      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-foreground/60">
         この銘柄の業績推移はまだ生成されていません(財務時系列の seed 待ち)。
       </div>
     );
@@ -57,12 +57,12 @@ export function HistoryChart({ stock }: { stock: Stock }) {
       {/* 5 年トレンドサマリー */}
       <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-border">
         <div>
-          <div className="text-[10px] text-dim tracking-wider mb-1">売上 5 年推移</div>
+          <div className="text-[10px] text-foreground/60 tracking-wider mb-1">売上 5 年推移</div>
           <div className="flex items-baseline gap-2">
             <span className="tabular font-mono text-sm">{startRevenue.toLocaleString()}</span>
-            <span className="text-dim">→</span>
+            <span className="text-foreground/60">→</span>
             <span className="tabular font-mono text-base font-bold">{endRevenue.toLocaleString()}</span>
-            <span className="text-[11px] text-muted">億円</span>
+            <span className="text-[11px] text-muted-foreground">億円</span>
           </div>
           <div
             className={`text-[11px] font-bold tabular mt-1 ${
@@ -74,10 +74,10 @@ export function HistoryChart({ stock }: { stock: Stock }) {
           </div>
         </div>
         <div>
-          <div className="text-[10px] text-dim tracking-wider mb-1">営業利益率 5 年推移</div>
+          <div className="text-[10px] text-foreground/60 tracking-wider mb-1">営業利益率 5 年推移</div>
           <div className="flex items-baseline gap-2">
             <span className="tabular font-mono text-sm">{startMargin.toFixed(1)}%</span>
-            <span className="text-dim">→</span>
+            <span className="text-foreground/60">→</span>
             <span className="tabular font-mono text-base font-bold">{endMargin.toFixed(1)}%</span>
           </div>
           <div
@@ -183,7 +183,7 @@ export function HistoryChart({ stock }: { stock: Stock }) {
       </svg>
 
       {/* 凡例 */}
-      <div className="flex items-center gap-5 mt-3 text-[11px] text-muted">
+      <div className="flex items-center gap-5 mt-3 text-[11px] text-muted-foreground">
         <div className="flex items-center gap-1.5">
           <span className="inline-block w-3 h-3 bg-foreground" />
           売上（億円・左軸）
@@ -197,7 +197,7 @@ export function HistoryChart({ stock }: { stock: Stock }) {
 
       {/* 詳細データテーブル */}
       <details className="mt-4 group/disclose">
-        <summary className="cursor-pointer text-xs text-muted hover:text-foreground inline-flex items-center gap-1.5 list-none">
+        <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 list-none">
           <span className="text-foreground/70">▸</span>
           <span className="underline decoration-dotted underline-offset-2 group-open/disclose:hidden">
             年度別の数値を見る
@@ -207,7 +207,7 @@ export function HistoryChart({ stock }: { stock: Stock }) {
           </span>
         </summary>
         <div className="mt-3 bg-surface-elev border border-border rounded-md overflow-hidden">
-          <div className="grid grid-cols-[1fr_1fr_1fr_1fr] text-[11px] text-dim border-b border-border px-3 py-2">
+          <div className="grid grid-cols-[1fr_1fr_1fr_1fr] text-[11px] text-foreground/60 border-b border-border px-3 py-2">
             <div>期</div>
             <div className="text-right">売上（億円）</div>
             <div className="text-right">営業利益（億円）</div>
@@ -225,7 +225,7 @@ export function HistoryChart({ stock }: { stock: Stock }) {
             </div>
           ))}
         </div>
-        <p className="mt-2 text-[10px] text-dim leading-relaxed">
+        <p className="mt-2 text-[10px] text-foreground/60 leading-relaxed">
           ※ 本データは現状値と 3 年 CAGR からの推計値です。本番では EDINET XBRL から実データを取得します。
         </p>
       </details>

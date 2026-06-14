@@ -10,7 +10,7 @@ export function PhaseChart({
 }) {
   if (!scores) {
     return (
-      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-dim">
+      <div className="bg-surface border border-border border-dashed rounded-md p-5 text-sm text-foreground/60">
         この銘柄の成長フェーズ判定はまだ生成されていません。
       </div>
     );
@@ -22,7 +22,7 @@ export function PhaseChart({
           const v = scores[p.key];
           return (
             <div key={p.key} className="text-center">
-              <div className="text-[11px] text-muted mb-2">{p.label}</div>
+              <div className="text-[11px] text-muted-foreground mb-2">{p.label}</div>
               <div className="relative h-24 bg-surface-elev border border-border rounded-sm overflow-hidden flex items-end">
                 <div
                   className="w-full bg-foreground transition-all"
@@ -39,7 +39,7 @@ export function PhaseChart({
           );
         })}
       </div>
-      <p className="text-[12px] text-muted leading-relaxed">{rationale}</p>
+      <p className="text-[12px] text-muted-foreground leading-relaxed">{rationale}</p>
     </div>
   );
 }

@@ -7,12 +7,12 @@ export function LatestPostsSection({ posts }: { posts: Post[] }) {
     <section className="mt-20 pt-12 border-t border-border">
       <div className="flex items-end justify-between mb-6">
         <div>
-          <p className="text-muted text-xs font-bold tracking-[0.2em] uppercase mb-2">
+          <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-2">
             Latest Posts
           </p>
           <h2 className="text-2xl font-bold tracking-tight">最新の分析</h2>
         </div>
-        <Link href="/blog" className="text-sm text-muted hover:text-foreground transition">
+        <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition">
           すべて見る →
         </Link>
       </div>

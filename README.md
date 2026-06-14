@@ -33,50 +33,6 @@
 
 > **注意**: このリポジトリの Next.js は本記事執筆時点の最新版で、過去のバージョンと API・規約・ファイル構成が異なる場合があります。コードを書く前に `node_modules/next/dist/docs/` 内の該当ガイドを必ず参照してください（[AGENTS.md](./AGENTS.md) 参照）。
 
-## ディレクトリ構成
-
-```
-src/
-  app/                   # App Router のページ・レイアウト・sitemap/robots
-    layout.tsx           # 全画面共通のヘッダー・フッター・メタデータ
-    page.tsx             # トップページ（ハイライト・カバレッジ・予測など）
-    stocks/[code]/       # 銘柄詳細
-    industries/[slug]/   # 業界マップ
-    screens/[slug]/      # スクリーン結果
-    themes/[slug]/       # 特集テーマ
-    predictions/         # AI 予測トラッカー
-    compare/             # 比較ビュー
-    blog/[slug]/         # 編集記事
-    about/, guide/       # サービス紹介・ガイド
-    legal/               # 利用規約・プライバシー・免責・編集方針
-    profile/             # マイ予測
-  components/            # 画面横断の UI コンポーネント
-  lib/                   # ドメインロジックとサンプルデータ
-    data.ts              # 銘柄マスタ（株価は週次更新スクリプトで反映）
-    industries.ts        # 業界定義と集計
-    posts.ts             # ブログ
-    predictions.ts       # AI 予測
-    screens.ts           # スクリーン定義
-    similarity.ts        # 類似度計算
-    themes.ts            # 特集テーマ
-    voteStore.ts         # 予測投票
-    site.ts              # SITE_URL / SITE_NAME（全体で参照）
-  db/
-    schema.ts            # Drizzle スキーマ（D1）
-    client.ts            # D1 + Drizzle クライアント
-
-drizzle/                 # Drizzle Kit が出力するマイグレーション
-data/prices.csv          # 株価更新スクリプトの入出力 CSV
-scripts/
-  update-prices.mjs      # 株価の週次更新スクリプト
-  seed.sql               # 初期投入 SQL
-
-wrangler.toml            # Cloudflare Workers / D1 の設定
-open-next.config.ts      # OpenNext の設定
-drizzle.config.ts        # Drizzle Kit の設定
-next.config.ts           # Next.js 設定
-```
-
 ## 開発手順
 
 ```bash
@@ -130,6 +86,36 @@ npx wrangler d1 migrations apply cho-kigyo-db-database --local
 ```
 
 > 現状の銘柄データはサンプルとして `src/lib/data.ts` に直書きされています。D1 は今後の本番データ移行に向けた基盤として用意されています（EDINET / TDnet / J-Quants からの取得を前提とした構造）。
+
+### ブログ管理画面
+
+ブログ記事は D1 の `posts` テーブルに HTML として保存します。管理画面で WYSIWYG エディタによる作成・編集・下書き保存・公開/非公開・タグ・関連銘柄/業界の設定ができます。
+
+- 管理画面: <http://localhost:3000/admin>（本番: <https://kigyo.cho-super.com/admin>）
+- ログイン: <http://localhost:3000/admin/login>
+
+`npm run db:seed` で投入される初期管理者は次のとおりです。**本番反映時は必ず `/admin/account` でパスワードを変更してください。**
+
+- メールアドレス: `admin@example.com`
+- パスワード: `password0`
+
+初期化／seed の手順:
+
+```bash
+# 既存ブログ記事 + 初期管理者の CSV を生成（オフラインで完結）
+npm run db:refresh-csv:blog
+
+# ローカル D1 をリセットして全 CSV を一括 INSERT
+npm run db:seed
+```
+
+管理画面の主な動線:
+
+- `/admin` — 下書き / 公開済みの記事一覧
+- `/admin/posts/new` — 新規記事作成（WYSIWYG）
+- `/admin/posts/[id]` — 記事の編集・削除
+- `/admin/account` — ログイン中ユーザーのパスワード変更
+- `/admin/users` — 管理者ユーザー一覧 + 新規発行
 
 ## サイトのコンセプト（要約）
 

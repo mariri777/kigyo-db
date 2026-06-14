@@ -44,6 +44,19 @@ export const getStockBrief = cache(
 );
 
 /**
+ * 複数銘柄コードを 1 クエリで解決する。コード順に並んだ StockBrief 配列を返す。
+ * blog/[slug] や stock 詳細ページの「関連銘柄チップ」のために使う。
+ */
+export const getStockBriefsByCodes = cache(
+  async function getStockBriefsByCodes(codes: string[]): Promise<StockBrief[]> {
+    if (codes.length === 0) return [];
+    const db = await getDb();
+    const rows = await stockRepo.listByCodes(db, codes);
+    return rows.map(toBrief);
+  },
+);
+
+/**
  * /stocks 一覧と /api/stocks ペジネーション用。
  * 業界 slug → 銘柄コードの解決は呼び出し側(industries.ts の subClusters)で行う。
  */

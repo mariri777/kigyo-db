@@ -61,14 +61,14 @@ export function VoteButtons({ prediction }: { prediction: Prediction }) {
       voted && prediction.resolution!.outcomeKey === vote!.choiceKey;
     return (
       <div className="mt-5 pt-5 border-t border-border">
-        <div className="text-[10px] tracking-[0.2em] uppercase text-dim mb-2">
+        <div className="text-[10px] tracking-[0.2em] uppercase text-foreground/60 mb-2">
           あなたの予測との照合
         </div>
         {!mounted ? (
           <div className="h-8" />
         ) : voted ? (
           <div className="flex items-center gap-3 flex-wrap text-[12px]">
-            <span className="text-muted">あなたの予測：</span>
+            <span className="text-muted-foreground">あなたの予測：</span>
             <span
               className={`inline-flex items-center gap-1 font-bold px-2 py-0.5 rounded-sm ${
                 isHit
@@ -79,22 +79,22 @@ export function VoteButtons({ prediction }: { prediction: Prediction }) {
               {voted.label}
               <span className="ml-1">{isHit ? "✓ 的中" : "✗ 外し"}</span>
             </span>
-            <span className="text-dim">|</span>
-            <span className="text-muted">
+            <span className="text-foreground/60">|</span>
+            <span className="text-muted-foreground">
               累積：
               <span className="text-foreground font-bold tabular">
                 {stats.hits}
               </span>
-              <span className="text-dim"> / {stats.total} 件的中</span>
+              <span className="text-foreground/60"> / {stats.total} 件的中</span>
               {stats.total > 0 && (
-                <span className="text-dim ml-1.5">
+                <span className="text-foreground/60 ml-1.5">
                   （{Math.round((stats.hits / stats.total) * 100)}%）
                 </span>
               )}
             </span>
           </div>
         ) : (
-          <p className="text-[11px] text-dim">
+          <p className="text-[11px] text-foreground/60">
             この予測には票を入れていません。次の予測カードで予測してみましょう。
           </p>
         )}
@@ -105,10 +105,10 @@ export function VoteButtons({ prediction }: { prediction: Prediction }) {
   // upcoming / live：投票ボタン
   return (
     <div className="mt-5 pt-5 border-t border-border">
-      <div className="text-[10px] tracking-[0.2em] uppercase text-dim mb-2">
+      <div className="text-[10px] tracking-[0.2em] uppercase text-foreground/60 mb-2">
         あなたの予測を記録
       </div>
-      <p className="text-[11px] text-muted mb-3">
+      <p className="text-[11px] text-muted-foreground mb-3">
         賭けません・賞金もありません。後で答え合わせされ、あなたの的中率がこのブラウザに溜まります。
       </p>
       <div className="flex flex-wrap gap-2">
@@ -135,7 +135,7 @@ export function VoteButtons({ prediction }: { prediction: Prediction }) {
 
       {/* 投票後のフィードバック */}
       {mounted && vote && (
-        <p className="text-[11px] text-muted mt-3">
+        <p className="text-[11px] text-muted-foreground mt-3">
           記録しました：
           <span className="font-bold text-foreground ml-1">
             {prediction.choices.find((c) => c.key === vote.choiceKey)?.label}
@@ -143,7 +143,7 @@ export function VoteButtons({ prediction }: { prediction: Prediction }) {
           <button
             type="button"
             onClick={onClear}
-            className="ml-3 text-[10px] text-dim hover:text-foreground underline decoration-dotted underline-offset-2"
+            className="ml-3 text-[10px] text-foreground/60 hover:text-foreground underline decoration-dotted underline-offset-2"
           >
             取り消す
           </button>
@@ -152,7 +152,7 @@ export function VoteButtons({ prediction }: { prediction: Prediction }) {
 
       {/* 累積スコア */}
       {mounted && stats.total > 0 && (
-        <p className="text-[11px] text-dim mt-3 pt-2 border-t border-border">
+        <p className="text-[11px] text-foreground/60 mt-3 pt-2 border-t border-border">
           あなたの累積的中率：
           <span className="text-foreground font-bold tabular ml-1">
             {stats.hits} / {stats.total}
