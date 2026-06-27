@@ -1,4 +1,4 @@
-import { SITE_NAME, SITE_NAME_EN } from "@/shared/site";
+import { SITE_NAME } from "@/shared/site";
 
 export const OG_SIZE = { width: 1200, height: 630 };
 export const OG_CONTENT_TYPE = "image/png";
@@ -57,9 +57,7 @@ export function OgCard({
           textTransform: "uppercase",
         }}
       >
-        <span style={{ color: PALETTE.accent, fontWeight: 700 }}>{SITE_NAME_EN}</span>
-        <span>·</span>
-        <span>{sectionLabel}</span>
+        <span style={{ color: PALETTE.accent, fontWeight: 700 }}>{sectionLabel}</span>
         {badge && (
           <span
             style={{

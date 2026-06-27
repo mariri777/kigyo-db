@@ -20,7 +20,6 @@ export default function MainLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
-    alternateName: "Cho! Kigyo DB",
     url: SITE_URL,
     inLanguage: SITE_LANG,
     description: SITE_DESCRIPTION,
@@ -40,7 +39,6 @@ export default function MainLayout({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: SITE_NAME,
-    alternateName: "Cho! Kigyo DB",
     url: SITE_URL,
     logo: `${SITE_URL}/icon-512.png`,
     description: SITE_DESCRIPTION,
@@ -65,7 +63,6 @@ export default function MainLayout({
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-foreground text-xl font-bold tracking-tight">超!企業DB</span>
-            <span className="text-foreground/60 text-xs hidden sm:inline">Cho! Kigyo DB</span>
           </Link>
           <nav className="flex items-center gap-3 sm:gap-5 text-sm">
             <Link

@@ -19,7 +19,6 @@ export default function NotFound() {
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-3">
           <Link href="/" className="flex items-center gap-2">
             <span className="text-foreground text-xl font-bold tracking-tight">超!企業DB</span>
-            <span className="text-foreground/60 text-xs hidden sm:inline">Cho! Kigyo DB</span>
           </Link>
           <nav className="flex items-center gap-3 sm:gap-5 text-sm">
             <Link

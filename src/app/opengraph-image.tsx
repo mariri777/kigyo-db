@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { SITE_NAME, SITE_NAME_EN, SITE_TAGLINE } from "@/shared/site";
+import { SITE_NAME, SITE_TAGLINE } from "@/shared/site";
 
 export const alt = "超!企業DB — AI が掘る、日本株の発見";
 export const size = { width: 1200, height: 630 };
@@ -20,21 +20,6 @@ export default function Image() {
           fontFamily: "sans-serif",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 16,
-            fontSize: 24,
-            color: "#a3a3a3",
-            letterSpacing: "0.18em",
-            textTransform: "uppercase",
-          }}
-        >
-          <span style={{ color: "#f5f5f5", fontWeight: 700 }}>{SITE_NAME_EN}</span>
-          <span>·</span>
-          <span>Japan Equities, Deeply Mapped</span>
-        </div>
         <div style={{ display: "flex", flexDirection: "column", marginTop: 56 }}>
           <div
             style={{
