@@ -98,7 +98,7 @@ export default async function PostPage({
   ];
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
+    <div className="max-w-3xl mx-auto px-6 py-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(postJsonLd) }}

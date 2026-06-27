@@ -75,7 +75,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.65,
   }));
 
-  // /profile はインデックス対象外 (robots.ts で disallow)
   return [
     ...hubs,
     ...statics,

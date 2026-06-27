@@ -204,12 +204,6 @@ export default async function PredictionDetailPage({
           >
             ← 予測ハブに戻る
           </Link>
-          <Link
-            href="/profile"
-            className="text-muted-foreground hover:text-foreground transition"
-          >
-            マイ予測 →
-          </Link>
           {stock && (
             <Link
               href={`/stocks/${stock.code}`}

@@ -26,7 +26,7 @@ export default async function BlogIndex() {
   const longForm = all.filter((p) => p.category !== "primer");
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
+    <div className="max-w-3xl mx-auto px-6 py-12">
       <header className="pb-10 border-b border-border mb-10">
         <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">Blog</p>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">

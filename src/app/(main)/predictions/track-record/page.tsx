@@ -212,9 +212,6 @@ export default function TrackRecordPage() {
           <Link href="/guide" className="text-muted-foreground hover:text-foreground transition">
             5 分ガイドへ →
           </Link>
-          <Link href="/profile" className="text-muted-foreground hover:text-foreground transition">
-            マイ予測へ →
-          </Link>
         </div>
       </section>
     </article>

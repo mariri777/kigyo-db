@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/profile", "/profile/*", "/api/", "/_next/"],
+        disallow: ["/api/", "/_next/"],
       },
       // 主要クローラに明示で許可(良質クロールを期待)
       { userAgent: "Googlebot", allow: "/" },

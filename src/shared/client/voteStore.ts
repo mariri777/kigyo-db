@@ -1,7 +1,7 @@
 /**
  * 予測コミット（投票）の localStorage 永続化レイヤー。
  *
- * VoteButtons コンポーネントと /profile ページの両方から使う共通 store。
+ * VoteButtons コンポーネントから使う共通 store。
  *
  * 賭けないので「投票」だが、内部表現は単純：
  *   ck_db_votes_v1: { [predictionId]: { choiceKey, votedAt } }
