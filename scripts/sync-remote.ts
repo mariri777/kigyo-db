@@ -436,6 +436,8 @@ function buildOverlayBundle(): SqlBundle {
   );
 
   // ─ industries ─
+  // theme_2025_json / chain_columns_json / industry_insights_json などは 1 行で
+  // 数十 KB に膨らむため、D1 の単一ステートメント上限を踏まないよう 1 行/INSERT。
   const industries = readCsv("industries.csv");
   stmts.push(
     ...insertChunks(
@@ -468,6 +470,7 @@ function buildOverlayBundle(): SqlBundle {
         emptyToNull(r.key_kpis_json),
         emptyToNull(r.industry_insights_json),
       ]),
+      1,
     ),
   );
 
@@ -535,7 +538,8 @@ function buildOverlayBundle(): SqlBundle {
   );
 
   // ─ company_insights + insight_sources ─
-  // CSV の insight_temp_id を AUTOINCREMENT id として直接採用する(本番側を全件入れ替えなので OK)
+  // CSV の insight_temp_id を AUTOINCREMENT id として直接採用する(本番側を全件入れ替えなので OK)。
+  // body は記事本文で 1 行 数 KB 程度になり得るため、chunk を 20 行に下げる。
   const insightCsv = readCsv("company_insights.csv");
   stmts.push(
     ...insertChunks(
@@ -549,6 +553,7 @@ function buildOverlayBundle(): SqlBundle {
         r.body,
         r.generated_at,
       ]),
+      20,
     ),
   );
   const insightSrc = readCsv("insight_sources.csv");
