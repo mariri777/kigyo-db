@@ -19,17 +19,22 @@ function runWrangler(args: string[]): string {
   const opts: SpawnSyncOptions = {
     cwd: process.cwd(),
     encoding: "utf8",
-    // stdin は使わない / stdout を捕捉 / stderr は CI ログに直接流す
-    stdio: ["ignore", "pipe", "inherit"],
+    // stdin/stdout/stderr すべてを pipe で捕捉。stderr は失敗時に Error メッセージに含めて
+    // CI ログから wrangler の本物のエラー原因が見えるようにする(--remote 401 / token 権限不足等)。
+    stdio: ["ignore", "pipe", "pipe"],
     env: process.env,
+    maxBuffer: 256 * 1024 * 1024, // 256MB(SELECT で 3,572 件 + ロング SQL 結果のため大きめ)
   };
-  const result = spawnSync("npx", ["wrangler", ...args], opts);
+  const result = spawnSync("pnpm", ["exec", "wrangler", ...args], opts);
+  const stderr = (result.stderr as string) ?? "";
+  const stdout = (result.stdout as string) ?? "";
   if (result.status !== 0) {
+    // stderr と stdout の両方を出して、どのチャネルにエラーが出ても拾えるようにする
     throw new Error(
-      `wrangler ${args.slice(0, 4).join(" ")} ... が exit ${result.status} で失敗しました`,
+      `wrangler ${args.slice(0, 4).join(" ")} ... が exit ${result.status} で失敗しました\n--- stderr ---\n${stderr}\n--- stdout ---\n${stdout}`,
     );
   }
-  return (result.stdout as string) ?? "";
+  return stdout;
 }
 
 /**
