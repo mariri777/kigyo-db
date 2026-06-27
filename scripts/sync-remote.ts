@@ -1,12 +1,12 @@
 #!/usr/bin/env tsx
 // 本番 Cloudflare D1 への差分同期スクリプト。
 //
-// 前提: 先に `npm run db:refresh-csv` で scripts/seed/*.csv が最新化されていること
+// 前提: 先に `pnpm db:refresh-csv` で scripts/seed/*.csv が最新化されていること
 //       (Actions 上では fetch-id-seed → refresh-csv の順で実行される)。
 //
 // 使い方:
-//   npm run db:sync-remote                # 本番 D1 へ反映
-//   npm run db:sync-remote -- --dry-run   # SQL ファイルを tmp/ に生成するだけ
+//   pnpm db:sync-remote              # 本番 D1 へ反映
+//   pnpm db:sync-remote --dry-run    # SQL ファイルを tmp/ に生成するだけ
 //
 // 反映戦略:
 //   - companies: 本番から SELECT → 差分のみ UPDATE / 新規のみ INSERT(DELETE しない)
@@ -45,7 +45,7 @@ function readCsv(name: string): Record<string, string>[] {
   const path = join(SEED_DIR, name);
   if (!existsSync(path)) {
     throw new Error(
-      `CSV が見つかりません: ${path}\n先に npm run db:refresh-csv を実行してください。`,
+      `CSV が見つかりません: ${path}\n先に pnpm db:refresh-csv を実行してください。`,
     );
   }
   return csvRowsToObjects(parseCsv(readFileSync(path, "utf8")));

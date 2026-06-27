@@ -9,7 +9,7 @@
 // を生成する。オフライン実行で完結。
 //
 // 使い方:
-//   npm run db:refresh-csv:blog
+//   pnpm db:refresh-csv:blog
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

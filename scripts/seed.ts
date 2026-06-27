@@ -9,7 +9,7 @@
 // 何度実行しても同じ最終状態に収束する。ネット接続不要。
 //
 // 使い方:
-//   npm run db:seed
+//   pnpm db:seed
 
 import {
   existsSync,
@@ -50,7 +50,7 @@ const INSERT_CHUNK = 500;
 function readCsv(name: string): Record<string, string>[] {
   const path = join(SEED_DIR, name);
   if (!existsSync(path)) {
-    throw new Error(`CSV が見つかりません: ${path}\n先に npm run db:refresh-csv を実行してください。`);
+    throw new Error(`CSV が見つかりません: ${path}\n先に pnpm db:refresh-csv を実行してください。`);
   }
   const text = readFileSync(path, "utf8");
   return csvRowsToObjects(parseCsv(text));

@@ -5,7 +5,7 @@
 // から scripts/seed/*.csv を全件再生成する。
 //
 // 使い方:
-//   npm run db:refresh-csv
+//   pnpm db:refresh-csv
 //
 // 生成される CSV(scripts/seed/ 配下):
 //   companies.csv, stocks.csv, stock_prices_daily.csv,

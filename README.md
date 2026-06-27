@@ -37,22 +37,22 @@
 
 ```bash
 # 依存関係のインストール
-npm install
+pnpm install
 
 # 開発サーバ（http://localhost:3000）
-npm run dev
+pnpm dev
 
 # プロダクションビルド
-npm run build
+pnpm build
 
 # Cloudflare Workers 互換でローカルプレビュー（OpenNext でビルドして preview）
-npm run preview
+pnpm preview
 
 # Cloudflare Workers にデプロイ
-npm run deploy
+pnpm deploy
 ```
 
-`npm run preview` / `npm run deploy` は、OpenNext で `.open-next/` 配下に成果物を生成してから wrangler を呼びます。Cloudflare のリソース（D1 など）は `wrangler.toml` で定義されています。
+`pnpm preview` / `pnpm deploy` は、OpenNext で `.open-next/` 配下に成果物を生成してから wrangler を呼びます。Cloudflare のリソース（D1 など）は `wrangler.toml` で定義されています。
 
 ### 株価データの更新
 
@@ -60,11 +60,11 @@ npm run deploy
 
 ```bash
 # 1) 現在の株価を CSV テンプレートとして書き出す
-npm run prices:template
+pnpm prices:template
 #   → data/prices.csv が生成される。ここに最新の終値を上書きする。
 
 # 2) CSV の株価を data.ts に反映する
-npm run prices:apply -- --date 2026-06-12
+pnpm prices:apply --date 2026-06-12
 #   → 時価総額・PER・PBR・配当利回り・前回比を自動再計算。
 #     前回比 ±20% を超える銘柄があると入力ミスの可能性として停止する。
 #     本当に正しければ末尾に --force を付ける。
@@ -76,13 +76,13 @@ npm run prices:apply -- --date 2026-06-12
 
 ```bash
 # スキーマ変更からマイグレーション SQL を生成
-npx drizzle-kit generate
+pnpm exec drizzle-kit generate
 
 # 本番 D1 に適用（wrangler.toml の binding 名は DB）
-npx wrangler d1 migrations apply cho-kigyo-db-database --remote
+pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --remote
 
 # ローカル D1 に適用
-npx wrangler d1 migrations apply cho-kigyo-db-database --local
+pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --local
 ```
 
 > 現状の銘柄データはサンプルとして `src/lib/data.ts` に直書きされています。D1 は今後の本番データ移行に向けた基盤として用意されています（EDINET / TDnet / J-Quants からの取得を前提とした構造）。
@@ -94,7 +94,7 @@ npx wrangler d1 migrations apply cho-kigyo-db-database --local
 - 管理画面: <http://localhost:3000/admin>（本番: <https://kigyo.cho-super.com/admin>）
 - ログイン: <http://localhost:3000/admin/login>
 
-`npm run db:seed` で投入される初期管理者は次のとおりです。**本番反映時は必ず `/admin/account` でパスワードを変更してください。**
+`pnpm db:seed` で投入される初期管理者は次のとおりです。**本番反映時は必ず `/admin/account` でパスワードを変更してください。**
 
 - メールアドレス: `admin@example.com`
 - パスワード: `password0`
@@ -103,10 +103,10 @@ npx wrangler d1 migrations apply cho-kigyo-db-database --local
 
 ```bash
 # 既存ブログ記事 + 初期管理者の CSV を生成（オフラインで完結）
-npm run db:refresh-csv:blog
+pnpm db:refresh-csv:blog
 
 # ローカル D1 をリセットして全 CSV を一括 INSERT
-npm run db:seed
+pnpm db:seed
 ```
 
 管理画面の主な動線:

@@ -2,7 +2,7 @@
 // 本番 D1 から companies と sources の id seed を取得して JSON ファイルに書き出す。
 //
 // 使い方:
-//   npm run db:fetch-id-seed -- --out /tmp/id-seed.json
+//   pnpm db:fetch-id-seed --out /tmp/id-seed.json
 //
 // 出力 JSON 形式:
 //   {

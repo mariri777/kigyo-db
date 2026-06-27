@@ -7,10 +7,10 @@
 //   このスクリプトは data.ts に株価を直書きする旧運用で、移行が完了するまでの暫定。
 //
 // 使い方:
-//   npm run prices:template
+//   pnpm prices:template
 //     → data/prices.csv を現在の株価で生成(これを編集する)
 //
-//   npm run prices:apply -- --date 2026-06-12
+//   pnpm prices:apply --date 2026-06-12
 //     → CSV の株価を src/lib/data.ts に反映する。
 //       時価総額・PER・PBR・配当利回り・前回比は自動で再計算。
 //       前回比 ±20% を超える銘柄は入力ミスの可能性があるため
@@ -76,7 +76,7 @@ function cmdTemplate(): void {
   const header = [
     "# 超!企業DB 株価更新シート",
     "# price 列を最新の終値(円)に書き換えて、以下を実行:",
-    "#   npm run prices:apply -- --date YYYY-MM-DD",
+    "#   pnpm prices:apply --date YYYY-MM-DD",
     "code,name,price",
   ].join("\n");
   writeFileSync(CSV_PATH, header + "\n" + rows.join("\n") + "\n");
@@ -219,7 +219,7 @@ function cmdApply(args: string[]): void {
   if (missing.length) {
     console.log(`⚠️  CSV に無く未更新のまま: ${missing.map((b) => b.code).join(", ")}`);
   }
-  console.log("次の一手: npm run build で確認 → npm run deploy で公開");
+  console.log("次の一手: pnpm build で確認 → pnpm deploy で公開");
 }
 
 // ---------- エントリポイント ----------
