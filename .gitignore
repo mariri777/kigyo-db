@@ -45,8 +45,9 @@ next-env.d.ts
 .wrangler/
 .dev.vars
 
-# seed の CSV (scripts/seed/*.csv) は全てコミット対象。
-# 中間 SQL/キャッシュは除外。
+# seed の CSV はリポジトリにコミットしない。
+# 本番 D1 を id の正本とし、ローカル / Actions で都度 refresh-csv → seed/sync-remote で再生成する。
+scripts/seed/*.csv
 scripts/seed/.jpx-cache.*
 scripts/seed/*.sql
 

@@ -51,11 +51,46 @@ async function main() {
     `📋 data.ts オーバーレイ ${overlayStocks.length} 銘柄 / industries.ts ${industries.length} 業界`,
   );
 
-  // ─── 3. id 採番(既存 companies.csv を尊重) ─────────
+  // ─── 3. id 採番 ───────────────────────────────────
+  //   優先度:
+  //     1) 環境変数 ID_SEED_JSON で指定されたファイル(本番 D1 から吸い出した JSON)
+  //     2) 既存 scripts/seed/companies.csv(ローカル開発のフォールバック)
+  //
+  //   sources も同様に、ID_SEED_JSON の sources 配列から (doc,page,period,url) を
+  //   キーに既存 id を継承する(後述 7 節を参照)。
+  const seedJsonPath = process.env.ID_SEED_JSON;
+  type IdSeedJson = {
+    companies?: { id: number; name: string }[];
+    sources?: {
+      id: number;
+      doc: string;
+      page: number | null;
+      period: string | null;
+      url: string | null;
+    }[];
+  };
+  let idSeed: IdSeedJson | null = null;
+  if (seedJsonPath) {
+    if (!existsSync(seedJsonPath)) {
+      throw new Error(`ID_SEED_JSON が指す JSON が見つかりません: ${seedJsonPath}`);
+    }
+    idSeed = JSON.parse(readFileSync(seedJsonPath, "utf8")) as IdSeedJson;
+    console.log(
+      `🔁 ID_SEED_JSON から companies ${idSeed.companies?.length ?? 0} 件 / sources ${idSeed.sources?.length ?? 0} 件の id を継承`,
+    );
+  }
+
   const existingCompaniesPath = join(SEED_DIR, "companies.csv");
   const existingIdByName = new Map<string, number>();
   let nextCompanyId = 1;
-  if (existsSync(existingCompaniesPath)) {
+  if (idSeed?.companies && idSeed.companies.length > 0) {
+    for (const c of idSeed.companies) {
+      if (Number.isFinite(c.id)) {
+        existingIdByName.set(c.name, c.id);
+        if (c.id >= nextCompanyId) nextCompanyId = c.id + 1;
+      }
+    }
+  } else if (existsSync(existingCompaniesPath)) {
     const rows = csvRowsToObjects(
       parseCsv(readFileSync(existingCompaniesPath, "utf8")),
     );
@@ -135,10 +170,29 @@ async function main() {
     period: string | null;
     url: string | null;
   };
-  const sourceKey = (s: { doc: string; page?: number; period?: string; url?: string }) =>
+  const sourceKey = (s: { doc: string; page?: number | null; period?: string | null; url?: string | null }) =>
     `${s.doc}|${s.page ?? ""}|${s.period ?? ""}|${s.url ?? ""}`;
   const sourceIdByKey = new Map<string, number>();
   const sources: SourceRow[] = [];
+  let nextSourceId = 1;
+
+  // id seed があれば、既存 sources の id を (doc,page,period,url) キーで継承し、
+  // 新規分は max(seed.id)+1 から採番する。これで本番 D1 と source_id がズレない。
+  if (idSeed?.sources && idSeed.sources.length > 0) {
+    for (const s of idSeed.sources) {
+      const k = sourceKey(s);
+      sourceIdByKey.set(k, s.id);
+      sources.push({
+        id: s.id,
+        doc: s.doc,
+        page: s.page ?? null,
+        period: s.period ?? null,
+        url: s.url ?? null,
+      });
+      if (s.id >= nextSourceId) nextSourceId = s.id + 1;
+    }
+  }
+
   function ensureSourceId(s: {
     doc: string;
     page?: number;
@@ -148,7 +202,7 @@ async function main() {
     const k = sourceKey(s);
     let id = sourceIdByKey.get(k);
     if (id != null) return id;
-    id = sources.length + 1;
+    id = nextSourceId++;
     sources.push({
       id,
       doc: s.doc,

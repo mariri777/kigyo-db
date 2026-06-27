@@ -14,6 +14,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "db:refresh-csv": "tsx scripts/refresh-csv.ts",
     "db:refresh-csv:blog": "tsx scripts/refresh-blog-csv.ts",
+    "db:fetch-id-seed": "tsx scripts/fetch-id-seed.ts",
+    "db:sync-remote": "tsx scripts/sync-remote.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
