@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Countdown } from "./Countdown";
 import { daysFromToday } from "@/content/predictions";
 import type { Prediction } from "@/content/predictions";
-import { eventLabelShort } from "@/shared/predictionLabels";
+import { eventLabelShort } from "@/domain/predictionLabels";
 import { formatPredictionEventDate } from "@/shared/format";
 
 /**

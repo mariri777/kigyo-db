@@ -8,125 +8,85 @@ import {
 } from "@/content/predictions";
 import { PredictionCard } from "@/components/PredictionCard";
 import { PredictionListItem } from "@/components/PredictionListItem";
+import { StructuredData } from "@/components/StructuredData";
+import { NOT_FOUND_METADATA, pageMetadata } from "@/lib/seo/metadata";
+import { articleLd, breadcrumbList } from "@/lib/seo/structuredData";
+import { ROUTES } from "@/shared/links";
+import { absoluteUrl, SITE_NAME } from "@/shared/site";
 import { getStockBrief } from "@/server/usecase";
 
+type Params = Promise<{ id: string }>;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { id } = await params;
   const prediction = getPrediction(id);
-  if (!prediction) return { title: "見つかりません", robots: { index: false, follow: false } };
-  const stock = prediction.stockCode
-    ? await getStockBrief(prediction.stockCode)
-    : null;
+  if (!prediction) return NOT_FOUND_METADATA;
+  const stock = prediction.stockCode ? await getStockBrief(prediction.stockCode) : null;
   const title = stock
     ? `予測:${stock.name}(${stock.code})— ${prediction.question}`
     : `予測:${prediction.question}`;
-  const noteOrEvent = prediction.questionNote ?? prediction.eventName;
-  const description = `${noteOrEvent}。AI と編集部がイベント前に確率を提示し、結果と教訓まで公開する予測カード。`;
-  const url = `/predictions/${prediction.id}`;
-  return {
+  const description = `${
+    prediction.questionNote ?? prediction.eventName
+  }。AI と編集部がイベント前に確率を提示し、結果と教訓まで公開する予測カード。`;
+  return pageMetadata({
     title,
     description,
+    path: `${ROUTES.predictions}/${prediction.id}`,
     keywords: ["予測", prediction.eventName, stock?.name ?? "マクロ", "AI 予測"],
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title,
-      description,
-      url,
-      siteName: "超!企業DB",
-    },
-    twitter: { card: "summary_large_image", title, description },
-  };
+  });
 }
 
-export default async function PredictionDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function PredictionDetailPage({ params }: { params: Params }) {
   const { id } = await params;
   const raw = getPrediction(id);
   if (!raw) notFound();
   const prediction = predictionWithLiveStatus(raw);
-  const stock = prediction.stockCode
-    ? await getStockBrief(prediction.stockCode)
-    : null;
+  const stock = prediction.stockCode ? await getStockBrief(prediction.stockCode) : null;
 
-  // 同銘柄の他予測（最大 3 件）
   const sameStock = prediction.stockCode
     ? listPredictions()
         .filter(
-          (p) =>
-            p.stockCode === prediction.stockCode && p.id !== prediction.id,
+          (p) => p.stockCode === prediction.stockCode && p.id !== prediction.id,
         )
         .slice(0, 3)
     : [];
-
-  // 他の予測（同銘柄じゃないもの、最大 3 件）
   const others = listPredictions()
     .filter((p) => p.id !== prediction.id && p.stockCode !== prediction.stockCode)
     .slice(0, 3);
 
+  const predictionPath = `${ROUTES.predictions}/${prediction.id}`;
+  const stockOrMacroCrumb = stock
+    ? { name: `${stock.name}(${stock.code})`, href: `${ROUTES.stocks}/${stock.code}` }
+    : { name: "マクロ", href: ROUTES.predictions };
+
   const predictionJsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
-        { "@type": "ListItem", position: 2, name: "予測", item: "https://kigyo.cho-super.com/predictions" },
-        {
-          "@type": "ListItem",
-          position: 3,
-          name: stock ? `${stock.name}(${stock.code})` : "マクロ",
-          item: stock
-            ? `https://kigyo.cho-super.com/stocks/${stock.code}`
-            : "https://kigyo.cho-super.com/predictions",
-        },
-        {
-          "@type": "ListItem",
-          position: 4,
-          name: prediction.question,
-          item: `https://kigyo.cho-super.com/predictions/${prediction.id}`,
-        },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Article",
-      headline: prediction.question,
+    breadcrumbList([
+      { name: "予測", href: ROUTES.predictions },
+      stockOrMacroCrumb,
+      { name: prediction.question, href: predictionPath },
+    ]),
+    articleLd({
+      title: prediction.question,
       description: prediction.questionNote ?? prediction.eventName,
-      url: `https://kigyo.cho-super.com/predictions/${prediction.id}`,
-      inLanguage: "ja",
-      author: { "@type": "Organization", name: "超!企業DB 編集部" },
-      publisher: {
-        "@type": "Organization",
-        name: "超!企業DB",
-        logo: { "@type": "ImageObject", url: "https://kigyo.cho-super.com/icon" },
-      },
-    },
+      path: predictionPath,
+      datePublished: prediction.deadlineAt,
+      dateModified: prediction.resolution?.resolvedAt ?? prediction.deadlineAt,
+      authorName: `${SITE_NAME} 編集部`,
+    }),
   ];
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(predictionJsonLd) }}
-      />
-      {/* パンくず */}
+      <StructuredData data={predictionJsonLd} />
       <nav className="flex items-center gap-2 text-[11px] text-muted-foreground mb-6 flex-wrap">
-        <Link href="/predictions" className="hover:text-foreground transition">
+        <Link href={ROUTES.predictions} className="hover:text-foreground transition">
           予測ハブ
         </Link>
         <span className="text-foreground/60">/</span>
         {stock ? (
           <>
             <Link
-              href={`/stocks/${stock.code}`}
+              href={`${ROUTES.stocks}/${stock.code}`}
               className="hover:text-foreground transition"
             >
               {stock.code} {stock.name}
@@ -139,51 +99,29 @@ export default async function PredictionDetailPage({
             <span className="text-foreground/60">/</span>
           </>
         )}
-        <span className="text-foreground truncate max-w-[60%]">
-          {prediction.question}
-        </span>
+        <span className="text-foreground truncate max-w-[60%]">{prediction.question}</span>
       </nav>
 
-      {/* ===== メインカード ===== */}
       <PredictionCard prediction={prediction} />
 
-      {/* ===== 同銘柄の他予測 ===== */}
       {sameStock.length > 0 && stock && (
-        <section className="mt-12">
-          <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-muted-foreground mb-4">
-            {stock.name} の他の予測
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {sameStock.map((p) => (
-              <PredictionListItem
-                key={p.id}
-                prediction={p}
-                stockName={p.stockCode === prediction.stockCode ? stock?.name : null}
-              />
-            ))}
-          </div>
-        </section>
+        <RelatedPredictions
+          heading={`${stock.name} の他の予測`}
+          predictions={sameStock}
+          highlightStockName={stock.name}
+          highlightStockCode={stock.code}
+        />
       )}
 
-      {/* ===== その他の予測 ===== */}
       {others.length > 0 && (
-        <section className="mt-12">
-          <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-muted-foreground mb-4">
-            その他の予測カード
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-3">
-            {others.map((p) => (
-              <PredictionListItem
-                key={p.id}
-                prediction={p}
-                stockName={p.stockCode === prediction.stockCode ? stock?.name : null}
-              />
-            ))}
-          </div>
-        </section>
+        <RelatedPredictions
+          heading="その他の予測カード"
+          predictions={others}
+          highlightStockName={stock?.name ?? null}
+          highlightStockCode={prediction.stockCode ?? null}
+        />
       )}
 
-      {/* ===== シェア用注記 ===== */}
       <section className="mt-12 pt-8 border-t border-border">
         <h2 className="text-sm font-bold mb-3">この予測を共有する</h2>
         <p className="text-[12px] text-muted-foreground leading-relaxed mb-3">
@@ -191,22 +129,21 @@ export default async function PredictionDetailPage({
           投票内容は各ブラウザのローカルに保存されるため、相手の投票は見えません。
         </p>
         <div className="bg-surface-elev border border-border rounded-md px-3 py-2 text-[11px] text-muted-foreground tabular font-mono break-all">
-          https://kigyo.cho-super.com/predictions/{prediction.id}
+          {absoluteUrl(predictionPath)}
         </div>
       </section>
 
-      {/* ===== 関連 ===== */}
       <section className="mt-12 pt-8 border-t border-border">
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
-            href="/predictions"
+            href={ROUTES.predictions}
             className="text-muted-foreground hover:text-foreground transition"
           >
             ← 予測ハブに戻る
           </Link>
           {stock && (
             <Link
-              href={`/stocks/${stock.code}`}
+              href={`${ROUTES.stocks}/${stock.code}`}
               className="text-muted-foreground hover:text-foreground transition"
             >
               {stock.name} の銘柄ページ →
@@ -215,5 +152,34 @@ export default async function PredictionDetailPage({
         </div>
       </section>
     </div>
+  );
+}
+
+function RelatedPredictions({
+  heading,
+  predictions,
+  highlightStockName,
+  highlightStockCode,
+}: {
+  heading: string;
+  predictions: ReturnType<typeof listPredictions>;
+  highlightStockName: string | null;
+  highlightStockCode: string | null;
+}) {
+  return (
+    <section className="mt-12">
+      <h2 className="text-sm font-bold tracking-[0.2em] uppercase text-muted-foreground mb-4">
+        {heading}
+      </h2>
+      <div className="grid sm:grid-cols-2 gap-3">
+        {predictions.map((p) => (
+          <PredictionListItem
+            key={p.id}
+            prediction={p}
+            stockName={p.stockCode === highlightStockCode ? highlightStockName : null}
+          />
+        ))}
+      </div>
+    </section>
   );
 }

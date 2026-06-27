@@ -70,18 +70,14 @@ export function Countdown({ target }: { target: string }) {
     );
   }
 
-  // 5 分以内は強調色（red 系の代わりにモノクロームの強いダークで表現）
+  // 5 分以内はインジケーターを点滅させて切迫感を出す（カラーは ASCII モノクロのため変えない）
   const imminent = totalSec <= 5 * 60;
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${
-        imminent ? "text-foreground" : "text-foreground"
-      }`}
-    >
+    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-foreground">
       <span
-        className={`inline-block w-1.5 h-1.5 rounded-full ${
-          imminent ? "bg-foreground animate-pulse" : "bg-foreground"
+        className={`inline-block w-1.5 h-1.5 rounded-full bg-foreground ${
+          imminent ? "animate-pulse" : ""
         }`}
       />
       残り {body}

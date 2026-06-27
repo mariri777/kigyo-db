@@ -5,25 +5,19 @@ import type { Prediction, PredictionBucket } from "@/content/predictions";
 import { PredictionListItem } from "@/components/PredictionListItem";
 import { PredictionCard } from "@/components/PredictionCard";
 import { Term } from "@/components/Term";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { listStockBriefs } from "@/server/usecase";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-const predictionsTitle = "予測 — 決算・適時開示・マクロを確率で読む";
-const predictionsDescription =
-  "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると『教訓』が追加されるミニ学習ユニット。AI と編集部の的中率も累積で全公開。";
-
-export const metadata: Metadata = {
-  title: predictionsTitle,
-  description: predictionsDescription,
+export const metadata: Metadata = pageMetadata({
+  title: "予測 — 決算・適時開示・マクロを確率で読む",
+  description:
+    "決算・適時開示・マクロイベントに対する予測カード。賭けません・賞金もありません。結果が出ると『教訓』が追加されるミニ学習ユニット。AI と編集部の的中率も累積で全公開。",
+  path: ROUTES.predictions,
   keywords: ["予測", "確率思考", "決算予測", "適時開示", "マクロ", "AI 的中率"],
-  alternates: { canonical: "/predictions" },
-  openGraph: {
-    title: predictionsTitle,
-    description: predictionsDescription,
-    url: "/predictions",
-    type: "website",
-  },
-  twitter: { card: "summary_large_image", title: predictionsTitle, description: predictionsDescription },
-};
+  ogType: "website",
+});
 
 const BUCKET_LABEL: Record<
   PredictionBucket,
@@ -72,9 +66,7 @@ export default async function PredictionsHub() {
     <div className="max-w-5xl mx-auto px-6 py-12">
       {/* ===== ヘッダー ===== */}
       <header className="pb-10 border-b border-border mb-10">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">
-          Predictions
-        </p>
+        <Eyebrow className="mb-4">Predictions</Eyebrow>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
           確率で考える、
           <br />
@@ -101,7 +93,7 @@ export default async function PredictionsHub() {
         </div>
         <div className="mt-4 max-w-2xl">
           <Link
-            href="/predictions/track-record"
+            href={ROUTES.predictionsTrackRecord}
             className="inline-flex items-center gap-1 text-[12px] text-foreground border border-border-strong rounded px-3 py-1.5 hover:bg-foreground hover:text-background transition"
           >
             的中率の詳細ダッシュボード →
@@ -178,12 +170,15 @@ export default async function PredictionsHub() {
           </p>
           <p>
             各予測カードは編集部 + AI による<strong className="text-foreground">公開情報ベース</strong>の予測であり、投資助言・投資推奨ではありません。投資判断はご自身の責任で行ってください。詳しくは
-            <Link href="/legal/disclaimer" className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground">
+            <Link
+              href={ROUTES.legal.disclaimer}
+              className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground"
+            >
               免責事項
             </Link>
             ・
             <Link
-              href="/legal/editorial-policy"
+              href={ROUTES.legal.editorial}
               className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground"
             >
               編集方針
@@ -200,13 +195,13 @@ export default async function PredictionsHub() {
       <section className="mt-12 pt-8 border-t border-border">
         <h2 className="text-sm font-bold mb-3">関連</h2>
         <div className="flex flex-wrap gap-3 text-sm">
-          <Link href="/stocks" className="text-muted-foreground hover:text-foreground transition">
+          <Link href={ROUTES.stocks} className="text-muted-foreground hover:text-foreground transition">
             銘柄一覧へ →
           </Link>
-          <Link href="/blog" className="text-muted-foreground hover:text-foreground transition">
+          <Link href={ROUTES.blog} className="text-muted-foreground hover:text-foreground transition">
             ブログへ →
           </Link>
-          <Link href="/guide" className="text-muted-foreground hover:text-foreground transition">
+          <Link href={ROUTES.guide} className="text-muted-foreground hover:text-foreground transition">
             5 分ガイドへ →
           </Link>
         </div>
@@ -233,9 +228,7 @@ function ResolvedSpotlight({ prediction }: { prediction: Prediction }) {
     <section className="mb-12 mt-12" id="spotlight">
       <div className="flex items-end justify-between mb-4 pb-2 border-b border-border">
         <div>
-          <p className="text-muted-foreground text-[11px] font-bold tracking-[0.2em] uppercase mb-1">
-            Spotlight
-          </p>
+          <Eyebrow className="mb-1 text-[11px]">Spotlight</Eyebrow>
           <h2 className="text-xl font-bold tracking-tight">直近の答え合わせを深掘り</h2>
           <p className="text-[12px] text-muted-foreground mt-1">
             予測が外れた／当たった理由と「見落としやすかったポイント」を毎回まとめます。

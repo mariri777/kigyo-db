@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getStockDetail } from "@/server/usecase";
-import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/shared/og";
+import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/components/og/OgCard";
 
 export const alt = "銘柄詳細 | 超!企業DB";
 export const size = OG_SIZE;

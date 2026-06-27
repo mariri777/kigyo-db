@@ -2,25 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Disclose } from "@/components/Disclose";
 import { Term } from "@/components/Term";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-const guideTitle = "初めての方へ — 投資の基本指標と超!企業DBの歩き方";
-const guideDescription =
-  "PER / PBR / 配当利回り / ROE といった投資の基本指標を、図解とミニ事例でやさしく解説。あわせて『超!企業DB』の使い方も紹介します。これから投資を始める方向けの入口ページ。";
-
-export const metadata: Metadata = {
-  title: guideTitle,
-  description: guideDescription,
+export const metadata: Metadata = pageMetadata({
+  title: "初めての方へ — 投資の基本指標と超!企業DBの歩き方",
+  description:
+    "PER / PBR / 配当利回り / ROE といった投資の基本指標を、図解とミニ事例でやさしく解説。あわせて『超!企業DB』の使い方も紹介します。これから投資を始める方向けの入口ページ。",
+  path: ROUTES.guide,
   keywords: ["投資入門", "PER", "PBR", "ROE", "配当利回り", "用語解説"],
-  alternates: { canonical: "/guide" },
-  openGraph: { title: guideTitle, description: guideDescription, url: "/guide", type: "article" },
-  twitter: { card: "summary_large_image", title: guideTitle, description: guideDescription },
-};
+});
 
 export default function GuidePage() {
   return (
     <article className="max-w-3xl mx-auto px-6 py-12">
       <header className="pb-8 border-b border-border mb-10">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-3">Guide</p>
+        <Eyebrow className="mb-3">Guide</Eyebrow>
         <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tighter mb-5">
           投資を始めた
           <br />

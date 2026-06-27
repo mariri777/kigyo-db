@@ -1,18 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalDoc, LegalSection } from "@/components/LegalDoc";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "利用規約",
   description:
     "超!企業DB の利用にあたっての規約。サービス内容、禁止事項、免責、規約改定などを定めています。ご利用前にお読みください。",
-  alternates: { canonical: "/legal/terms" },
-  openGraph: {
-    title: "利用規約 | 超!企業DB",
-    description: "超!企業DB の利用にあたっての規約。",
-    url: "/legal/terms",
-    type: "article",
-  },
-};
+  path: ROUTES.legal.terms,
+});
 
 export default function TermsPage() {
   return (
@@ -36,7 +33,7 @@ export default function TermsPage() {
         </p>
         <p>
           本サービスは投資情報の提供を目的とし、投資勧誘や売買推奨を目的とするものではありません。
-          詳しくは <Link href="/legal/disclaimer" className="underline">免責事項</Link> をご確認ください。
+          詳しくは <Link href={ROUTES.legal.disclaimer} className="underline">免責事項</Link> をご確認ください。
         </p>
       </LegalSection>
 
@@ -78,7 +75,7 @@ export default function TermsPage() {
       <LegalSection title="第 6 条（免責事項）">
         <p>
           本サービスの利用に関する免責事項は別途
-          <Link href="/legal/disclaimer" className="underline mx-1">免責事項</Link>
+          <Link href={ROUTES.legal.disclaimer} className="underline mx-1">免責事項</Link>
           に定めるとおりです。本サービスを利用される前に必ずご確認ください。
         </p>
       </LegalSection>

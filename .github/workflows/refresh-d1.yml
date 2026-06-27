@@ -1,7 +1,7 @@
 name: refresh-d1
 
 # JPX 銘柄一覧 + Yahoo Finance を取得し、本番 Cloudflare D1 を 24 時間ごとに更新する。
-# blog/admin 系テーブルは触らない(scripts/sync-remote.ts のスコープ外)。
+# blog/admin 系テーブル(posts, post_tags, tags, admin_users, admin_sessions)は触らない。
 
 on:
   schedule:
@@ -37,13 +37,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Fetch id seed from production D1
-        run: pnpm db:fetch-id-seed --out /tmp/id-seed.json
-
-      - name: Regenerate CSVs from JPX + Yahoo Finance
-        env:
-          ID_SEED_JSON: /tmp/id-seed.json
-        run: pnpm db:refresh-csv
-
-      - name: Sync diffs to production D1
-        run: pnpm db:sync-remote
+      - name: Refresh production D1
+        run: pnpm db:refresh

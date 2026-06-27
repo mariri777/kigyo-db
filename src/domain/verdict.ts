@@ -1,17 +1,5 @@
 import type { ValuationCall } from "./types";
 
-/**
- * 規範的判断ラベルの順序とスタイル。
- * 元の同名定数 (StockTable / CompareView / screens / stocks 各所) から振る舞いを一切変えずに集約。
- */
-
-export const VERDICTS: ValuationCall["verdict"][] = [
-  "割安",
-  "ほぼ妥当",
-  "やや割高",
-  "割高",
-];
-
 /** テーブル・チップ用: 角丸チップで使うクラス。 */
 export const VERDICT_STYLE: Record<ValuationCall["verdict"], string> = {
   割安: "text-positive bg-positive/10 border-positive/30",

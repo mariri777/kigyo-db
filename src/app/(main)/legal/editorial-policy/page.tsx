@@ -1,18 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalDoc, LegalSection } from "@/components/LegalDoc";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "編集方針 — どう書き、どう判断しているか",
   description:
     "規範的判断(割安・割高)の出し方、見落とし論点の抽出方法、AI と編集部の責任分担、品質階層、訂正ポリシーまでを公開。透明性そのものをプロダクトに織り込みます。",
-  alternates: { canonical: "/legal/editorial-policy" },
-  openGraph: {
-    title: "編集方針 — どう書き、どう判断しているか | 超!企業DB",
-    description: "規範的判断の出し方、見落とし論点の抽出方法、訂正ポリシーまで公開。",
-    url: "/legal/editorial-policy",
-    type: "article",
-  },
-};
+  path: ROUTES.legal.editorial,
+});
 
 export default function EditorialPolicyPage() {
   return (
@@ -30,7 +27,7 @@ export default function EditorialPolicyPage() {
         </p>
         <p>
           本サービスは独立系として、法律の範囲内（不特定多数への一般情報提供）で、根拠と数値を併記した規範的判断を出します。
-          これは <Link href="/" className="underline">超！企業DB</Link> が他のサービスと差別化する核心です。
+          これは <Link href={ROUTES.home} className="underline">超！企業DB</Link> が他のサービスと差別化する核心です。
         </p>
       </LegalSection>
 

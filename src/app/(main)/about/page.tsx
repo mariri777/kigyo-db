@@ -1,16 +1,14 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-const aboutTitle = "超!企業DBとは — 設計思想と提供価値";
-const aboutDescription =
-  "個人投資家のための AI ネイティブな銘柄分析サービス。類似銘柄エンジン・見落とし論点抽出・業界マップ動的生成という 3 つのコア機能と、信頼性を担保する設計思想を解説します。";
-
-export const metadata: Metadata = {
-  title: aboutTitle,
-  description: aboutDescription,
-  alternates: { canonical: "/about" },
-  openGraph: { title: aboutTitle, description: aboutDescription, url: "/about", type: "website" },
-  twitter: { card: "summary_large_image", title: aboutTitle, description: aboutDescription },
-};
+export const metadata: Metadata = pageMetadata({
+  title: "超!企業DBとは — 設計思想と提供価値",
+  description:
+    "個人投資家のための AI ネイティブな銘柄分析サービス。類似銘柄エンジン・見落とし論点抽出・業界マップ動的生成という 3 つのコア機能と、信頼性を担保する設計思想を解説します。",
+  path: ROUTES.about,
+  ogType: "website",
+});
 
 export default function AboutPage() {
   return (

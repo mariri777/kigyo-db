@@ -1,18 +1,15 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalDoc, LegalSection } from "@/components/LegalDoc";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "免責事項",
   description:
     "超!企業DB は投資助言業に該当する個別助言ではなく、不特定多数向けの一般情報提供サービスです。投資判断は必ずご自身の責任で行ってください。",
-  alternates: { canonical: "/legal/disclaimer" },
-  openGraph: {
-    title: "免責事項 | 超!企業DB",
-    description: "投資判断はご自身の責任で。一般情報提供サービスとしての立場を明示します。",
-    url: "/legal/disclaimer",
-    type: "article",
-  },
-};
+  path: ROUTES.legal.disclaimer,
+});
 
 export default function DisclaimerPage() {
   return (
@@ -88,7 +85,7 @@ export default function DisclaimerPage() {
       <LegalSection title="5. 規範的判断について">
         <p>
           本サービスは「割安／ほぼ妥当／やや割高／割高」の 4 段階で銘柄の規範的判断を提供します。
-          詳細な判断基準は <Link href="/legal/editorial-policy" className="underline">編集方針</Link>
+          詳細な判断基準は <Link href={ROUTES.legal.editorial} className="underline">編集方針</Link>
           をご確認ください。
         </p>
         <p>

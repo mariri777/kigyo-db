@@ -1,2 +1,0 @@
-id,email,name,password_hash,password_salt,password_iterations,created_at,updated_at
-1,admin@example.com,編集部,tc7ksB71Z4rl+NcWIr+PmrMe2x/UtZVkswkRYNTlZrs=,a2lneW8tc2VlZC1zYWx0MA==,200000,2026-01-01T00:00:00.000Z,2026-01-01T00:00:00.000Z

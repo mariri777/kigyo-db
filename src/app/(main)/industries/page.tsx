@@ -2,18 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { industries, industryAggregates } from "@/content/industries";
 import { listStockBriefs } from "@/server/usecase";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-const title = `業界マップ — バリューチェーンで読む ${industries.length} 業界`;
-const description = `半導体・自動車・化学など ${industries.length} 業界を、バリューチェーン・競争構造・主要 KPI・市場が見落とした論点まで分解。東証の業種分類より一段細かい粒度で、銘柄を俯瞰できます。`;
-
-export const metadata: Metadata = {
-  title,
-  description,
+export const metadata: Metadata = pageMetadata({
+  title: `業界マップ — バリューチェーンで読む ${industries.length} 業界`,
+  description: `半導体・自動車・化学など ${industries.length} 業界を、バリューチェーン・競争構造・主要 KPI・市場が見落とした論点まで分解。東証の業種分類より一段細かい粒度で、銘柄を俯瞰できます。`,
+  path: ROUTES.industries,
   keywords: ["業界マップ", "バリューチェーン", "競争構造", "業界分析", "サブクラスタ", "業界 KPI"],
-  alternates: { canonical: "/industries" },
-  openGraph: { title, description, url: "/industries", type: "website" },
-  twitter: { card: "summary_large_image", title, description },
-};
+  ogType: "website",
+});
 
 const COMING_SOON: { name: string; note: string }[] = [];
 
@@ -22,9 +21,7 @@ export default async function IndustriesHub() {
   return (
     <article className="max-w-6xl mx-auto px-6 py-12">
       <header className="pb-10 border-b border-border mb-12">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">
-          Industry Map
-        </p>
+        <Eyebrow className="mb-4">Industry Map</Eyebrow>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
           業界の競争構造を、
           <br />
@@ -44,7 +41,7 @@ export default async function IndustriesHub() {
             return (
               <Link
                 key={ind.slug}
-                href={`/industries/${ind.slug}`}
+                href={`${ROUTES.industries}/${ind.slug}`}
                 className="group block bg-surface border border-border rounded-md p-6 hover:border-border-strong transition"
               >
                 <div className="flex items-baseline justify-between mb-3">

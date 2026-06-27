@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getScreen } from "@/domain/screens";
-import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/shared/og";
+import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/components/og/OgCard";
 
 export const alt = "スクリーン | 超!企業DB";
 export const size = OG_SIZE;

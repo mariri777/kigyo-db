@@ -6,10 +6,19 @@ import { getStockBriefsByCodes } from "@/server/usecase";
 import { getIndustry } from "@/content/industries";
 import { PostContent } from "@/components/PostContent";
 import { PostCard } from "@/components/PostCard";
+import { StructuredData } from "@/components/StructuredData";
+import { NOT_FOUND_METADATA, pageMetadata } from "@/lib/seo/metadata";
+import { articleLd, breadcrumbList } from "@/lib/seo/structuredData";
+import { ROUTES } from "@/shared/links";
+import { SITE_NAME } from "@/shared/site";
 import { formatJaDate } from "@/shared/format";
 
 export const dynamic = "force-dynamic";
 
+const AUTHOR_LABEL = {
+  editor: "編集部",
+  "ai-editor": "AI + 編集部レビュー",
+} as const;
 
 export async function generateMetadata({
   params,
@@ -18,26 +27,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const p = await getPost(slug);
-  if (!p) return { title: "見つかりません", robots: { index: false, follow: false } };
-  const url = `/blog/${p.slug}`;
-  return {
+  if (!p) return NOT_FOUND_METADATA;
+  return pageMetadata({
     title: p.title,
     description: p.lede,
+    path: `${ROUTES.blog}/${p.slug}`,
     keywords: [CATEGORY_LABEL[p.category], "ブログ", "決算分析", "業界ウォッチ"],
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title: p.title,
-      description: p.lede,
-      url,
-      siteName: "超!企業DB",
-      publishedTime: p.publishedAt,
-      modifiedTime: p.publishedAt,
-      authors: [p.author === "ai-editor" ? "AI + 編集部レビュー" : "編集部"],
-      tags: [CATEGORY_LABEL[p.category]],
-    },
-    twitter: { card: "summary_large_image", title: p.title, description: p.lede },
-  };
+    publishedTime: p.publishedAt,
+    modifiedTime: p.publishedAt,
+    authors: [AUTHOR_LABEL[p.author]],
+  });
 }
 
 export default async function PostPage({
@@ -55,56 +54,33 @@ export default async function PostPage({
     .filter((s): s is NonNullable<ReturnType<typeof getIndustry>> => Boolean(s));
 
   const others = (await listPosts()).filter((p) => p.slug !== post.slug).slice(0, 3);
+  const path = `${ROUTES.blog}/${post.slug}`;
+  const authorOrg =
+    post.author === "ai-editor"
+      ? `${SITE_NAME} 編集部(AI + レビュー)`
+      : `${SITE_NAME} 編集部`;
   const postJsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
-        { "@type": "ListItem", position: 2, name: "ブログ", item: "https://kigyo.cho-super.com/blog" },
-        {
-          "@type": "ListItem",
-          position: 3,
-          name: post.title,
-          item: `https://kigyo.cho-super.com/blog/${post.slug}`,
-        },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "Article",
-      headline: post.title,
+    breadcrumbList([
+      { name: "ブログ", href: ROUTES.blog },
+      { name: post.title, href: path },
+    ]),
+    articleLd({
+      title: post.title,
       description: post.lede,
-      url: `https://kigyo.cho-super.com/blog/${post.slug}`,
+      path,
       datePublished: post.publishedAt,
       dateModified: post.publishedAt,
-      inLanguage: "ja",
       articleSection: CATEGORY_LABEL[post.category],
-      keywords: [CATEGORY_LABEL[post.category], "投資", "銘柄分析"].join(", "),
-      author: {
-        "@type": "Organization",
-        name: post.author === "ai-editor" ? "超!企業DB 編集部(AI + レビュー)" : "超!企業DB 編集部",
-      },
-      publisher: {
-        "@type": "Organization",
-        name: "超!企業DB",
-        logo: { "@type": "ImageObject", url: "https://kigyo.cho-super.com/icon" },
-      },
-      mainEntityOfPage: {
-        "@type": "WebPage",
-        "@id": `https://kigyo.cho-super.com/blog/${post.slug}`,
-      },
-    },
+      keywords: [CATEGORY_LABEL[post.category], "投資", "銘柄分析"],
+      authorName: authorOrg,
+    }),
   ];
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(postJsonLd) }}
-      />
+      <StructuredData data={postJsonLd} />
       <Link
-        href="/blog"
+        href={ROUTES.blog}
         className="inline-block text-xs text-muted-foreground hover:text-foreground transition mb-8"
       >
         ← ブログ一覧へ

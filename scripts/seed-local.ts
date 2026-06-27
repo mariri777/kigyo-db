@@ -1,15 +1,17 @@
 #!/usr/bin/env tsx
-// 冪等な seed スクリプト(オフライン実行)。
+// ローカル D1 を初期化するスクリプト(オフライン完結)。
 //
-// 手順:
-//   1) ローカル D1 SQLite ファイルを物理削除
-//   2) wrangler d1 migrations apply --local で全マイグレーションを適用
-//   3) scripts/seed/*.csv を読み、Drizzle ORM で順番に INSERT
+// 1) .wrangler/state 下のローカル SQLite ファイルを inode 維持で全テーブル DROP
+// 2) drizzle/*.sql を順に流して再作成
+// 3) scripts/seed/*.csv を Drizzle で一括 INSERT(企業 / 銘柄 / 価格 / overlay)
+// 4) admin_users はハードコード 1 名だけ投入(管理画面ログイン用)
+// 5) blog (posts, post_tags, tags) は空のまま(管理画面から手で作る)
 //
-// 何度実行しても同じ最終状態に収束する。ネット接続不要。
+// CSV は手動で `pnpm db:snapshot` を叩いた最後のスナップショットを使う。
+// 古くて良い(本番 D1 は cron で常に最新化される)。
 //
 // 使い方:
-//   pnpm db:seed
+//   pnpm db:seed-local
 
 import {
   existsSync,
@@ -19,19 +21,21 @@ import {
   statSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { join, dirname } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 
-import {
-  parseCsv,
-  csvRowsToObjects,
-  parseIntOrNull,
-  parseFloatOrNull,
-  emptyToNull,
-} from "./lib/csv.js";
 import * as schema from "../src/server/db/schema.js";
+import {
+  csvRowsToObjects,
+  emptyToNull,
+  parseCsv,
+  parseFloatOrNull,
+  parseIntOrNull,
+} from "./lib/csv.js";
+import { pbkdf2HashSyncForSeed } from "./lib/passwordSeed.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SEED_DIR = join(ROOT, "scripts/seed");
@@ -40,31 +44,24 @@ const D1_LOCAL_DIR = join(
   ".wrangler/state/v3/d1/miniflare-D1DatabaseObject",
 );
 const D1_NAME = "cho-kigyo-db-database";
-
 const INSERT_CHUNK = 500;
+const PRICE_INSERT_CHUNK = 1000;
+
+const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_PASSWORD = "password0";
 
 // ──────────────────────────────────────────────────
-// ヘルパ
+// CSV ヘルパ
 // ──────────────────────────────────────────────────
 
 function readCsv(name: string): Record<string, string>[] {
   const path = join(SEED_DIR, name);
   if (!existsSync(path)) {
-    throw new Error(`CSV が見つかりません: ${path}\n先に pnpm db:refresh-csv を実行してください。`);
+    throw new Error(
+      `CSV が見つかりません: ${path}\n先に pnpm db:snapshot で seed スナップショットを生成してください。`,
+    );
   }
-  const text = readFileSync(path, "utf8");
-  return csvRowsToObjects(parseCsv(text));
-}
-
-/**
- * 任意 CSV(存在しなければ空配列)。新規に追加した seed テーブル(admin_users 等)で
- * CSV が未生成のまま seed が走るケースに備えるためのガード版。
- */
-function readCsvOptional(name: string): Record<string, string>[] {
-  const path = join(SEED_DIR, name);
-  if (!existsSync(path)) return [];
-  const text = readFileSync(path, "utf8");
-  return csvRowsToObjects(parseCsv(text));
+  return csvRowsToObjects(parseCsv(readFileSync(path, "utf8")));
 }
 
 function chunked<T>(arr: T[], size: number): T[][] {
@@ -74,36 +71,25 @@ function chunked<T>(arr: T[], size: number): T[][] {
 }
 
 // ──────────────────────────────────────────────────
-// 1) ローカル D1 ファイルを「同じ inode のまま」リセットする
+// ローカル D1 ファイルを inode 維持でリセット
 //
-// dev サーバ(`next dev`)が起動中だと、miniflare が既に SQLite ファイルを
-// 開いている。以前は seed のたびにディレクトリごと rm -rf していたが、
-// 旧 inode を miniflare が掴んだまま新ファイルが作られると次回クエリ時に
-// `SQLITE_CANTOPEN: unable to open database file` が出る。
-//
-// 修正: ファイルを物理削除せず、ファイルそのものを `BEGIN` で開いた接続から
-//   1) 既存テーブルを全て DROP
-//   2) drizzle/*.sql を順に流して再作成
-// する。同一 inode を維持するので dev サーバの接続を壊さない。
-// マイグレーションが未適用な「真の初回」は wrangler migrations apply に委譲。
+// 旧 inode を miniflare が掴んだまま新ファイルが作られると
+// SQLITE_CANTOPEN になる。そのため rm せず、開いた接続から
+// 全テーブル DROP → drizzle/*.sql を再投入する。
+// 真の初回(ファイル未作成)だけ wrangler migrations apply に委譲。
 // ──────────────────────────────────────────────────
 
-function runWranglerMigrations() {
-  console.log(`🚀 wrangler d1 migrations apply ${D1_NAME} --local`);
-  const result = spawnSync(
-    "npx",
-    ["wrangler", "d1", "migrations", "apply", D1_NAME, "--local"],
-    { cwd: ROOT, stdio: "inherit" },
-  );
-  if (result.status !== 0) {
-    throw new Error(`wrangler migrations apply failed: exit ${result.status}`);
-  }
+function loadMigrationSql(): string[] {
+  const migrationsDir = join(ROOT, "drizzle");
+  return readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .map((f) => readFileSync(join(migrationsDir, f), "utf8"));
 }
 
 function findLocalD1File(): string | null {
   if (!existsSync(D1_LOCAL_DIR)) return null;
-  const entries = readdirSync(D1_LOCAL_DIR);
-  for (const f of entries) {
+  for (const f of readdirSync(D1_LOCAL_DIR)) {
     if (!f.endsWith(".sqlite") || f === "metadata.sqlite") continue;
     const path = join(D1_LOCAL_DIR, f);
     const db = new Database(path, { readonly: true });
@@ -118,14 +104,6 @@ function findLocalD1File(): string | null {
     }
   }
   return null;
-}
-
-function loadMigrationSql(): string[] {
-  const migrationsDir = join(ROOT, "drizzle");
-  return readdirSync(migrationsDir)
-    .filter((f) => f.endsWith(".sql"))
-    .sort()
-    .map((f) => readFileSync(join(migrationsDir, f), "utf8"));
 }
 
 function resetLocalD1Inplace(dbPath: string) {
@@ -148,9 +126,7 @@ function resetLocalD1Inplace(dbPath: string) {
     });
     tx();
     sqlite.pragma("foreign_keys = ON");
-    console.log(
-      `🧹 既存テーブルを DROP → drizzle/*.sql を流して再作成 (inode 維持)`,
-    );
+    console.log("🧹 既存テーブルを DROP → drizzle/*.sql で再作成 (inode 維持)");
   } finally {
     sqlite.close();
   }
@@ -163,22 +139,28 @@ function prepareLocalD1(): string {
     resetLocalD1Inplace(existing);
     return existing;
   }
-  // 初回は wrangler に作らせる
-  runWranglerMigrations();
+  // 真の初回のみ wrangler に作らせる
+  console.log(`🚀 wrangler d1 migrations apply ${D1_NAME} --local`);
+  const result = spawnSync(
+    "npx",
+    ["wrangler", "d1", "migrations", "apply", D1_NAME, "--local"],
+    { cwd: ROOT, stdio: "inherit" },
+  );
+  if (result.status !== 0) {
+    throw new Error(`wrangler migrations apply failed: exit ${result.status}`);
+  }
   const created = findLocalD1File();
   if (!created) {
-    throw new Error(
-      `companies テーブルを持つ D1 ファイルが見つかりません: ${D1_LOCAL_DIR}`,
-    );
+    throw new Error(`companies テーブルを持つ D1 ファイルが見つかりません: ${D1_LOCAL_DIR}`);
   }
   return created;
 }
 
 // ──────────────────────────────────────────────────
-// 2) CSV 読み込み + INSERT
+// main
 // ──────────────────────────────────────────────────
 
-async function main() {
+function main() {
   const dbPath = prepareLocalD1();
   const sizeKb = (statSync(dbPath).size / 1024).toFixed(1);
   console.log(`📂 ローカル D1: ${dbPath} (${sizeKb} KB)`);
@@ -187,10 +169,10 @@ async function main() {
   sqlite.pragma("foreign_keys = ON");
   const db = drizzle(sqlite, { schema });
 
+  const now = new Date().toISOString();
   const t0 = Date.now();
 
-  // 全 INSERT を 1 トランザクションで実行(冪等性 + 速度)
-  const tx = sqlite.transaction(() => {
+  sqlite.transaction(() => {
     // ─ sources ─
     const sources = readCsv("sources.csv").map((r) => ({
       id: parseIntOrNull(r.id)!,
@@ -222,7 +204,7 @@ async function main() {
       db.insert(schema.industries).values(chunk).run();
     }
 
-    // ─ industry_clusters ─(CSV の id をそのまま入れる)
+    // ─ industry_clusters ─
     const clusters = readCsv("industry_clusters.csv").map((r) => ({
       id: parseIntOrNull(r.id)!,
       industrySlug: r.industry_slug,
@@ -235,7 +217,7 @@ async function main() {
       db.insert(schema.industryClusters).values(chunk).run();
     }
 
-    // ─ companies ─(CSV の id をそのまま入れる)
+    // ─ companies ─
     const companies = readCsv("companies.csv").map((r) => ({
       id: parseIntOrNull(r.id)!,
       name: r.name,
@@ -269,7 +251,7 @@ async function main() {
       db.insert(schema.stocks).values(chunk).run();
     }
 
-    // ─ stock_prices_daily ─(件数が多いので 1000 件単位)
+    // ─ stock_prices_daily(行数が多い) ─
     const prices = readCsv("stock_prices_daily.csv").map((r) => ({
       code: r.code,
       date: r.date,
@@ -280,7 +262,7 @@ async function main() {
       volume: parseIntOrNull(r.volume),
       adjClose: parseFloatOrNull(r.adj_close),
     }));
-    for (const chunk of chunked(prices, 1000)) {
+    for (const chunk of chunked(prices, PRICE_INSERT_CHUNK)) {
       db.insert(schema.stockPricesDaily).values(chunk).run();
     }
 
@@ -330,37 +312,26 @@ async function main() {
       }
     }
 
-    // ─ company_insights + insight_sources ─
-    // 仮 id (insight_temp_id) を実 id にマップ
-    const insightCsv = readCsv("company_insights.csv");
-    const tempIdToRealId = new Map<number, number>();
-    for (const r of insightCsv) {
-      const tempId = parseIntOrNull(r.insight_temp_id)!;
-      const res = db
-        .insert(schema.companyInsights)
-        .values({
-          companyId: parseIntOrNull(r.company_id)!,
-          title: r.title,
-          lede: emptyToNull(r.lede),
-          body: r.body,
-          generatedAt: r.generated_at,
-        })
-        .returning({ id: schema.companyInsights.id })
-        .all();
-      tempIdToRealId.set(tempId, res[0].id);
+    // ─ company_insights(id を CSV から明示) ─
+    const insights = readCsv("company_insights.csv").map((r) => ({
+      id: parseIntOrNull(r.id)!,
+      companyId: parseIntOrNull(r.company_id)!,
+      title: r.title,
+      lede: emptyToNull(r.lede),
+      body: r.body,
+      generatedAt: r.generated_at,
+    }));
+    if (insights.length > 0) {
+      for (const chunk of chunked(insights, INSERT_CHUNK)) {
+        db.insert(schema.companyInsights).values(chunk).run();
+      }
     }
 
-    const insightSrc = readCsv("insight_sources.csv")
-      .map((r) => {
-        const tempId = parseIntOrNull(r.insight_temp_id)!;
-        const realId = tempIdToRealId.get(tempId);
-        if (realId == null) return null;
-        return {
-          insightId: realId,
-          sourceId: parseIntOrNull(r.source_id)!,
-        };
-      })
-      .filter((x): x is { insightId: number; sourceId: number } => x !== null);
+    // ─ insight_sources ─
+    const insightSrc = readCsv("insight_sources.csv").map((r) => ({
+      insightId: parseIntOrNull(r.insight_id)!,
+      sourceId: parseIntOrNull(r.source_id)!,
+    }));
     if (insightSrc.length > 0) {
       for (const chunk of chunked(insightSrc, INSERT_CHUNK)) {
         db.insert(schema.insightSources).values(chunk).run();
@@ -403,7 +374,7 @@ async function main() {
       }
     }
 
-    // ─ company_valuation_calls + valuation_sources ─
+    // ─ company_valuation_calls ─
     const valuations = readCsv("company_valuation_calls.csv").map((r) => ({
       companyId: parseIntOrNull(r.company_id)!,
       verdict: r.verdict as "割安" | "ほぼ妥当" | "やや割高" | "割高",
@@ -416,6 +387,8 @@ async function main() {
         db.insert(schema.companyValuationCalls).values(chunk).run();
       }
     }
+
+    // ─ valuation_sources ─
     const valuationSrc = readCsv("valuation_sources.csv").map((r) => ({
       companyId: parseIntOrNull(r.company_id)!,
       sourceId: parseIntOrNull(r.source_id)!,
@@ -426,115 +399,55 @@ async function main() {
       }
     }
 
-    // ─ admin_users ─
-    const adminUsers = readCsvOptional("admin_users.csv").map((r) => ({
-      id: parseIntOrNull(r.id)!,
-      email: r.email,
-      name: r.name,
-      passwordHash: r.password_hash,
-      passwordSalt: r.password_salt,
-      passwordIterations: parseIntOrNull(r.password_iterations)!,
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
-    if (adminUsers.length > 0) {
-      for (const chunk of chunked(adminUsers, INSERT_CHUNK)) {
-        db.insert(schema.adminUsers).values(chunk).run();
-      }
-    }
+    // ─ admin_users(ハードコード 1 名) ─
+    //
+    // 管理画面ログイン用の初期管理者。本番運用では /admin/account から
+    // 必ず変更すること。パスワードハッシュは決定論的(固定 salt)に生成され、
+    // CSV を介さず seed のたびに同じハッシュが書き込まれる。
+    const { hashB64, saltB64, iterations } = pbkdf2HashSyncForSeed(ADMIN_PASSWORD);
+    db.insert(schema.adminUsers)
+      .values({
+        email: ADMIN_EMAIL,
+        name: "Admin",
+        passwordHash: hashB64,
+        passwordSalt: saltB64,
+        passwordIterations: iterations,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .run();
 
-    // ─ posts ─
-    const posts = readCsvOptional("posts.csv").map((r) => ({
-      id: parseIntOrNull(r.id)!,
-      slug: r.slug,
-      title: r.title,
-      lede: r.lede,
-      bodyHtml: r.body_html,
-      category: r.category as
-        | "earnings"
-        | "industry-watch"
-        | "analysis"
-        | "disclosure"
-        | "primer",
-      status: r.status as "draft" | "published",
-      author: r.author as "editor" | "ai-editor",
-      readTimeMin: parseIntOrNull(r.read_time_min)!,
-      fiscalPeriod: emptyToNull(r.fiscal_period),
-      relatedStocksJson: r.related_stocks_json || "[]",
-      relatedIndustriesJson: r.related_industries_json || "[]",
-      publishedAt: emptyToNull(r.published_at),
-      authorUserId: parseIntOrNull(r.author_user_id),
-      createdAt: r.created_at,
-      updatedAt: r.updated_at,
-    }));
-    if (posts.length > 0) {
-      for (const chunk of chunked(posts, INSERT_CHUNK)) {
-        db.insert(schema.posts).values(chunk).run();
-      }
-    }
+    // posts / tags / post_tags は空のまま(管理画面から手で作る)
+  })();
 
-    // ─ tags ─
-    const tagsRows = readCsvOptional("tags.csv").map((r) => ({
-      id: parseIntOrNull(r.id)!,
-      slug: r.slug,
-      name: r.name,
-      createdAt: r.created_at,
-    }));
-    if (tagsRows.length > 0) {
-      for (const chunk of chunked(tagsRows, INSERT_CHUNK)) {
-        db.insert(schema.tags).values(chunk).run();
-      }
-    }
-
-    // ─ post_tags ─
-    const postTagsRows = readCsvOptional("post_tags.csv").map((r) => ({
-      postId: parseIntOrNull(r.post_id)!,
-      tagId: parseIntOrNull(r.tag_id)!,
-    }));
-    if (postTagsRows.length > 0) {
-      for (const chunk of chunked(postTagsRows, INSERT_CHUNK)) {
-        db.insert(schema.postTags).values(chunk).run();
-      }
-    }
-  });
-
-  tx();
-  const elapsed = Date.now() - t0;
-
-  // 検証用 COUNT
+  // 検証
   const counts = {
-    companies: (sqlite.prepare("SELECT COUNT(*) c FROM companies").get() as { c: number }).c,
-    stocks: (sqlite.prepare("SELECT COUNT(*) c FROM stocks").get() as { c: number }).c,
-    prices: (sqlite.prepare("SELECT COUNT(*) c FROM stock_prices_daily").get() as { c: number }).c,
-    sources: (sqlite.prepare("SELECT COUNT(*) c FROM sources").get() as { c: number }).c,
-    industries: (sqlite.prepare("SELECT COUNT(*) c FROM industries").get() as { c: number }).c,
-    clusters: (sqlite.prepare("SELECT COUNT(*) c FROM industry_clusters").get() as { c: number }).c,
-    tags: (sqlite.prepare("SELECT COUNT(*) c FROM business_tags").get() as { c: number }).c,
-    insights: (sqlite.prepare("SELECT COUNT(*) c FROM company_insights").get() as { c: number }).c,
-    adminUsers: (sqlite.prepare("SELECT COUNT(*) c FROM admin_users").get() as { c: number }).c,
-    posts: (sqlite.prepare("SELECT COUNT(*) c FROM posts").get() as { c: number }).c,
-    blogTags: (sqlite.prepare("SELECT COUNT(*) c FROM tags").get() as { c: number }).c,
-    postTags: (sqlite.prepare("SELECT COUNT(*) c FROM post_tags").get() as { c: number }).c,
+    companies: countOf(sqlite, "companies"),
+    stocks: countOf(sqlite, "stocks"),
+    prices: countOf(sqlite, "stock_prices_daily"),
+    sources: countOf(sqlite, "sources"),
+    industries: countOf(sqlite, "industries"),
+    clusters: countOf(sqlite, "industry_clusters"),
+    tags: countOf(sqlite, "business_tags"),
+    insights: countOf(sqlite, "company_insights"),
+    adminUsers: countOf(sqlite, "admin_users"),
   };
-
-  console.log(`\n✅ seed 完了 (${elapsed}ms)`);
-  console.log(`   companies          : ${counts.companies}`);
-  console.log(`   stocks             : ${counts.stocks}`);
-  console.log(`   stock_prices_daily : ${counts.prices}`);
-  console.log(`   sources            : ${counts.sources}`);
-  console.log(`   industries         : ${counts.industries}`);
-  console.log(`   industry_clusters  : ${counts.clusters}`);
-  console.log(`   business_tags      : ${counts.tags}`);
-  console.log(`   company_insights   : ${counts.insights}`);
-  console.log(`   admin_users        : ${counts.adminUsers}`);
-  console.log(`   posts              : ${counts.posts}`);
-  console.log(`   tags               : ${counts.blogTags}`);
-  console.log(`   post_tags          : ${counts.postTags}`);
-
   sqlite.close();
+
+  console.log(`✅ seed 完了 (${Date.now() - t0}ms):`);
+  for (const [k, v] of Object.entries(counts)) {
+    console.log(`   ${k.padEnd(11)}: ${v}`);
+  }
+  console.log(`   admin login : ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
 }
 
-main().catch((e) => {
+function countOf(sqlite: Database.Database, table: string): number {
+  return (sqlite.prepare(`SELECT COUNT(*) AS c FROM ${table}`).get() as { c: number }).c;
+}
+
+try {
+  main();
+} catch (e) {
   console.error(e);
   process.exit(1);
-});
+}

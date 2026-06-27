@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { CATEGORY_LABEL, getPost } from "@/content/posts";
-import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/shared/og";
+import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/components/og/OgCard";
 
 export const alt = "ブログ記事 | 超!企業DB";
 export const size = OG_SIZE;

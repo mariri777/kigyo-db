@@ -2,23 +2,29 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { CATEGORY_LABEL, listPosts, type PostCategory } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
 export const dynamic = "force-dynamic";
 
-const blogTitle = "ブログ — 決算・業界・テーマを毎日深掘り";
-const blogDescription =
-  "決算分析・業界ウォッチ・テーマ解説・『3 分でわかる』入門シリーズ。AI が有報・決算説明会・適時開示を読み込み、編集部がレビューしてから公開する銘柄分析ブログ。";
-
-export const metadata: Metadata = {
-  title: blogTitle,
-  description: blogDescription,
+export const metadata: Metadata = pageMetadata({
+  title: "ブログ — 決算・業界・テーマを毎日深掘り",
+  description:
+    "決算分析・業界ウォッチ・テーマ解説・『3 分でわかる』入門シリーズ。AI が有報・決算説明会・適時開示を読み込み、編集部がレビューしてから公開する銘柄分析ブログ。",
+  path: ROUTES.blog,
   keywords: ["ブログ", "決算分析", "業界ウォッチ", "投資コラム", "プライマー"],
-  alternates: { canonical: "/blog" },
-  openGraph: { title: blogTitle, description: blogDescription, url: "/blog", type: "website" },
-  twitter: { card: "summary_large_image", title: blogTitle, description: blogDescription },
-};
+  ogType: "website",
+});
 
 const CATEGORIES: PostCategory[] = ["earnings", "industry-watch", "analysis", "disclosure", "primer"];
+
+const RELATED_LINKS = [
+  { href: ROUTES.stocks, label: "銘柄一覧へ →" },
+  { href: `${ROUTES.industries}/semiconductor`, label: "半導体業界マップへ →" },
+  { href: `${ROUTES.industries}/saas`, label: "SaaS 業界マップへ →" },
+  { href: `${ROUTES.industries}/pharmaceutical`, label: "医薬品業界マップへ →" },
+];
 
 export default async function BlogIndex() {
   const all = await listPosts();
@@ -28,7 +34,7 @@ export default async function BlogIndex() {
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
       <header className="pb-10 border-b border-border mb-10">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">Blog</p>
+        <Eyebrow className="mb-4">Blog</Eyebrow>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
           投資の論点を、
           <br />
@@ -63,9 +69,7 @@ export default async function BlogIndex() {
         <section className="mb-12">
           <div className="flex items-end justify-between mb-4">
             <div>
-              <p className="text-muted-foreground text-[11px] font-bold tracking-[0.2em] uppercase mb-1">
-                Primer Series
-              </p>
+              <Eyebrow className="mb-1 text-[11px]">Primer Series</Eyebrow>
               <h2 className="text-xl font-bold tracking-tight">3 分でわかる、業界の基本概念</h2>
             </div>
             <span className="text-[11px] text-foreground/60">{primers.length} 本</span>
@@ -86,9 +90,7 @@ export default async function BlogIndex() {
       <section>
         <div className="flex items-end justify-between mb-4">
           <div>
-            <p className="text-muted-foreground text-[11px] font-bold tracking-[0.2em] uppercase mb-1">
-              Latest Posts
-            </p>
+            <Eyebrow className="mb-1 text-[11px]">Latest Posts</Eyebrow>
             <h2 className="text-xl font-bold tracking-tight">分析・ウォッチ・読み解き</h2>
           </div>
           <span className="text-[11px] text-foreground/60">{longForm.length} 本</span>
@@ -103,27 +105,15 @@ export default async function BlogIndex() {
       <section className="mt-16 pt-8 border-t border-border">
         <h2 className="text-sm font-bold mb-3">関連</h2>
         <div className="flex flex-wrap gap-3 text-sm">
-          <Link href="/" className="text-muted-foreground hover:text-foreground transition">
-            銘柄一覧へ →
-          </Link>
-          <Link
-            href="/industries/semiconductor"
-            className="text-muted-foreground hover:text-foreground transition"
-          >
-            半導体業界マップへ →
-          </Link>
-          <Link
-            href="/industries/saas"
-            className="text-muted-foreground hover:text-foreground transition"
-          >
-            SaaS 業界マップへ →
-          </Link>
-          <Link
-            href="/industries/pharmaceutical"
-            className="text-muted-foreground hover:text-foreground transition"
-          >
-            医薬品業界マップへ →
-          </Link>
+          {RELATED_LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="text-muted-foreground hover:text-foreground transition"
+            >
+              {l.label}
+            </Link>
+          ))}
         </div>
       </section>
     </div>

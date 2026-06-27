@@ -21,7 +21,7 @@ const DIM_WEIGHTS: Record<TagDimension, number> = {
 // 半導体クラスタの正規化コンセプト語彙。タグ文字列が独自表記でも
 // この語彙を含めばコンセプト集合として照合される。本番ではタグマスターで
 // 入力側を統制するが、プロトタイプではここで吸収する。
-const CONCEPTS: string[] = [
+const CONCEPTS = [
   // バリューチェーン・工程
   "前工程", "後工程", "WFE", "マスク検査", "マスク", "計測", "テスト", "テスタ",
   "材料", "シリコンウェハ", "ウェハ", "レジスト", "PVC", "装置部材", "部材",
@@ -39,12 +39,16 @@ const CONCEPTS: string[] = [
   "デバイス売り切り", "素材",
   // 地理
   "中国", "台湾", "韓国", "北米", "日本", "欧州", "アジア",
-];
+] as const;
+
+function matchedConcepts(v: string): string[] {
+  const hits: string[] = [];
+  for (const c of CONCEPTS) if (v.includes(c)) hits.push(c);
+  return hits;
+}
 
 function expandValue(v: string): string[] {
-  const tokens: string[] = [v];
-  for (const c of CONCEPTS) if (v.includes(c)) tokens.push(c);
-  return tokens;
+  return [v, ...matchedConcepts(v)];
 }
 
 function tagsByDim(tags: BusinessTag[]): Record<TagDimension, Set<string>> {
@@ -95,8 +99,8 @@ export function businessReason(a: Stock, b: Stock): string {
   for (const dim of Object.keys(DIM_WEIGHTS) as TagDimension[]) {
     const aConcepts = new Set<string>();
     const bConcepts = new Set<string>();
-    for (const t of A[dim]) for (const c of CONCEPTS) if (t.value.includes(c)) aConcepts.add(c);
-    for (const t of B[dim]) for (const c of CONCEPTS) if (t.value.includes(c)) bConcepts.add(c);
+    for (const t of A[dim]) for (const c of matchedConcepts(t.value)) aConcepts.add(c);
+    for (const t of B[dim]) for (const c of matchedConcepts(t.value)) bConcepts.add(c);
     const overlap = [...aConcepts].filter((c) => bConcepts.has(c));
     if (overlap.length > 0) matched.push({ dim, values: overlap });
   }

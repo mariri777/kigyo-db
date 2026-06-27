@@ -3,45 +3,41 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import {
   getIndustry,
-  getStocksForCluster,
   industryAggregates,
 } from "@/content/industries";
 import { Section } from "@/components/Section";
 import { AiBadge, AiDisclaimer } from "@/components/AiNotice";
-import { SourceList } from "@/components/SourceChip";
-import { Disclose } from "@/components/Disclose";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { postsForIndustry } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
 import { listStockBriefs } from "@/server/usecase";
-import { formatPbrOpt, formatPct1Opt, formatPerOpt, formatPriceOpt } from "@/shared/format";
+import { IndustryMap } from "@/components/industry/IndustryMap";
+import { CompetitiveStructure } from "@/components/industry/CompetitiveStructure";
+import { KpiList } from "@/components/industry/KpiList";
+import { IndustryStocksTable } from "@/components/industry/IndustryStocksTable";
+import { IndustryInsightList } from "@/components/industry/IndustryInsightList";
+import { StructuredData } from "@/components/StructuredData";
+import { NOT_FOUND_METADATA, pageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbList, collectionPageLd } from "@/lib/seo/structuredData";
+import { ROUTES } from "@/shared/links";
 
+type Params = Promise<{ slug: string }>;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const ind = getIndustry(slug);
-  if (!ind) return { title: "見つかりません", robots: { index: false, follow: false } };
+  if (!ind) return NOT_FOUND_METADATA;
   const title = `${ind.name}業界マップ — 競争構造・主要プレイヤー・投資論点`;
   const description = `${ind.name}業界の競争構造、バリューチェーン上のサブクラスタ、主要 KPI、市場が見落とした論点、上場企業一覧を一枚に。${ind.description.slice(0, 70)}`;
-  const url = `/industries/${ind.slug}`;
-  return {
+  return pageMetadata({
     title,
     description,
+    path: `${ROUTES.industries}/${ind.slug}`,
     keywords: [ind.name, "業界マップ", "競争構造", ...ind.theme2025.slice(0, 4)],
-    alternates: { canonical: url },
-    openGraph: { type: "article", title, description, url, siteName: "超!企業DB" },
-    twitter: { card: "summary_large_image", title, description },
-  };
+  });
 }
 
-export default async function IndustryPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function IndustryPage({ params }: { params: Params }) {
   const { slug } = await params;
   const industry = getIndustry(slug);
   if (!industry) notFound();
@@ -49,43 +45,27 @@ export default async function IndustryPage({
   const briefsByCode = new Map((await listStockBriefs()).map((b) => [b.code, b]));
   const agg = industryAggregates(industry, briefsByCode);
   const relatedPosts = (await postsForIndustry(industry.slug)).slice(0, 3);
-  const industryJsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
-        { "@type": "ListItem", position: 2, name: "業界マップ", item: "https://kigyo.cho-super.com/industries" },
-        {
-          "@type": "ListItem",
-          position: 3,
-          name: industry.name,
-          item: `https://kigyo.cho-super.com/industries/${industry.slug}`,
-        },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "CollectionPage",
+
+  const path = `${ROUTES.industries}/${industry.slug}`;
+  const jsonLd = [
+    breadcrumbList([
+      { name: "業界マップ", href: ROUTES.industries },
+      { name: industry.name, href: path },
+    ]),
+    collectionPageLd({
       name: `${industry.name}業界マップ`,
-      url: `https://kigyo.cho-super.com/industries/${industry.slug}`,
+      path,
       description: industry.description.slice(0, 160),
-      isPartOf: { "@type": "WebSite", name: "超!企業DB", url: "https://kigyo.cho-super.com" },
-      about: { "@type": "Thing", name: industry.name },
-    },
+      about: industry.name,
+    }),
   ];
 
   return (
     <article className="max-w-6xl mx-auto px-6 py-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(industryJsonLd) }}
-      />
-      {/* ===== Hero ===== */}
+      <StructuredData data={jsonLd} />
+
       <header className="border-b border-border pb-10 mb-12">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">
-          Industry Deep Dive
-        </p>
+        <Eyebrow className="mb-4">Industry Deep Dive</Eyebrow>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
           {industry.name}
         </h1>
@@ -93,7 +73,6 @@ export default async function IndustryPage({
           {industry.description}
         </p>
 
-        {/* テーマ chips */}
         <div className="flex flex-wrap gap-2 mb-8">
           {industry.theme2025.map((t) => (
             <span
@@ -105,31 +84,22 @@ export default async function IndustryPage({
           ))}
         </div>
 
-        {/* 市場規模 stat row */}
         <div className="grid sm:grid-cols-3 gap-px bg-border border border-border rounded-md overflow-hidden">
-          <div className="bg-background p-4">
-            <div className="text-[10px] text-foreground/60 tracking-wider mb-1">市場規模</div>
-            <div className="font-bold tabular">{industry.marketScale.headline}</div>
-            <div className="text-[11px] text-muted-foreground mt-1">{industry.marketScale.growth}</div>
-          </div>
-          <div className="bg-background p-4">
-            <div className="text-[10px] text-foreground/60 tracking-wider mb-1">カバー銘柄</div>
-            <div className="font-bold tabular">
-              {agg.count} 社 <span className="text-xs text-muted-foreground font-normal">（株価実勢・財務はサンプル）</span>
-            </div>
-            <div className="text-[11px] text-muted-foreground mt-1">
-              時価総額合計 {agg.totalMcap.toLocaleString()} 億円
-            </div>
-          </div>
-          <div className="bg-background p-4">
-            <div className="text-[10px] text-foreground/60 tracking-wider mb-1">カバー銘柄の平均</div>
-            <div className="font-bold tabular">PER {agg.avgPer.toFixed(1)} 倍</div>
-            <div className="text-[11px] text-muted-foreground mt-1">{industry.marketScale.breakdown}</div>
-          </div>
+          <StatCell label="市場規模" value={industry.marketScale.headline} sub={industry.marketScale.growth} />
+          <StatCell
+            label="カバー銘柄"
+            value={`${agg.count} 社`}
+            valueSuffix="(株価実勢・財務はサンプル)"
+            sub={`時価総額合計 ${agg.totalMcap.toLocaleString()} 億円`}
+          />
+          <StatCell
+            label="カバー銘柄の平均"
+            value={`PER ${agg.avgPer.toFixed(1)} 倍`}
+            sub={industry.marketScale.breakdown}
+          />
         </div>
       </header>
 
-      {/* ===== 業界マップ ===== */}
       <Section
         id="map"
         title="業界マップ"
@@ -141,48 +111,9 @@ export default async function IndustryPage({
           </>
         }
       >
-        <div className="grid lg:grid-cols-3 gap-4">
-          {industry.chainColumns.map((col) => {
-            const subs = industry.subClusters.filter((s) => col.positions.includes(s.position));
-            return (
-              <div key={col.title} className="bg-surface border border-border rounded-md p-5">
-                <div className="border-b border-border pb-3 mb-4">
-                  <div className="text-[11px] text-foreground/60 tracking-wider">{col.subtitle}</div>
-                  <h3 className="text-xl font-bold mt-1">{col.title}</h3>
-                </div>
-                <div className="space-y-4">
-                  {subs.map((sub) => {
-                    const stocks = getStocksForCluster(sub, briefsByCode);
-                    return (
-                      <div key={sub.key}>
-                        <div className="flex items-baseline justify-between gap-2 mb-1">
-                          <h4 className="font-bold text-sm">{sub.name}</h4>
-                          <span className="text-[10px] text-foreground/60 tabular">{stocks.length} 社</span>
-                        </div>
-                        <p className="text-[12px] text-muted-foreground leading-relaxed mb-2">{sub.role}</p>
-                        <div className="flex flex-wrap gap-1">
-                          {stocks.map((s) => (
-                            <Link
-                              key={s.code}
-                              href={`/stocks/${s.code}`}
-                              className="inline-flex items-center gap-1 text-[11px] border border-border rounded px-2 py-0.5 hover:bg-surface-elev hover:border-border-strong transition"
-                            >
-                              <span className="text-foreground/60 tabular">{s.code}</span>
-                              <span className="font-medium">{s.name}</span>
-                            </Link>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <IndustryMap industry={industry} briefsByCode={briefsByCode} />
       </Section>
 
-      {/* ===== 競争構造 ===== */}
       <Section
         id="competitive-structure"
         title="競争構造"
@@ -194,61 +125,9 @@ export default async function IndustryPage({
           </>
         }
       >
-        <div className="space-y-6">
-          {industry.competitiveStructure.map((cs, i) => (
-            <div
-              key={i}
-              className="grid sm:grid-cols-[180px_1fr] gap-4 sm:gap-8 pb-6 border-b border-border last:border-b-0 last:pb-0"
-            >
-              <h3 className="font-bold text-base">{cs.sub}</h3>
-              <div>
-                {/* サマリー：要約だけ知りたい方はここだけ読んで OK */}
-                <p className="text-sm leading-relaxed">{cs.summary}</p>
-
-                {/* 詳細分析（展開） */}
-                <Disclose label="詳しい分析を見る">
-                  <p className="text-muted-foreground leading-relaxed">{cs.detail}</p>
-                </Disclose>
-
-                {/* シェア比較（展開） */}
-                {cs.shares && (
-                  <Disclose label="シェア比較を見る">
-                    <div className="text-[11px] text-foreground/60 mb-2">{cs.shares.metric}</div>
-                    <ul className="space-y-1.5">
-                      {cs.shares.entries.map((e, j) => (
-                        <li
-                          key={j}
-                          className="grid grid-cols-[32px_1fr_120px] sm:grid-cols-[32px_1fr_140px_1fr] items-baseline gap-2 py-1.5 border-b border-border last:border-b-0"
-                        >
-                          <span className="text-foreground/60 tabular text-xs">
-                            {e.rank ? `${e.rank}.` : "・"}
-                          </span>
-                          <span className="font-medium text-sm">{e.name}</span>
-                          <span className="tabular font-mono text-sm text-right sm:text-left">
-                            {e.value}
-                          </span>
-                          {e.note && (
-                            <span className="text-[11px] text-muted-foreground col-span-3 sm:col-span-1 sm:text-right">
-                              {e.note}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    {cs.shares.note && (
-                      <p className="text-[11px] text-foreground/60 mt-3 leading-relaxed">
-                        ※ {cs.shares.note}
-                      </p>
-                    )}
-                  </Disclose>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <CompetitiveStructure blocks={industry.competitiveStructure} />
       </Section>
 
-      {/* ===== 主要 KPI ===== */}
       <Section
         id="kpis"
         title="主要 KPI と市場動向"
@@ -260,44 +139,9 @@ export default async function IndustryPage({
           </>
         }
       >
-        <div className="bg-surface border border-border rounded-md divide-y divide-border">
-          {industry.keyKpis.map((kpi) => (
-            <div key={kpi.name} className="px-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-1 md:gap-6 items-baseline">
-                <div className="font-bold text-sm">{kpi.name}</div>
-                <div className="text-sm tabular">{kpi.current}</div>
-              </div>
-              <div className="md:pl-[244px]">
-                <Disclose label="これは何？">
-                  <p className="text-muted-foreground leading-relaxed">{kpi.desc}</p>
-                </Disclose>
-                {kpi.history && kpi.history.length > 0 && (
-                  <Disclose label="推移を見る">
-                    <ul className="space-y-1.5">
-                      {kpi.history.map((h, j) => (
-                        <li
-                          key={j}
-                          className="grid grid-cols-[80px_1fr] sm:grid-cols-[100px_180px_1fr] items-baseline gap-2 py-1 border-b border-border last:border-b-0"
-                        >
-                          <span className="text-foreground/60 text-xs tabular">{h.period}</span>
-                          <span className="tabular font-mono">{h.value}</span>
-                          {h.note && (
-                            <span className="text-[11px] text-muted-foreground col-span-2 sm:col-span-1">
-                              {h.note}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </Disclose>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        <KpiList kpis={industry.keyKpis} />
       </Section>
 
-      {/* ===== 業界レベル見落とし論点 ===== */}
       <Section
         id="insights"
         title="業界レベルの見落とし論点"
@@ -311,78 +155,18 @@ export default async function IndustryPage({
         rightSlot={<AiBadge />}
         ai
       >
-        <div className="space-y-4">
-          {industry.industryInsights.map((ins, i) => (
-            <div key={i} className="bg-surface border border-border rounded-md p-5">
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-foreground/60 text-sm font-mono">
-                  0{i + 1}
-                </span>
-                <h3 className="font-bold leading-tight">{ins.title}</h3>
-              </div>
-              <p className="text-sm leading-relaxed">{ins.lede}</p>
-              <Disclose label="根拠を読む">
-                <p className="text-muted-foreground leading-relaxed mb-3">{ins.body}</p>
-                <SourceList sources={ins.citations.map((c) => ({ doc: c.doc, period: c.period }))} />
-              </Disclose>
-            </div>
-          ))}
-        </div>
+        <IndustryInsightList insights={industry.industryInsights} />
         <AiDisclaimer />
       </Section>
 
-      {/* ===== 主要銘柄一覧（サブクラスタ別） ===== */}
       <Section
         id="companies"
         title="主要銘柄一覧"
-        subtitle="サブクラスタ別の上場企業（クリックで個別銘柄ページへ）"
+        subtitle="サブクラスタ別の上場企業(クリックで個別銘柄ページへ)"
       >
-        <div className="space-y-8">
-          {industry.subClusters.map((sub) => {
-            const stocks = getStocksForCluster(sub, briefsByCode);
-            if (stocks.length === 0) return null;
-            return (
-              <div key={sub.key}>
-                <div className="flex items-baseline justify-between mb-3">
-                  <h3 className="font-bold text-base">{sub.name}</h3>
-                  <span className="text-[11px] text-foreground/60">{stocks.length} 社</span>
-                </div>
-                <div className="bg-surface border border-border rounded-md overflow-hidden">
-                  <div className="hidden md:grid grid-cols-[70px_1fr_90px_70px_70px_90px] text-[11px] text-foreground/60 border-b border-border bg-surface-elev px-4 py-2">
-                    <div>コード</div>
-                    <div>銘柄</div>
-                    <div className="text-right">株価</div>
-                    <div className="text-right">PER</div>
-                    <div className="text-right">PBR</div>
-                    <div className="text-right">配当</div>
-                  </div>
-                  {stocks.map((s) => (
-                    <Link
-                      key={s.code}
-                      href={`/stocks/${s.code}`}
-                      className="grid grid-cols-1 md:grid-cols-[70px_1fr_90px_70px_70px_90px] gap-2 md:gap-0 items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-elev transition group text-sm"
-                    >
-                      <div className="text-foreground/60 tabular text-xs">{s.code}</div>
-                      <div>
-                        <div className="font-medium group-hover:underline">{s.name}</div>
-                        <div className="text-[11px] text-muted-foreground line-clamp-1">{s.sectorTSE}</div>
-                      </div>
-                      <div className="text-right tabular font-mono">
-                        {formatPriceOpt(s.priceJpy)}
-                      </div>
-                      <div className="text-right tabular font-mono">{formatPerOpt(s.per)}</div>
-                      <div className="text-right tabular font-mono">{formatPbrOpt(s.pbr)}</div>
-                      <div className="text-right tabular font-mono">{formatPct1Opt(s.dividendYield)}</div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <IndustryStocksTable industry={industry} briefsByCode={briefsByCode} />
       </Section>
 
-      {/* ===== 関連記事 ===== */}
       {relatedPosts.length > 0 && (
         <Section
           id="related-posts"
@@ -397,15 +181,39 @@ export default async function IndustryPage({
         </Section>
       )}
 
-      {/* ===== Footer link ===== */}
       <div className="border-t border-border pt-8 mt-12 flex items-center justify-between text-sm">
-        <Link href="/industries" className="text-muted-foreground hover:text-foreground transition">
+        <Link href={ROUTES.industries} className="text-muted-foreground hover:text-foreground transition">
           ← 業界マップ一覧へ
         </Link>
-        <Link href="/" className="text-muted-foreground hover:text-foreground transition">
+        <Link href={ROUTES.home} className="text-muted-foreground hover:text-foreground transition">
           トップへ →
         </Link>
       </div>
     </article>
+  );
+}
+
+function StatCell({
+  label,
+  value,
+  valueSuffix,
+  sub,
+}: {
+  label: string;
+  value: string;
+  valueSuffix?: string;
+  sub?: string;
+}) {
+  return (
+    <div className="bg-background p-4">
+      <div className="text-[10px] text-foreground/60 tracking-wider mb-1">{label}</div>
+      <div className="font-bold tabular">
+        {value}
+        {valueSuffix && (
+          <span className="text-xs text-muted-foreground font-normal ml-1">{valueSuffix}</span>
+        )}
+      </div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-1">{sub}</div>}
+    </div>
   );
 }

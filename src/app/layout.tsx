@@ -14,11 +14,14 @@ import {
 } from "@/shared/site";
 import "./globals.css";
 
+// Noto Sans JP は日本語コンテンツが本体なので latin だけにしない。
+// Google Fonts では `japanese` 等の指定はないので preload を切り、
+// hint だけ next が CSS で扱う形に倒す。
 const notoJp = Noto_Sans_JP({
   variable: "--font-noto-jp",
-  subsets: ["latin"],
   weight: ["400", "500", "700"],
   display: "swap",
+  preload: false,
 });
 const jbMono = JetBrains_Mono({
   variable: "--font-jb-mono",

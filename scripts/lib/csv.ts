@@ -105,10 +105,16 @@ export function csvRowsToObjects(rows: string[][]): Record<string, string>[] {
 
 export function buildCsv(
   header: string[],
-  rows: Array<Array<string | number | null | undefined>>,
+  rows: Array<Array<string | number | boolean | null | undefined>>,
 ): string {
   const lines = [header.map(csvEscape).join(",")];
-  for (const r of rows) lines.push(r.map(csvEscape).join(","));
+  for (const r of rows) {
+    lines.push(
+      r
+        .map((v) => csvEscape(typeof v === "boolean" ? (v ? "1" : "0") : v))
+        .join(","),
+    );
+  }
   return lines.join("\n") + "\n";
 }
 

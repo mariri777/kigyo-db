@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { listAllTags, listPosts } from "@/content/posts";
 import { PostCard } from "@/components/PostCard";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { NOT_FOUND_METADATA, pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
 export const dynamic = "force-dynamic";
 
@@ -14,12 +17,12 @@ export async function generateMetadata({
   const { slug } = await params;
   const tags = await listAllTags();
   const tag = tags.find((t) => t.slug === slug);
-  if (!tag) return { title: "見つかりません", robots: { index: false, follow: false } };
-  return {
-    title: `タグ：${tag.name} — ブログ`,
+  if (!tag) return NOT_FOUND_METADATA;
+  return pageMetadata({
+    title: `タグ:${tag.name} — ブログ`,
     description: `『${tag.name}』タグが付いたブログ記事の一覧`,
-    alternates: { canonical: `/blog/tag/${tag.slug}` },
-  };
+    path: `${ROUTES.blog}/tag/${tag.slug}`,
+  });
 }
 
 export default async function BlogTagPage({
@@ -37,13 +40,13 @@ export default async function BlogTagPage({
   return (
     <div className="max-w-3xl mx-auto px-6 py-12">
       <Link
-        href="/blog"
+        href={ROUTES.blog}
         className="inline-block text-xs text-muted-foreground hover:text-foreground transition mb-8"
       >
         ← ブログ一覧へ
       </Link>
       <header className="pb-8 border-b border-border mb-10">
-        <p className="text-muted-foreground text-[11px] font-bold tracking-[0.2em] uppercase mb-3">Tag</p>
+        <Eyebrow className="mb-3 text-[11px]">Tag</Eyebrow>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tighter">#{tag.name}</h1>
         <p className="text-foreground/60 text-sm mt-3">{posts.length} 件</p>
       </header>

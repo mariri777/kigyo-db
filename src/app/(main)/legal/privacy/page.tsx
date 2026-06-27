@@ -1,17 +1,14 @@
+import type { Metadata } from "next";
 import { LegalDoc, LegalSection } from "@/components/LegalDoc";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-export const metadata = {
+export const metadata: Metadata = pageMetadata({
   title: "プライバシーポリシー",
   description:
     "超!企業DB における個人情報の取扱方針。取得情報、利用目的、Cookie、第三者提供、開示請求の手続きを記載します。",
-  alternates: { canonical: "/legal/privacy" },
-  openGraph: {
-    title: "プライバシーポリシー | 超!企業DB",
-    description: "超!企業DB における個人情報の取扱方針。",
-    url: "/legal/privacy",
-    type: "article",
-  },
-};
+  path: ROUTES.legal.privacy,
+});
 
 export default function PrivacyPage() {
   return (

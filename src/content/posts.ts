@@ -1,9 +1,6 @@
-// ブログ記事の型と DB クエリのラッパ。
-// 旧実装では本ファイルに 22 件分の Block[] サンプルがハードコードされていたが、
-// 0003 マイグレーションで posts テーブルに移行した。サンプルは scripts/seed/posts.csv
-// に転記済みで、本ファイルからは生成 HTML を持つ DB レコードを返すヘルパだけを公開する。
-//
-// 互換目的で、`Block` 型のエクスポートはそのまま残す。旧コードからの import を壊さない。
+// ブログ記事の表示用ビューと DB クエリのラッパ。
+// 本文は 0003 マイグレーションで posts テーブルに移行済みで、ここでは
+// repo 層が返す行をビューに整形して返すだけの薄いラッパに留める。
 
 import "server-only";
 
@@ -18,20 +15,6 @@ import {
   type PostCategory as RepoPostCategory,
   type PostRow,
 } from "@/server/repo/postRepo";
-
-export type Block =
-  | { type: "p"; text: string }
-  | { type: "h2"; text: string }
-  | { type: "h3"; text: string }
-  | { type: "callout"; tone?: "info" | "warn"; title?: string; text: string }
-  | { type: "ul"; items: string[] }
-  | { type: "kv"; pairs: { key: string; value: string; sub?: string }[] }
-  | { type: "quote"; text: string; cite?: string }
-  | {
-      type: "disclose";
-      label: string;
-      blocks: Exclude<Block, { type: "disclose" }>[];
-    };
 
 export type PostCategory = RepoPostCategory;
 

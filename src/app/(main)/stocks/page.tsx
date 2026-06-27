@@ -2,19 +2,18 @@ import type { Metadata } from "next";
 import { listStockBriefsPaginated } from "@/server/usecase";
 import { industries } from "@/content/industries";
 import { StockTable } from "@/components/StockTable";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-const title = "銘柄一覧 — 東証 3,800 社を業界・指標で絞り込む";
-const description =
-  "東証プライム/スタンダード/グロース上場の約 3,800 社を、業界・PER・PBR・配当利回り・時価総額で絞り込み・並び替え。気になる銘柄から事業構造タグ・類似銘柄・AI 評価に 1 クリックでジャンプ。";
-
-export const metadata: Metadata = {
-  title,
-  description,
+export const metadata: Metadata = pageMetadata({
+  title: "銘柄一覧 — 東証 3,800 社を業界・指標で絞り込む",
+  description:
+    "東証プライム/スタンダード/グロース上場の約 3,800 社を、業界・PER・PBR・配当利回り・時価総額で絞り込み・並び替え。気になる銘柄から事業構造タグ・類似銘柄・AI 評価に 1 クリックでジャンプ。",
+  path: ROUTES.stocks,
   keywords: ["銘柄一覧", "東証", "PER", "PBR", "配当利回り", "高配当", "時価総額", "スクリーニング"],
-  alternates: { canonical: "/stocks" },
-  openGraph: { title, description, url: "/stocks", type: "website" },
-  twitter: { card: "summary_large_image", title, description },
-};
+  ogType: "website",
+});
 
 const INITIAL_PAGE_SIZE = 100;
 
@@ -36,9 +35,7 @@ export default async function StocksListPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-10">
       <header className="pb-8 border-b border-border mb-8">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-3">
-          Stocks
-        </p>
+        <Eyebrow className="mb-3">Stocks</Eyebrow>
         <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tighter mb-4">
           銘柄一覧
         </h1>

@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getTheme } from "@/content/themes";
-import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/shared/og";
+import { OG_CONTENT_TYPE, OG_SIZE, OgCard } from "@/components/og/OgCard";
 
 export const alt = "特集 | 超!企業DB";
 export const size = OG_SIZE;

@@ -9,13 +9,6 @@ export const PHASES: { key: PhaseKey; label: string }[] = [
   { key: "decline", label: "衰退期" },
 ];
 
-const PHASE_LABEL: Record<PhaseKey, string> = {
-  launch: "ローンチ期",
-  expansion: "拡大期",
-  mature: "成熟期",
-  decline: "衰退期",
-};
-
 /**
  * 最も支配的なフェーズ名を返す。
  *
@@ -31,5 +24,3 @@ export function dominantPhase(p: PhaseScores, withCohabitation = false): string 
   }
   return entries[0][0];
 }
-
-export const phaseLabel = (key: PhaseKey): string => PHASE_LABEL[key];

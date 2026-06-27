@@ -5,7 +5,6 @@ export const OG_CONTENT_TYPE = "image/png";
 
 const PALETTE = {
   bg: "#0a0a0a",
-  surface: "#161616",
   border: "#404040",
   fg: "#f5f5f5",
   muted: "#a3a3a3",
@@ -13,12 +12,8 @@ const PALETTE = {
 };
 
 /**
- * 共通 OG カードのレイアウト。
- * - 上部に「サイト名 EN · sectionLabel」
- * - 中央に大見出し(title)とサブ(subtitle)
- * - 下部に chips(任意)と sitename
- *
- * Satori は flex のみ。display: flex を明示。
+ * 共通 OG カードのレイアウト。Satori (next/og) は flex のみサポートなので、
+ * すべての要素に display: "flex" を明示する。
  */
 export function OgCard({
   sectionLabel,
@@ -76,14 +71,7 @@ export function OgCard({
         )}
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          marginTop: 40,
-          flex: 1,
-        }}
-      >
+      <div style={{ display: "flex", flexDirection: "column", marginTop: 40, flex: 1 }}>
         <div
           style={{
             fontSize: title.length > 26 ? 72 : 96,

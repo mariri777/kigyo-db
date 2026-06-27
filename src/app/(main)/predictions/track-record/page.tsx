@@ -7,21 +7,20 @@ import {
   allResolvedPredictions,
 } from "@/content/predictions";
 import type { TrackRecordRow } from "@/content/predictions";
-import { eventLabelJa } from "@/shared/predictionLabels";
+import { eventLabelJa } from "@/domain/predictionLabels";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 import { formatIsoSlashDate } from "@/shared/format";
 
-const trackTitle = "AI 予測の的中率ダッシュボード — 全件公開";
-const trackDescription =
-  "超!企業DB の AI 予測がどれくらい当たっているのか。決算・適時開示・マクロといったイベント種別、確信度ブラケット別の的中率を全件公開。外した予測も隠さず、累積で検証可能に。";
-
-export const metadata: Metadata = {
-  title: trackTitle,
-  description: trackDescription,
+export const metadata: Metadata = pageMetadata({
+  title: "AI 予測の的中率ダッシュボード — 全件公開",
+  description:
+    "超!企業DB の AI 予測がどれくらい当たっているのか。決算・適時開示・マクロといったイベント種別、確信度ブラケット別の的中率を全件公開。外した予測も隠さず、累積で検証可能に。",
+  path: ROUTES.predictionsTrackRecord,
   keywords: ["AI 予測", "的中率", "予測精度", "確信度別", "イベント別"],
-  alternates: { canonical: "/predictions/track-record" },
-  openGraph: { title: trackTitle, description: trackDescription, url: "/predictions/track-record", type: "website" },
-  twitter: { card: "summary_large_image", title: trackTitle, description: trackDescription },
-};
+  ogType: "website",
+});
 
 export default function TrackRecordPage() {
   const overall = trackRecordOverall();
@@ -33,9 +32,7 @@ export default function TrackRecordPage() {
     <article className="max-w-5xl mx-auto px-6 py-12">
       {/* ===== ヘッダー ===== */}
       <header className="pb-10 border-b border-border mb-12">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">
-          AI Track Record
-        </p>
+        <Eyebrow className="mb-4">AI Track Record</Eyebrow>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
           AI 予測は、
           <br />
@@ -136,7 +133,7 @@ export default function TrackRecordPage() {
               return (
                 <Link
                   key={p.id}
-                  href={`/predictions/${p.id}`}
+                  href={`${ROUTES.predictions}/${p.id}`}
                   className="block bg-surface border border-border rounded-md p-4 hover:border-border-strong hover:bg-surface-elev transition group"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
@@ -190,11 +187,17 @@ export default function TrackRecordPage() {
           <p>
             AI 予測は<strong className="text-foreground">投資助言・投資推奨ではありません</strong>。
             あくまで参考情報として、投資判断はご自身の責任で行ってください。詳しくは
-            <Link href="/legal/disclaimer" className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground mx-1">
+            <Link
+              href={ROUTES.legal.disclaimer}
+              className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground mx-1"
+            >
               免責事項
             </Link>
             ・
-            <Link href="/legal/editorial-policy" className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground">
+            <Link
+              href={ROUTES.legal.editorial}
+              className="text-foreground underline decoration-dotted underline-offset-2 hover:text-muted-foreground"
+            >
               編集方針
             </Link>
             をご覧ください。
@@ -206,10 +209,10 @@ export default function TrackRecordPage() {
       <section className="mt-12 pt-8 border-t border-border">
         <h2 className="text-sm font-bold mb-3">関連</h2>
         <div className="flex flex-wrap gap-3 text-sm">
-          <Link href="/predictions" className="text-muted-foreground hover:text-foreground transition">
+          <Link href={ROUTES.predictions} className="text-muted-foreground hover:text-foreground transition">
             予測一覧へ →
           </Link>
-          <Link href="/guide" className="text-muted-foreground hover:text-foreground transition">
+          <Link href={ROUTES.guide} className="text-muted-foreground hover:text-foreground transition">
             5 分ガイドへ →
           </Link>
         </div>
@@ -217,6 +220,11 @@ export default function TrackRecordPage() {
     </article>
   );
 }
+
+const STAT_TONE = {
+  positive: "text-positive",
+  negative: "text-negative",
+} as const;
 
 function BigStat({
   label,
@@ -228,20 +236,19 @@ function BigStat({
   label: string;
   value: string;
   sub: string;
-  tone?: "positive" | "negative";
+  tone?: keyof typeof STAT_TONE;
   highlight?: boolean;
 }) {
-  const valueClass = tone === "positive"
-    ? "text-positive"
-    : tone === "negative"
-      ? "text-negative"
-      : highlight
-        ? "text-foreground"
-        : "text-foreground";
   return (
-    <div className={`bg-surface border rounded-md px-4 py-3 ${highlight ? "border-foreground" : "border-border"}`}>
+    <div
+      className={`bg-surface border rounded-md px-4 py-3 ${highlight ? "border-foreground" : "border-border"}`}
+    >
       <div className="text-[10px] text-foreground/60 font-bold tracking-[0.15em] uppercase mb-1">{label}</div>
-      <div className={`text-3xl font-bold tabular font-mono leading-tight ${valueClass}`}>{value}</div>
+      <div
+        className={`text-3xl font-bold tabular font-mono leading-tight ${tone ? STAT_TONE[tone] : "text-foreground"}`}
+      >
+        {value}
+      </div>
       <div className="text-[11px] text-muted-foreground mt-1">{sub}</div>
     </div>
   );

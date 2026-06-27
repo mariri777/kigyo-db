@@ -10,6 +10,10 @@ import {
 import { industries } from "@/content/industries";
 import { listPosts } from "@/content/posts";
 import { listOverlayStocks } from "@/server/usecase";
+import { StructuredData } from "@/components/StructuredData";
+import { NOT_FOUND_METADATA, pageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbList, collectionPageLd } from "@/lib/seo/structuredData";
+import { ROUTES } from "@/shared/links";
 import { formatPct1Opt, formatPerOpt, formatOkuOpt } from "@/shared/format";
 
 
@@ -20,26 +24,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const theme = getTheme(slug);
-  if (!theme) return { title: "見つかりません", robots: { index: false, follow: false } };
+  if (!theme) return NOT_FOUND_METADATA;
   const title = `${theme.name} — 業界横断テーマ特集 / 推奨銘柄 + ランキング`;
   const description = `『${theme.name}』を投資テーマに、業界横断で銘柄をキュレーション。編集部の推奨銘柄、${theme.rankLabel}でのファクターランキング、関連業界・記事をまとめて。${theme.lede.slice(0, 70)}`;
-  const url = `/themes/${theme.slug}`;
-  return {
+  return pageMetadata({
     title,
     description,
+    path: `${ROUTES.themes}/${theme.slug}`,
     keywords: [theme.name, "テーマ投資", theme.rankLabel, "業界横断"],
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title,
-      description,
-      url,
-      siteName: "超!企業DB",
-      publishedTime: theme.updatedAt,
-      modifiedTime: theme.updatedAt,
-    },
-    twitter: { card: "summary_large_image", title, description },
-  };
+    publishedTime: theme.updatedAt,
+    modifiedTime: theme.updatedAt,
+  });
 }
 
 export default async function ThemePage({
@@ -62,39 +57,24 @@ export default async function ThemePage({
     .map((s) => allPosts.find((p) => p.slug === s))
     .filter((p): p is NonNullable<typeof p> => Boolean(p));
 
+  const themePath = `${ROUTES.themes}/${theme.slug}`;
   const themeJsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
-        { "@type": "ListItem", position: 2, name: "特集", item: "https://kigyo.cho-super.com/themes" },
-        {
-          "@type": "ListItem",
-          position: 3,
-          name: theme.name,
-          item: `https://kigyo.cho-super.com/themes/${theme.slug}`,
-        },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "CollectionPage",
+    breadcrumbList([
+      { name: "特集", href: ROUTES.themes },
+      { name: theme.name, href: themePath },
+    ]),
+    collectionPageLd({
       name: theme.name,
-      url: `https://kigyo.cho-super.com/themes/${theme.slug}`,
+      path: themePath,
       description: theme.lede.slice(0, 160),
       datePublished: theme.updatedAt,
       dateModified: theme.updatedAt,
-      isPartOf: { "@type": "WebSite", name: "超!企業DB", url: "https://kigyo.cho-super.com" },
-    },
+    }),
   ];
 
   return (
     <article className="max-w-6xl mx-auto px-6 py-8">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(themeJsonLd) }}
-      />
+      <StructuredData data={themeJsonLd} />
       {/* ===== Hero ===== */}
       <header className="border-b border-border pb-10 mb-12">
         <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">

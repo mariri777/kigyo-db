@@ -54,25 +54,9 @@ pnpm deploy
 
 `pnpm preview` / `pnpm deploy` は、OpenNext で `.open-next/` 配下に成果物を生成してから wrangler を呼びます。Cloudflare のリソース（D1 など）は `wrangler.toml` で定義されています。
 
-### 株価データの更新
-
-サンプル銘柄マスタ（`src/lib/data.ts`）の株価を、週次で CSV 経由で更新する仕組みです。
-
-```bash
-# 1) 現在の株価を CSV テンプレートとして書き出す
-pnpm prices:template
-#   → data/prices.csv が生成される。ここに最新の終値を上書きする。
-
-# 2) CSV の株価を data.ts に反映する
-pnpm prices:apply --date 2026-06-12
-#   → 時価総額・PER・PBR・配当利回り・前回比を自動再計算。
-#     前回比 ±20% を超える銘柄があると入力ミスの可能性として停止する。
-#     本当に正しければ末尾に --force を付ける。
-```
-
 ### データベース（Cloudflare D1）
 
-スキーマは `src/db/schema.ts`、マイグレーションは `drizzle/` に生成されます。
+スキーマは `src/server/db/schema.ts`、マイグレーションは `drizzle/` に生成されます。
 
 ```bash
 # スキーマ変更からマイグレーション SQL を生成
@@ -85,7 +69,37 @@ pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --remote
 pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --local
 ```
 
-> 現状の銘柄データはサンプルとして `src/lib/data.ts` に直書きされています。D1 は今後の本番データ移行に向けた基盤として用意されています（EDINET / TDnet / J-Quants からの取得を前提とした構造）。
+#### 本番 D1 の自動更新（24h cron）
+
+本番 D1 は GitHub Actions の cron（`.github/workflows/refresh-d1.yml`、JST 04:00）が毎日 1 回更新します。`scripts/refresh-d1.ts` が以下を 1 コマンドで実行:
+
+1. 本番 D1 から id seed（companies/sources）を SELECT し、id の連続性を保つ
+2. JPX 銘柄一覧 + Yahoo Finance を取得
+3. `src/content/data.ts` と `src/content/industries.ts` の overlay と統合
+4. 本番 D1 と差分比較して INSERT/UPDATE/DELETE を計算
+5. wrangler 経由で本番 D1 に SQL を順次反映
+6. 件数しきい値で検証
+
+手動で叩く場合（`CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を env に渡す）:
+
+```bash
+pnpm db:refresh:dry-run   # SQL を tmp/sync-remote/ に書き出すだけ
+pnpm db:refresh            # 本番 D1 へ反映
+```
+
+blog/admin 系（posts, post_tags, tags, admin_users, admin_sessions）は cron のスコープ外。
+
+#### ローカル D1 の初期化
+
+ローカル開発では `scripts/seed/*.csv`（手動で `pnpm db:snapshot` を叩いた時点のスナップショット）を投入する。古くて良い（本番 D1 は cron で常に最新）。
+
+```bash
+# ローカル D1 をリセットして seed スナップショットを一括 INSERT
+pnpm db:seed-local
+
+# 必要なら seed スナップショット自体を再生成(オンライン必須、JPX/Yahoo を叩く)
+pnpm db:snapshot
+```
 
 ### ブログ管理画面
 
@@ -94,20 +108,10 @@ pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --local
 - 管理画面: <http://localhost:3000/admin>（本番: <https://kigyo.cho-super.com/admin>）
 - ログイン: <http://localhost:3000/admin/login>
 
-`pnpm db:seed` で投入される初期管理者は次のとおりです。**本番反映時は必ず `/admin/account` でパスワードを変更してください。**
+`pnpm db:seed-local` で投入される初期管理者は次のとおりです。**本番反映時は必ず `/admin/account` でパスワードを変更してください。**
 
 - メールアドレス: `admin@example.com`
 - パスワード: `password0`
-
-初期化／seed の手順:
-
-```bash
-# 既存ブログ記事 + 初期管理者の CSV を生成（オフラインで完結）
-pnpm db:refresh-csv:blog
-
-# ローカル D1 をリセットして全 CSV を一括 INSERT
-pnpm db:seed
-```
 
 管理画面の主な動線:
 

@@ -44,7 +44,6 @@ export function HistoryChart({ stock }: { stock: Stock }) {
   const barW = (innerW / years.length) * 0.55;
 
   const xFor = (i: number) => PADDING.left + i * xStep;
-  const yRev = (rev: number) => PADDING.top + innerH - (rev / maxRev) * innerH;
   const yMargin = (m: number) => PADDING.top + innerH - ((m - minM) / (maxM - minM)) * innerH;
   const barBaseY = PADDING.top + innerH;
 

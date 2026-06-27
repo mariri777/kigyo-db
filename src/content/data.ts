@@ -41,7 +41,6 @@ const SRC_2025FY_MF = { doc: "2025年11月期 通期決算説明会資料", peri
 const SRC_2025FY_FREEE = { doc: "2025年6月期 通期決算説明会資料", period: "2025/6", page: 16 };
 const SRC_2025FY_RAKUS = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 11 };
 const SRC_2025FY_HENNGE = { doc: "2025年9月期 通期決算説明会資料", period: "2025/9", page: 9 };
-const SRC_2025FY_KAONAVI = { doc: "2025年3月期 通期決算説明会資料", period: "2025/3", page: 10 };
 const SRC_2025FY_KUBELL = { doc: "2025年12月期 通期決算説明会資料", period: "2025/12", page: 13 };
 
 // 自動車クラスタ用の出典

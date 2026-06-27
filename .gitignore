@@ -45,9 +45,9 @@ next-env.d.ts
 .wrangler/
 .dev.vars
 
-# seed の CSV はリポジトリにコミットしない。
-# 本番 D1 を id の正本とし、ローカル / Actions で都度 refresh-csv → seed/sync-remote で再生成する。
-scripts/seed/*.csv
+# scripts/seed/ はローカル D1 初期化(pnpm db:seed-local)のスナップショット。
+# 本番 cron はこれを参照せず JPX/Yahoo を毎回取得する。
+# snapshot 自体は pnpm db:snapshot を任意のタイミングで叩いて更新する。
 scripts/seed/.jpx-cache.*
 scripts/seed/*.sql
 

@@ -2,19 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listThemes, pickedStocksForTheme } from "@/content/themes";
 import { listOverlayStocks } from "@/server/usecase";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { pageMetadata } from "@/lib/seo/metadata";
+import { ROUTES } from "@/shared/links";
 
-const title = "特集 — マクロ・テーマで掘る業界横断キュレーション";
-const description =
-  "円安・AI 受益・金利上昇・訪日インバウンド・累進配当・PBR 改善 — マクロやテーマを起点に、業界横断で銘柄をキュレーション。各特集は推奨銘柄 + ファクターランキング + 関連業界の 3 層構成。";
-
-export const metadata: Metadata = {
-  title,
-  description,
+export const metadata: Metadata = pageMetadata({
+  title: "特集 — マクロ・テーマで掘る業界横断キュレーション",
+  description:
+    "円安・AI 受益・金利上昇・訪日インバウンド・累進配当・PBR 改善 — マクロやテーマを起点に、業界横断で銘柄をキュレーション。各特集は推奨銘柄 + ファクターランキング + 関連業界の 3 層構成。",
+  path: ROUTES.themes,
   keywords: ["特集", "テーマ投資", "円安", "AI 関連", "高配当", "PBR 改善", "インバウンド"],
-  alternates: { canonical: "/themes" },
-  openGraph: { title, description, url: "/themes", type: "website" },
-  twitter: { card: "summary_large_image", title, description },
-};
+  ogType: "website",
+});
 
 export default async function ThemesHub() {
   const themes = listThemes();
@@ -22,9 +21,7 @@ export default async function ThemesHub() {
   return (
     <article className="max-w-6xl mx-auto px-6 py-12">
       <header className="pb-10 border-b border-border mb-12">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-4">
-          Cross-Industry Themes
-        </p>
+        <Eyebrow className="mb-4">Cross-Industry Themes</Eyebrow>
         <h1 className="text-5xl sm:text-6xl font-bold leading-[1.1] tracking-tighter mb-6">
           テーマで
           <br />
@@ -43,7 +40,7 @@ export default async function ThemesHub() {
           return (
             <Link
               key={theme.slug}
-              href={`/themes/${theme.slug}`}
+              href={`${ROUTES.themes}/${theme.slug}`}
               className="group block bg-surface border border-border rounded-md p-6 hover:border-border-strong transition"
             >
               <div className="flex items-baseline justify-between mb-3 gap-2">
@@ -80,7 +77,7 @@ export default async function ThemesHub() {
       <section className="mt-16 pt-8 border-t border-border text-[12px] text-foreground/60 leading-relaxed max-w-3xl">
         <h2 className="text-sm font-bold text-muted-foreground mb-3">特集とスクリーンの違い</h2>
         <p className="mb-2">
-          <Link href="/screens" className="underline text-muted-foreground">スクリーン</Link>{" "}
+          <Link href={ROUTES.screens} className="underline text-muted-foreground">スクリーン</Link>{" "}
           は『PER 15 倍以下』『ROE 15% 以上』など純粋な定量フィルタ。条件を満たす全銘柄を機械的に抽出します。
         </p>
         <p>

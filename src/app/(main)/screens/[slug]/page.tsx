@@ -4,6 +4,11 @@ import type { Metadata } from "next";
 import { applyScreen, getScreen, screens } from "@/domain/screens";
 import type { StockBrief } from "@/domain/types";
 import { listStockBriefs } from "@/server/usecase";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { StructuredData } from "@/components/StructuredData";
+import { NOT_FOUND_METADATA, pageMetadata } from "@/lib/seo/metadata";
+import { breadcrumbList, collectionPageLd } from "@/lib/seo/structuredData";
+import { ROUTES } from "@/shared/links";
 import { formatPbrOpt, formatPct1Opt, formatPerOpt, formatPriceOpt } from "@/shared/format";
 
 
@@ -14,26 +19,13 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const screen = getScreen(slug);
-  if (!screen) return { title: "見つかりません", robots: { index: false, follow: false } };
-  const url = `/screens/${screen.slug}`;
-  return {
+  if (!screen) return NOT_FOUND_METADATA;
+  return pageMetadata({
     title: screen.title,
     description: screen.metaDescription,
+    path: `${ROUTES.screens}/${screen.slug}`,
     keywords: ["スクリーニング", screen.shortTitle, "東証", screen.emphasis],
-    alternates: { canonical: url },
-    openGraph: {
-      type: "article",
-      title: screen.title,
-      description: screen.metaDescription,
-      url,
-      siteName: "超!企業DB",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: screen.title,
-      description: screen.metaDescription,
-    },
-  };
+  });
 }
 
 export default async function ScreenPage({
@@ -46,50 +38,34 @@ export default async function ScreenPage({
   if (!screen) notFound();
 
   const all = await listStockBriefs();
-  const matching = applyScreen(screen, all).slice(0, 100);
+  const fullMatches = applyScreen(screen, all);
+  const matching = fullMatches.slice(0, 100);
   const otherScreens = screens.filter((s) => s.slug !== screen.slug);
+  const screenPath = `${ROUTES.screens}/${screen.slug}`;
   const screenJsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      itemListElement: [
-        { "@type": "ListItem", position: 1, name: "ホーム", item: "https://kigyo.cho-super.com/" },
-        { "@type": "ListItem", position: 2, name: "スクリーン", item: "https://kigyo.cho-super.com/screens" },
-        {
-          "@type": "ListItem",
-          position: 3,
-          name: screen.shortTitle,
-          item: `https://kigyo.cho-super.com/screens/${screen.slug}`,
-        },
-      ],
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "CollectionPage",
+    breadcrumbList([
+      { name: "スクリーン", href: ROUTES.screens },
+      { name: screen.shortTitle, href: screenPath },
+    ]),
+    collectionPageLd({
       name: screen.title,
-      url: `https://kigyo.cho-super.com/screens/${screen.slug}`,
+      path: screenPath,
       description: screen.metaDescription,
-      isPartOf: { "@type": "WebSite", name: "超!企業DB", url: "https://kigyo.cho-super.com" },
-    },
+    }),
   ];
 
   return (
     <article className="max-w-6xl mx-auto px-6 py-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(screenJsonLd) }}
-      />
+      <StructuredData data={screenJsonLd} />
       <Link
-        href="/screens"
+        href={ROUTES.screens}
         className="inline-block text-xs text-muted-foreground hover:text-foreground transition mb-6"
       >
         ← すべてのスクリーン
       </Link>
 
       <header className="pb-8 border-b border-border mb-8">
-        <p className="text-muted-foreground text-xs font-bold tracking-[0.2em] uppercase mb-3">
-          Screen
-        </p>
+        <Eyebrow className="mb-3">Screen</Eyebrow>
         <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tighter mb-5">
           {screen.title}
         </h1>
@@ -97,9 +73,7 @@ export default async function ScreenPage({
           {screen.description}
         </p>
         <div className="mt-6 inline-flex items-center gap-2 text-[11px] text-foreground/60">
-          <span className="text-foreground font-bold tabular">
-            {applyScreen(screen, all).length}
-          </span>
+          <span className="text-foreground font-bold tabular">{fullMatches.length}</span>
           <span>社が条件に合致(全 {all.length} 社中)</span>
         </div>
       </header>
@@ -116,7 +90,7 @@ export default async function ScreenPage({
       <section className="mb-12">
         <h2 className="text-xl font-bold mb-4">
           該当銘柄
-          {matching.length < applyScreen(screen, all).length && (
+          {matching.length < fullMatches.length && (
             <span className="text-[12px] text-foreground/60 font-normal ml-2">
               (上位 {matching.length} 件を表示)
             </span>
@@ -143,7 +117,7 @@ export default async function ScreenPage({
             {matching.map((s, i) => (
               <Link
                 key={s.code}
-                href={`/stocks/${s.code}`}
+                href={`${ROUTES.stocks}/${s.code}`}
                 className="grid grid-cols-1 md:grid-cols-[40px_70px_1fr_140px_90px_70px_70px_90px] items-center px-4 py-3 border-b border-border last:border-b-0 hover:bg-surface-elev transition group text-sm gap-2"
               >
                 <div className="text-foreground/60 font-mono text-xs tabular">
@@ -188,7 +162,7 @@ export default async function ScreenPage({
           {otherScreens.map((s) => (
             <Link
               key={s.slug}
-              href={`/screens/${s.slug}`}
+              href={`${ROUTES.screens}/${s.slug}`}
               className="block bg-surface border border-border rounded-md p-3 hover:border-border-strong transition text-sm font-medium"
             >
               {s.shortTitle} →

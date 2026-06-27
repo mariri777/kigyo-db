@@ -1,4 +1,12 @@
 import Link from "next/link";
+import {
+  FOOTER_PRIMARY_LINKS,
+  FOOTER_SECONDARY_LINKS,
+  LEGAL_LINKS,
+} from "@/shared/links";
+import { SITE_NAME } from "@/shared/site";
+
+const COPYRIGHT_YEAR = "2026";
 
 export function SiteFooter() {
   return (
@@ -12,37 +20,16 @@ export function SiteFooter() {
           株価は市場実勢の終値を週次で更新しています。財務指標・業績データは EDINET / TDnet / J-Quants からの取得を前提とした構造で、現在はサンプルデータで運用中です。
         </p>
         <div className="pt-4 border-t border-border flex flex-wrap gap-x-5 gap-y-2">
-          <Link href="/guide" className="text-muted-foreground hover:text-foreground transition">
-            初めての方へ
-          </Link>
-          <Link href="/themes" className="text-muted-foreground hover:text-foreground transition">
-            特集
-          </Link>
-          <Link href="/predictions" className="text-muted-foreground hover:text-foreground transition">
-            予測
-          </Link>
-          <Link href="/screens" className="text-muted-foreground hover:text-foreground transition">
-            スクリーン
-          </Link>
-          <Link href="/compare" className="text-muted-foreground hover:text-foreground transition">
-            比較
-          </Link>
-          <Link href="/legal/terms" className="text-muted-foreground hover:text-foreground transition">
-            利用規約
-          </Link>
-          <Link href="/legal/privacy" className="text-muted-foreground hover:text-foreground transition">
-            プライバシーポリシー
-          </Link>
-          <Link href="/legal/disclaimer" className="text-muted-foreground hover:text-foreground transition">
-            免責事項
-          </Link>
-          <Link href="/legal/editorial-policy" className="text-muted-foreground hover:text-foreground transition">
-            編集方針
-          </Link>
-          <Link href="/about" className="text-muted-foreground hover:text-foreground transition">
-            超!企業DBとは
-          </Link>
-          <span className="ml-auto text-foreground/60">© 2026 超!企業DB</span>
+          {[...FOOTER_PRIMARY_LINKS, ...LEGAL_LINKS, ...FOOTER_SECONDARY_LINKS].map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="text-muted-foreground hover:text-foreground transition"
+            >
+              {l.label}
+            </Link>
+          ))}
+          <span className="ml-auto text-foreground/60">© {COPYRIGHT_YEAR} {SITE_NAME}</span>
         </div>
       </div>
     </footer>
