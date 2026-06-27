@@ -48,11 +48,6 @@ const MIN_STOCKS = 3000;
 // ──────────────────────────────────────────────────
 
 async function fetchIdSeed(): Promise<IdSeed> {
-  if (DRY_RUN) {
-    // dry-run でも本番から取りに行きたければ別フラグを切れば良いが、デフォルトでは空 seed で差分を最大化する
-    console.log("🧪 DRY RUN: id seed を空で扱う(全行が INSERT 扱いになる)");
-    return emptyIdSeed();
-  }
   console.log("⬇️  本番 D1 から id seed を取得...");
   const companiesRes = execRemoteJson<{ id: number; name: string }>(
     "SELECT id, name FROM companies",
@@ -101,7 +96,6 @@ type RemoteStockRow = {
 };
 
 function fetchRemoteCompanies(): Map<number, RemoteCompanyRow> {
-  if (DRY_RUN) return new Map();
   const res = execRemoteJson<RemoteCompanyRow>(
     "SELECT id, name, name_en, description, one_liner, edinet_code FROM companies",
   );
@@ -109,7 +103,6 @@ function fetchRemoteCompanies(): Map<number, RemoteCompanyRow> {
 }
 
 function fetchRemoteStocks(): Map<string, RemoteStockRow> {
-  if (DRY_RUN) return new Map();
   const res = execRemoteJson<RemoteStockRow>(
     "SELECT code, company_id, exchange, sector_tse, price_jpy, price_date, change_pct, market_cap_oku, per, pbr, dividend_yield FROM stocks",
   );
