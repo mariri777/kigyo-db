@@ -16,13 +16,12 @@ import {
 } from "@/server/repo/forecastRepo";
 import {
   confidenceMeta,
-  dominantProbability,
   formatGeneratedAt,
   formatResolveAtJp,
-  readVerdict,
+  readStance,
   timeUntilResolveJp,
 } from "./_lib/format";
-import { ProbabilityGauge, ShiftSparkline, VerdictGlyph } from "./_viz";
+import { ShiftSparkline, YesNoBlock } from "./_viz";
 
 export const dynamic = "force-dynamic";
 
@@ -207,10 +206,11 @@ function StatBlock({
 // ─────────────────────────────────────────────────────────
 
 function LiveCard({ forecast }: { forecast: ForecastSummary }) {
-  const verdict = readVerdict(forecast.probability);
-  const dominant = dominantProbability(forecast.probability);
+  const stance = readStance(forecast.probability, forecast.position);
   const confidence = confidenceMeta(forecast.confidence);
   const remaining = timeUntilResolveJp(forecast.resolveAt);
+  const yesLabel = forecast.yesLabel ?? "プラス";
+  const noLabel = forecast.noLabel ?? "マイナス";
 
   return (
     <Link
@@ -223,7 +223,7 @@ function LiveCard({ forecast }: { forecast: ForecastSummary }) {
           {forecast.targetName}
         </span>
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${confidence.color}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wider ${confidence.color}`}>
             {confidence.label}
           </span>
           <span className="text-[11px] font-mono tabular text-emerald-700 inline-flex items-center gap-1">
@@ -235,43 +235,25 @@ function LiveCard({ forecast }: { forecast: ForecastSummary }) {
 
       <div className="px-5 pt-4">
         <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">
-          AI の結論
+          ISSUE
         </div>
-        <h3 className="font-black text-lg sm:text-xl leading-snug tracking-tight text-neutral-900">
-          {forecast.headline}
+        <h3 className="font-black text-base sm:text-lg leading-snug tracking-tight text-neutral-900">
+          {forecast.question}
         </h3>
+        {forecast.headline && (
+          <div className="mt-1 text-[12px] font-bold text-neutral-600 leading-snug">
+            AIの結論: {forecast.headline}
+          </div>
+        )}
       </div>
 
       <div className="px-5 pt-4 pb-4">
-        <div className={`rounded-xl ring-1 ${verdict.ring} ${verdict.bg} px-4 py-4`}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <VerdictGlyph tone={verdict.tone} />
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">
-                  方向性
-                </div>
-                <div className={`text-lg sm:text-xl font-black tracking-tight ${verdict.color}`}>
-                  {verdict.label}
-                </div>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="flex items-baseline gap-1 justify-end">
-                <span className={`font-mono tabular text-4xl sm:text-5xl font-black tracking-tight ${verdict.color}`}>
-                  {dominant.value}
-                </span>
-                <span className={`text-xl font-bold ${verdict.color}`}>%</span>
-              </div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                {dominant.direction === "up" ? "上がる" : "下がる"} の確率
-              </div>
-            </div>
-          </div>
-          <div className="mt-4">
-            <ProbabilityGauge probability={forecast.probability} />
-          </div>
-        </div>
+        <YesNoBlock
+          probability={forecast.probability}
+          position={forecast.position}
+          yesLabel={yesLabel}
+          noLabel={noLabel}
+        />
       </div>
 
       <div className="px-5 pb-4">
@@ -286,7 +268,7 @@ function LiveCard({ forecast }: { forecast: ForecastSummary }) {
             <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-1.5">
               24h の確率推移
             </div>
-            <ShiftSparkline shifts={forecast.shifts} tone={verdict.tone} />
+            <ShiftSparkline shifts={forecast.shifts} tone={stance.side} />
           </div>
         )}
         <div className="px-5 py-3 flex items-center justify-between text-[11px] font-bold tracking-wide">
@@ -308,8 +290,13 @@ function LiveCard({ forecast }: { forecast: ForecastSummary }) {
 // ─────────────────────────────────────────────────────────
 
 function ResolvedRow({ forecast }: { forecast: ForecastSummary }) {
-  const verdict = readVerdict(forecast.probability);
-  const dominant = dominantProbability(forecast.probability);
+  const stance = readStance(forecast.probability, forecast.position);
+  const sideLabel =
+    stance.side === "yes"
+      ? `YES・${forecast.yesLabel ?? "プラス"}`
+      : stance.side === "no"
+        ? `NO・${forecast.noLabel ?? "マイナス"}`
+        : "拮抗";
 
   return (
     <Link
@@ -323,18 +310,18 @@ function ResolvedRow({ forecast }: { forecast: ForecastSummary }) {
         </span>
         <div className="flex-1 min-w-0">
           <div className="text-[15px] font-bold tracking-tight text-neutral-900 truncate">
-            {forecast.headline}
+            {forecast.headline || forecast.question}
           </div>
           <div className="text-[11px] text-neutral-500 font-mono tabular mt-0.5">
             答え合わせ {formatResolveAtJp(forecast.resolveAt)}
           </div>
         </div>
         <div className="hidden md:flex items-center gap-2 shrink-0">
-          <span className={`font-mono tabular text-sm font-black ${verdict.color}`}>
-            {dominant.value}%
+          <span className={`font-mono tabular text-sm font-black ${stance.color}`}>
+            {stance.sideProbability}%
           </span>
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${verdict.color}`}>
-            {dominant.direction === "up" ? "上がる" : "下がる"} 予想
+          <span className={`text-[10px] font-bold tracking-widest ${stance.color}`}>
+            {sideLabel}
           </span>
         </div>
         <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-700 group-hover:translate-x-0.5 transition shrink-0" />

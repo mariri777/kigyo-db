@@ -23,19 +23,19 @@ import {
 } from "@/server/repo/forecastRepo";
 import {
   confidenceMeta,
-  dominantProbability,
   formatGeneratedAt,
   formatResolveAtJp,
   formatResolveAtLong,
-  readVerdict,
+  readStance,
   takeKindMeta,
   timeUntilResolveJp,
+  type Stance,
 } from "../_lib/format";
 import {
   ProbabilityGauge,
   ScenarioStack,
   ShiftSparkline,
-  VerdictGlyph,
+  YesNoBlock,
 } from "../_viz";
 
 export const dynamic = "force-dynamic";
@@ -84,8 +84,7 @@ export default async function ForecastDetailPage({
     (f) => f.id !== detail.id,
   );
 
-  const verdict = readVerdict(detail.probability);
-  const dominant = dominantProbability(detail.probability);
+  const stance = readStance(detail.probability, detail.position);
   const confidence = confidenceMeta(detail.confidence);
 
   // takes は kind ごとにグルーピング (macro/technical/sentiment 上、その他下)
@@ -101,7 +100,7 @@ export default async function ForecastDetailPage({
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-5 space-y-8">
         <Breadcrumb targetName={detail.targetName} headline={detail.headline} />
 
-        <Hero detail={detail} verdict={verdict} dominant={dominant} confidence={confidence} />
+        <Hero detail={detail} stance={stance} confidence={confidence} />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <main className="lg:col-span-8 space-y-8">
@@ -144,7 +143,7 @@ export default async function ForecastDetailPage({
           </main>
 
           <aside className="lg:col-span-4 space-y-6">
-            <ShiftPanel detail={detail} verdict={verdict} />
+            <ShiftPanel detail={detail} stance={stance} />
             <ResolvePanel detail={detail} />
             {related.length > 0 && <RelatedPanel related={related} targetName={detail.targetName} />}
           </aside>
@@ -160,17 +159,17 @@ export default async function ForecastDetailPage({
 
 function Hero({
   detail,
-  verdict,
-  dominant,
+  stance,
   confidence,
 }: {
   detail: ForecastDetail;
-  verdict: ReturnType<typeof readVerdict>;
-  dominant: ReturnType<typeof dominantProbability>;
+  stance: Stance;
   confidence: ReturnType<typeof confidenceMeta>;
 }) {
   const remaining = timeUntilResolveJp(detail.resolveAt);
   const isLive = detail.status === "live";
+  const yesLabel = detail.yesLabel ?? "プラス";
+  const noLabel = detail.noLabel ?? "マイナス";
 
   return (
     <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-800 text-white">
@@ -191,9 +190,9 @@ function Hero({
       {/* 発光 */}
       <div
         className={`absolute -top-32 -right-20 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
-          verdict.tone === "up"
+          stance.side === "yes"
             ? "bg-emerald-500/20"
-            : verdict.tone === "down"
+            : stance.side === "no"
               ? "bg-rose-500/20"
               : "bg-sky-500/15"
         }`}
@@ -225,11 +224,16 @@ function Hero({
           </div>
 
           <div className="text-[11px] font-mono uppercase tracking-widest text-neutral-400">
-            {detail.question}
+            ISSUE
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
-            {detail.headline}
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tight leading-tight">
+            {detail.question}
           </h1>
+          {detail.headline && (
+            <div className="text-sm sm:text-base font-bold text-neutral-200 leading-snug">
+              AIの結論: {detail.headline}
+            </div>
+          )}
           <p className="text-sm sm:text-base text-neutral-300 leading-relaxed max-w-2xl">
             {detail.lede}
           </p>
@@ -245,58 +249,22 @@ function Hero({
 
         <div className="lg:col-span-5">
           <div className="relative rounded-2xl bg-white/5 backdrop-blur ring-1 ring-white/10 p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <VerdictGlyph tone={verdict.tone} size="lg" />
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                    AI の方向性
-                  </div>
-                  <div
-                    className={`text-2xl font-black tracking-tight ${
-                      verdict.tone === "up"
-                        ? "text-emerald-300"
-                        : verdict.tone === "down"
-                          ? "text-rose-300"
-                          : "text-neutral-200"
-                    }`}
-                  >
-                    {verdict.label}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="flex items-baseline gap-1 justify-end">
-                  <span
-                    className={`font-mono tabular text-6xl font-black tracking-tight ${
-                      verdict.tone === "up"
-                        ? "text-emerald-300"
-                        : verdict.tone === "down"
-                          ? "text-rose-300"
-                          : "text-neutral-200"
-                    }`}
-                  >
-                    {dominant.value}
-                  </span>
-                  <span
-                    className={`text-2xl font-bold ${
-                      verdict.tone === "up"
-                        ? "text-emerald-300"
-                        : verdict.tone === "down"
-                          ? "text-rose-300"
-                          : "text-neutral-300"
-                    }`}
-                  >
-                    %
-                  </span>
-                </div>
-                <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-                  {dominant.direction === "up" ? "上がる" : "下がる"} の確率
-                </div>
-              </div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-3">
+              AI のポジション
             </div>
+            <YesNoBlock
+              probability={detail.probability}
+              position={detail.position}
+              yesLabel={yesLabel}
+              noLabel={noLabel}
+              variant="lg"
+            />
             <div className="mt-5">
-              <ProbabilityGauge probability={detail.probability} />
+              <ProbabilityGauge
+                probability={detail.probability}
+                yesLabel={yesLabel}
+                noLabel={noLabel}
+              />
             </div>
 
             {detail.referencePrice != null && (
@@ -396,9 +364,12 @@ function TakeBlock({ take, compact = false }: { take: ForecastTake; compact?: bo
 // ─────────────────────────────────────────────────────────
 
 function ScenarioPanel({ scenarios }: { scenarios: ForecastScenario[] }) {
+  // 指数系: base / bull / bear、スクラッチ: base / yes-case / no-case
   const base = scenarios.find((s) => s.kind === "base");
-  const bull = scenarios.find((s) => s.kind === "bull");
-  const bear = scenarios.find((s) => s.kind === "bear");
+  const yesSide = scenarios.find((s) => s.kind === "bull" || s.kind === "yes-case");
+  const noSide = scenarios.find((s) => s.kind === "bear" || s.kind === "no-case");
+  const yesLabelHeader = yesSide?.kind === "yes-case" ? "Yes ケース" : "強気";
+  const noLabelHeader = noSide?.kind === "no-case" ? "No ケース" : "弱気";
   return (
     <div className="bg-white rounded-2xl shadow-sm p-5 sm:p-6 space-y-5">
       <div>
@@ -407,19 +378,23 @@ function ScenarioPanel({ scenarios }: { scenarios: ForecastScenario[] }) {
         </div>
         <ScenarioStack
           base={base?.probability ?? 0}
-          bull={bull?.probability ?? 0}
-          bear={bear?.probability ?? 0}
+          bull={yesSide?.probability ?? 0}
+          bear={noSide?.probability ?? 0}
         />
         <div className="mt-2 grid grid-cols-3 gap-2 text-[10px] font-bold uppercase tracking-widest">
-          <span className="text-emerald-700">強気 {bull?.probability ?? 0}%</span>
+          <span className="text-emerald-700">
+            {yesLabelHeader} {yesSide?.probability ?? 0}%
+          </span>
           <span className="text-neutral-700 text-center">ベース {base?.probability ?? 0}%</span>
-          <span className="text-rose-700 text-right">弱気 {bear?.probability ?? 0}%</span>
+          <span className="text-rose-700 text-right">
+            {noLabelHeader} {noSide?.probability ?? 0}%
+          </span>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {bull && <ScenarioCard scenario={bull} accent="emerald" />}
+        {yesSide && <ScenarioCard scenario={yesSide} accent="emerald" />}
         {base && <ScenarioCard scenario={base} accent="neutral" />}
-        {bear && <ScenarioCard scenario={bear} accent="rose" />}
+        {noSide && <ScenarioCard scenario={noSide} accent="rose" />}
       </div>
     </div>
   );
@@ -462,7 +437,15 @@ function ScenarioCard({
       <div className="flex items-center justify-between mb-2">
         <span className={`text-[10px] font-bold uppercase tracking-widest ${styles.text} inline-flex items-center gap-1.5`}>
           <span className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
-          {scenario.kind === "bull" ? "強気" : scenario.kind === "bear" ? "弱気" : "ベース"}
+          {scenario.kind === "bull"
+            ? "強気"
+            : scenario.kind === "bear"
+              ? "弱気"
+              : scenario.kind === "yes-case"
+                ? "Yes ケース"
+                : scenario.kind === "no-case"
+                  ? "No ケース"
+                  : "ベース"}
         </span>
         <span className={`font-mono tabular text-lg font-black ${styles.text}`}>
           {scenario.probability}%
@@ -491,10 +474,10 @@ function formatPrice(v: number): string {
 
 function ShiftPanel({
   detail,
-  verdict,
+  stance,
 }: {
   detail: ForecastDetail;
-  verdict: ReturnType<typeof readVerdict>;
+  stance: Stance;
 }) {
   if (detail.shifts.length < 2) {
     return (
@@ -526,7 +509,7 @@ function ShiftPanel({
           {delta}pt
         </span>
       </div>
-      <ShiftSparkline shifts={detail.shifts} tone={verdict.tone} variant="wide" />
+      <ShiftSparkline shifts={detail.shifts} tone={stance.side} variant="wide" />
       <div className="mt-3 text-[10px] font-mono uppercase tracking-widest text-neutral-500 flex justify-between">
         <span>{first.at.slice(5).replace("T", " ")}</span>
         <span>{last.at.slice(5).replace("T", " ")}</span>
@@ -615,8 +598,13 @@ function RelatedPanel({
       </div>
       <ul className="space-y-2.5">
         {related.slice(0, 6).map((r) => {
-          const v = readVerdict(r.probability);
-          const d = dominantProbability(r.probability);
+          const s = readStance(r.probability, r.position);
+          const sideLabel =
+            s.side === "yes"
+              ? `YES・${r.yesLabel ?? "プラス"}`
+              : s.side === "no"
+                ? `NO・${r.noLabel ?? "マイナス"}`
+                : "拮抗";
           return (
             <li key={r.id}>
               <Link
@@ -627,15 +615,13 @@ function RelatedPanel({
                   {formatResolveAtJp(r.resolveAt)}
                 </span>
                 <span className="flex-1 text-[12px] font-bold text-neutral-800 truncate">
-                  {r.headline}
+                  {r.headline || r.question}
                 </span>
-                <span className={`text-[12px] font-mono tabular font-black ${v.color}`}>
-                  {d.value}%
+                <span className={`text-[12px] font-mono tabular font-black ${s.color}`}>
+                  {s.sideProbability}%
                 </span>
-                <span
-                  className={`text-[10px] font-bold tracking-widest ${v.color}`}
-                >
-                  {d.direction === "up" ? "上がる" : "下がる"}
+                <span className={`text-[10px] font-bold tracking-widest ${s.color}`}>
+                  {sideLabel}
                 </span>
               </Link>
             </li>

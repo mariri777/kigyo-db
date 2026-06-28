@@ -958,11 +958,16 @@ function readVerdict(p: number): Verdict {
 function ForecastCard({ forecast }: { forecast: ForecastSummary }) {
   const p = forecast.probability;
   const inverse = 100 - p;
-  const verdict = readVerdict(p);
+  const yes = p;
+  const no = inverse;
+  const sideFallback: "yes" | "no" = p >= 50 ? "yes" : "no";
+  const position = forecast.position ?? sideFallback;
+  const yesActive = position === "yes";
+  const noActive = position === "no";
+  const tone: "up" | "down" = position === "yes" ? "up" : "down";
+  const yesLabel = forecast.yesLabel ?? "プラス";
+  const noLabel = forecast.noLabel ?? "マイナス";
   const shift = computeShiftDelta(forecast.shifts);
-  const upLabel = "上がる";
-  const downLabel = "下がる";
-  const dominantP = verdict.tone === "down" ? inverse : p;
 
   return (
     <Link
@@ -980,63 +985,74 @@ function ForecastCard({ forecast }: { forecast: ForecastSummary }) {
         </span>
       </div>
 
-      {/* 見出し */}
+      {/* Issue */}
       <div className="px-5 pt-4">
         <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-1">
-          AI の結論
+          ISSUE
         </div>
-        <h3 className="font-black text-lg sm:text-xl leading-snug tracking-tight text-neutral-900 group-hover:text-neutral-700 transition">
-          {forecast.headline}
+        <h3 className="font-black text-base sm:text-lg leading-snug tracking-tight text-neutral-900 group-hover:text-neutral-700 transition">
+          {forecast.question}
         </h3>
+        {forecast.headline && (
+          <div className="mt-1 text-[12px] font-bold text-neutral-600 leading-snug">
+            AIの結論: {forecast.headline}
+          </div>
+        )}
       </div>
 
-      {/* メインビジュアル: 判定バッジ + 大きな確率 + ゲージ */}
+      {/* Polymarket 風 Yes / No 大型表示 */}
       <div className="px-5 pt-4 pb-4">
-        <div className={`rounded-xl ring-1 ${verdict.ring} ${verdict.bg} px-4 py-4`}>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <VerdictGlyph tone={verdict.tone} />
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">
-                  方向性
-                </div>
-                <div className={`text-lg sm:text-xl font-black tracking-tight ${verdict.color}`}>
-                  {verdict.label}
-                </div>
+        <div className="grid grid-cols-2 gap-2">
+          {yesActive ? (
+            <div className="rounded-xl ring-2 ring-emerald-500/60 bg-emerald-50 py-3 px-4 flex flex-col">
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-emerald-700">
+                YES ・ {yesLabel}
               </div>
-            </div>
-            <div className="text-right">
-              <div className="flex items-baseline gap-1 justify-end">
-                <span
-                  className={`font-mono tabular text-4xl sm:text-5xl font-black tracking-tight ${verdict.color}`}
-                >
-                  {dominantP}
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-mono tabular text-3xl sm:text-4xl font-black tracking-tight text-emerald-600">
+                  {yes}
                 </span>
-                <span className={`text-xl font-bold ${verdict.color}`}>%</span>
-              </div>
-              <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
-                {verdict.tone === "down" ? downLabel : upLabel} の確率
+                <span className="text-lg font-bold text-emerald-600">%</span>
               </div>
             </div>
-          </div>
-
-          {/* バー */}
-          <div className="mt-4">
-            <div className="h-2.5 rounded-full overflow-hidden flex bg-white/60">
-              <div className="h-full bg-emerald-500" style={{ width: `${p}%` }} />
-              <div className="h-full bg-rose-500" style={{ width: `${inverse}%` }} />
+          ) : (
+            <div className="rounded-xl bg-neutral-50 ring-1 ring-neutral-200 py-3 px-4 flex flex-col">
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-neutral-500">
+                YES ・ {yesLabel}
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-mono tabular text-3xl sm:text-4xl font-black tracking-tight text-neutral-500">
+                  {yes}
+                </span>
+                <span className="text-lg font-bold text-neutral-400">%</span>
+              </div>
             </div>
-            <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
-              <span className="text-emerald-700 inline-flex items-center gap-1">
-                <TrendingUp className="w-3 h-3" />
-                {upLabel} <span className="font-mono tabular">{p}%</span>
-              </span>
-              <span className="text-rose-700 inline-flex items-center gap-1">
-                <TrendingDown className="w-3 h-3" />
-                {downLabel} <span className="font-mono tabular">{inverse}%</span>
-              </span>
+          )}
+          {noActive ? (
+            <div className="rounded-xl ring-2 ring-rose-500/60 bg-rose-50 py-3 px-4 flex flex-col">
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-rose-700">
+                NO ・ {noLabel}
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-mono tabular text-3xl sm:text-4xl font-black tracking-tight text-rose-600">
+                  {no}
+                </span>
+                <span className="text-lg font-bold text-rose-600">%</span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="rounded-xl bg-neutral-50 ring-1 ring-neutral-200 py-3 px-4 flex flex-col">
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-widest text-neutral-500">
+                NO ・ {noLabel}
+              </div>
+              <div className="flex items-baseline gap-1 mt-1">
+                <span className="font-mono tabular text-3xl sm:text-4xl font-black tracking-tight text-neutral-500">
+                  {no}
+                </span>
+                <span className="text-lg font-bold text-neutral-400">%</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1057,7 +1073,7 @@ function ForecastCard({ forecast }: { forecast: ForecastSummary }) {
               </div>
               {shift && <ShiftBadge delta={shift.delta} />}
             </div>
-            <ShiftSparkline shifts={forecast.shifts} tone={verdict.tone} />
+            <ShiftSparkline shifts={forecast.shifts} tone={tone} />
           </div>
         )}
         <div className="px-5 py-3 flex items-center justify-between text-[11px] font-bold tracking-wide">

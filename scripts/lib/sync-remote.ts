@@ -21,15 +21,15 @@ import { ALL_TASKS } from "../tasks/index.js";
 import type { Task } from "./task.js";
 
 /** タスクは「出力 → SQL 配列」を返す sqlFor() を実装する */
-export type SyncCapable<O = unknown> = Task & {
+export type SyncCapable<O = unknown> = {
   /** 1 件の出力を本番 D1 に書く SQL UPSERT 文の配列を返す */
   sqlFor(key: string, output: O): string[];
   /** 反映先テーブル名(同じテーブルへの SQL は同じファイルにまとめる) */
   remoteTable: string;
 };
 
-export function isSyncCapable(task: Task): task is SyncCapable {
-  return typeof (task as SyncCapable).sqlFor === "function";
+export function isSyncCapable(task: Task): task is Task & SyncCapable {
+  return typeof (task as Task & Partial<SyncCapable>).sqlFor === "function";
 }
 
 type LakeFile = { task: string; key: string; output: unknown };

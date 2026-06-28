@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentAdmin } from "@/server/auth/session";
+import { Toaster } from "@/components/ui/sonner";
 import { AdminAccountMenu } from "./AdminAccountMenu";
 
 // 管理画面の chrome は公開サイトの (main)/layout.tsx から完全に独立している。
@@ -53,6 +54,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
       </header>
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-10">{children}</main>
+      <Toaster richColors position="bottom-right" />
     </div>
   );
 }

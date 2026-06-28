@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentAdmin } from "@/server/auth/session";
@@ -5,31 +6,21 @@ import { getDb } from "@/server/db/client";
 import { listUsers } from "@/server/repo/userRepo";
 import { CreateUserForm } from "./CreateUserForm";
 import { DeleteUserButton } from "./DeleteUserButton";
+import { UsersFlashToast } from "./UsersFlashToast";
 
 export const dynamic = "force-dynamic";
 
-const DELETE_MESSAGES: Record<string, { tone: "ok" | "err"; text: string }> = {
-  "1": { tone: "ok", text: "ユーザーを削除しました。" },
-  self: { tone: "err", text: "自分自身は削除できません。" },
-  last: { tone: "err", text: "最後の管理者ユーザーは削除できません。" },
-  missing: { tone: "err", text: "対象のユーザーが見つかりませんでした。" },
-  invalid: { tone: "err", text: "削除リクエストが不正です。" },
-};
-
-export default async function UsersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ created?: string; deleted?: string }>;
-}) {
+export default async function UsersPage() {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
   const db = await getDb();
   const users = await listUsers(db);
-  const { created, deleted } = await searchParams;
-  const deletedMessage = deleted ? DELETE_MESSAGES[deleted] : undefined;
 
   return (
     <div className="max-w-3xl">
+      <Suspense fallback={null}>
+        <UsersFlashToast />
+      </Suspense>
       <Link
         href="/admin"
         className="inline-block text-xs text-muted-foreground hover:text-foreground transition mb-6"
@@ -37,24 +28,6 @@ export default async function UsersPage({
         ← 記事一覧へ
       </Link>
       <h1 className="text-2xl font-bold tracking-tight mb-6">管理者ユーザー</h1>
-
-      {created === "1" && (
-        <div className="mb-6 bg-muted border-l-2 border-foreground rounded-md p-3 text-sm">
-          新しいユーザーを発行しました。
-        </div>
-      )}
-
-      {deletedMessage && (
-        <div
-          className={`mb-6 border-l-2 rounded-md p-3 text-sm ${
-            deletedMessage.tone === "ok"
-              ? "bg-muted border-foreground"
-              : "bg-red-500/10 border-red-400 text-red-300"
-          }`}
-        >
-          {deletedMessage.text}
-        </div>
-      )}
 
       <section className="bg-surface border border-border rounded-md overflow-hidden mb-10">
         <table className="w-full text-sm">

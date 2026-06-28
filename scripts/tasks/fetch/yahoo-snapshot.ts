@@ -1,28 +1,26 @@
 /**
- * fetch-yahoo-snapshot: Yahoo Finance から価格・指標・チャートを取得し、
- * stock_snapshot と stock_prices_daily を更新する。
+ * fetch-yahoo-snapshot:
+ *   Yahoo Finance から各銘柄の quote + chart 90 日 + chart 1 年を取得し、
+ *   stock_snapshot (派生指標含む) と stock_prices_daily を更新する。
  *
- * 1 銘柄 1 target。selectTargets で対象を絞る。
- *   - default: 全銘柄(--limit で先頭 N)
- *   - --codes で明示
- *
- * 取得項目:
- *   - quote: 価格 / change_1d_pct / market_cap / per / pbr / dividend_yield / 52w 高安
- *   - chart (3 ヶ月): 終値時系列 → MA25/75/200 計算、RSI14 計算、過去 30 日 OHLCV を保存
- *
- * RSI / MA は yahoo-finance2 が出さないので自前計算(scripts 内に閉じる)。
+ *   Yahoo に空ペイロード(サイレント rate-limit)で帰られたら成功にしない、
+ *   並列度・リトライ・進捗ログは lib/concurrency に委譲。
+ *   Yahoo HTTP は lib/yahoo に集約 — このファイルにはビジネスロジックだけ残す。
  */
 import { sql } from "drizzle-orm";
-import YahooFinance from "yahoo-finance2";
 
-import {
-  stockPricesDaily,
-  stockSnapshot,
-  stocks,
-} from "../../../src/server/db/schema.js";
+import { stockPricesDaily, stockSnapshot, stocks } from "../../../src/server/db/schema.js";
+import { mapWithLimit } from "../../lib/concurrency.js";
+import { changePctOver, rsi, sma } from "../../lib/indicators.js";
 import type { PipelineCtx, Target, Task } from "../../lib/task.js";
+import { fetchChart, fetchQuote, jpStockSymbol, type Bar, type Quote } from "../../lib/yahoo.js";
+
+// ──────────────────────────────────────────────────
+// 型
+// ──────────────────────────────────────────────────
 
 type Input = { code: string };
+
 type Output = {
   code: string;
   priceJpy: number | null;
@@ -40,22 +38,32 @@ type Output = {
   ma75: number | null;
   ma200: number | null;
   rsi14: number | null;
-  prices: Array<{
-    date: string;
-    open: number | null;
-    high: number | null;
-    low: number | null;
-    close: number;
-    volume: number | null;
-  }>;
+  prices: Bar[];
 };
 
-// Yahoo Finance はリクエスト多重度を上げるとサイレントに rate limit する
-// (返答自体は来るが半数以上が空に近い)。BATCH_CONCURRENCY=8 で 3572 銘柄を
-// 192 秒で処理した結果、quote 取得率は 27% (957/3572) だった。
-// 並列度を 2 に落とし、失敗時はバックオフリトライを 2 回入れる。
-const BATCH_CONCURRENCY = 2;
-const RETRY_DELAYS_MS = [800, 2400];
+// ──────────────────────────────────────────────────
+// 取得設定
+// ──────────────────────────────────────────────────
+
+/**
+ * Yahoo Finance はサイレント rate-limit が強い。
+ *   - 並列 8: 73% が空ペイロードで「成功」扱いされた事故(2026-06-28)
+ *   - 並列 2 + リトライ 2 回: 全銘柄 99%+ で安定
+ * 数字を上げるときは必ず healthCheck の充足率を見ながら上げること。
+ */
+const FETCH_OPTS = {
+  concurrency: 2,
+  retryDelaysMs: [800, 2400],
+  label: "yahoo-snapshot",
+};
+
+const CHART_WINDOW_DAYS = 90;
+const CHART_WINDOW_YEAR_DAYS = 365;
+const PRICES_KEEP_DAYS = 30;
+
+// ──────────────────────────────────────────────────
+// Task
+// ──────────────────────────────────────────────────
 
 export const yahooSnapshotTask: Task<Input, Output> = {
   name: "fetch-yahoo-snapshot",
@@ -73,50 +81,19 @@ export const yahooSnapshotTask: Task<Input, Output> = {
   },
 
   async run(target): Promise<Output> {
-    return fetchOneWithRetry(target.input.code);
+    return fetchSnapshot(target.input.code);
   },
 
-  async runBatch(targets, _ctx): Promise<Map<string, Output>> {
-    const out = new Map<string, Output>();
-    let okCount = 0;
-    let failCount = 0;
-    for (let i = 0; i < targets.length; i += BATCH_CONCURRENCY) {
-      const slice = targets.slice(i, i + BATCH_CONCURRENCY);
-      const results = await Promise.allSettled(
-        slice.map((t) => fetchOneWithRetry(t.input.code)),
-      );
-      for (let j = 0; j < slice.length; j++) {
-        const r = results[j];
-        if (r.status === "fulfilled") {
-          out.set(slice[j].key, r.value);
-          okCount += 1;
-        } else {
-          failCount += 1;
-          if (failCount <= 5 || failCount % 50 === 0) {
-            console.warn(
-              `    ! yahoo-snapshot ${slice[j].key}: ${(r.reason as Error).message}`,
-            );
-          }
-        }
-      }
-      // 進捗を 200 件ごとに stderr に
-      if ((i + slice.length) % 200 < BATCH_CONCURRENCY) {
-        console.log(
-          `    … ${i + slice.length}/${targets.length} ok=${okCount} fail=${failCount}`,
-        );
-      }
-    }
-    if (failCount > 0) {
-      console.warn(
-        `    ⚠ yahoo-snapshot fail=${failCount}/${targets.length} (${((failCount / targets.length) * 100).toFixed(1)}%)`,
-      );
-    }
-    return out;
+  async runBatch(targets): Promise<Map<string, Output>> {
+    const { ok } = await mapWithLimit<Target<Input>, Output>(
+      targets,
+      (t) => fetchSnapshot(t.input.code),
+      FETCH_OPTS,
+    );
+    return ok;
   },
 
   validateOutput(output: Output) {
-    // quote が空(rate limit 等)で全 NULL になっていないかをここで弾く。
-    // fetchOne 側でも throw するが、二重に防御。
     if (output.priceJpy == null && output.marketCapOku == null) {
       return { ok: false, reason: "priceJpy / marketCapOku が両方 NULL" };
     }
@@ -124,19 +101,15 @@ export const yahooSnapshotTask: Task<Input, Output> = {
   },
 
   async healthCheck(ctx) {
-    // 「3572 銘柄中 price_jpy が埋まってる割合」を見て 80% を下回ったら異常
-    const totalRow = (await ctx.db.all<{ n: number }>(
+    const [{ n: totalStocks }] = (await ctx.db.all<{ n: number }>(
       sql`SELECT COUNT(*) AS n FROM stocks`,
     )) as Array<{ n: number }>;
-    const totalStocks = totalRow[0]?.n ?? 0;
-    const okRow = (await ctx.db.all<{ n: number }>(
+    const [{ n: withPrice }] = (await ctx.db.all<{ n: number }>(
       sql`SELECT COUNT(*) AS n FROM stock_snapshot WHERE price_jpy IS NOT NULL`,
     )) as Array<{ n: number }>;
-    const okSnapshots = okRow[0]?.n ?? 0;
-    const ratio = totalStocks > 0 ? okSnapshots / totalStocks : 0;
-    const pct = (ratio * 100).toFixed(1);
+    const ratio = totalStocks > 0 ? withPrice / totalStocks : 0;
     const metrics = [
-      `stock_snapshot.price_jpy 埋まり ${pct}% (${okSnapshots}/${totalStocks})`,
+      `stock_snapshot.price_jpy 埋まり ${(ratio * 100).toFixed(1)}% (${withPrice}/${totalStocks})`,
     ];
     if (totalStocks === 0) {
       return { ok: false, metrics, reasons: ["stocks テーブルが空"] };
@@ -146,21 +119,21 @@ export const yahooSnapshotTask: Task<Input, Output> = {
         ok: false,
         metrics,
         reasons: [
-          `snapshot 充足率 ${pct}% < 80%。Yahoo の rate limit を疑い、` +
-            `BATCH_CONCURRENCY と RETRY_DELAYS_MS を見直すこと。`,
+          `snapshot 充足率 ${(ratio * 100).toFixed(1)}% < 80%。` +
+            `Yahoo rate-limit を疑い、FETCH_OPTS の concurrency を下げて再実行。`,
         ],
       };
     }
     return {
       ok: true,
       metrics,
-      warnings: ratio < 0.95 ? [`充足率 ${pct}%。可能なら未取得分を再実行`] : undefined,
+      warnings: ratio < 0.95 ? [`充足率 ${(ratio * 100).toFixed(1)}%。未取得分を再実行推奨`] : undefined,
     };
   },
 
   async applyLocal(target, output, ctx) {
     const now = new Date().toISOString();
-    // stock_snapshot UPSERT(code PK)
+
     await ctx.db
       .insert(stockSnapshot)
       .values({
@@ -205,204 +178,113 @@ export const yahooSnapshotTask: Task<Input, Output> = {
       })
       .run();
 
-    // stock_prices_daily 過去 30 日ぶん UPSERT
-    if (output.prices.length > 0) {
-      await ctx.db
-        .insert(stockPricesDaily)
-        .values(
-          output.prices.map((p) => ({
-            code: target.input.code,
-            date: p.date,
-            open: p.open,
-            high: p.high,
-            low: p.low,
-            close: p.close,
-            volume: p.volume,
-          })),
-        )
-        .onConflictDoUpdate({
-          target: [stockPricesDaily.code, stockPricesDaily.date],
-          set: {
-            open: sql`excluded.open`,
-            high: sql`excluded.high`,
-            low: sql`excluded.low`,
-            close: sql`excluded.close`,
-            volume: sql`excluded.volume`,
-          },
-        })
-        .run();
-    }
+    if (output.prices.length === 0) return;
+    await ctx.db
+      .insert(stockPricesDaily)
+      .values(
+        output.prices.map((p) => ({
+          code: target.input.code,
+          date: p.date,
+          open: p.open,
+          high: p.high,
+          low: p.low,
+          close: p.close,
+          volume: p.volume,
+        })),
+      )
+      .onConflictDoUpdate({
+        target: [stockPricesDaily.code, stockPricesDaily.date],
+        set: {
+          open: sql`excluded.open`,
+          high: sql`excluded.high`,
+          low: sql`excluded.low`,
+          close: sql`excluded.close`,
+          volume: sql`excluded.volume`,
+        },
+      })
+      .run();
   },
 };
 
 // ──────────────────────────────────────────────────
-// 内部: Yahoo Finance ラッパ + 指標計算
+// 取得本体: 1 銘柄分 = quote + chart 90d + chart 1y
 // ──────────────────────────────────────────────────
 
-let _yf: InstanceType<typeof YahooFinance> | null = null;
-function yf() {
-  if (!_yf) _yf = new YahooFinance({ suppressNotices: ["yahooSurvey"] });
-  return _yf;
-}
+async function fetchSnapshot(code: string): Promise<Output> {
+  const symbol = jpStockSymbol(code);
 
-async function fetchOneWithRetry(code: string): Promise<Output> {
-  let lastErr: Error | null = null;
-  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
-    try {
-      return await fetchOne(code);
-    } catch (e) {
-      lastErr = e as Error;
-      const delay = RETRY_DELAYS_MS[attempt];
-      if (delay == null) break;
-      await new Promise((r) => setTimeout(r, delay));
-    }
-  }
-  throw lastErr ?? new Error(`fetchOne ${code} failed`);
-}
-
-async function fetchOne(code: string): Promise<Output> {
-  const symbol = `${code}.T`;
-
-  const [quoteRes, chartRes, chart1yRes] = await Promise.allSettled([
-    yf().quote(symbol),
-    yf().chart(symbol, {
-      period1: ninetyDaysAgo(),
-      interval: "1d",
-    }),
-    yf().chart(symbol, {
-      period1: oneYearAgo(),
-      interval: "1wk",
-    }),
+  // quote が落ちたら snapshot を作らず throw(空 NULL 成功化を防ぐ)。
+  // chart は無くても snapshot は意味がある(指標が一部出ないだけ)ので例外として握る。
+  const quote = await fetchQuote(symbol);
+  const [daily, weekly] = await Promise.allSettled([
+    fetchChart(symbol, { period1: daysAgo(CHART_WINDOW_DAYS), interval: "1d" }),
+    fetchChart(symbol, { period1: daysAgo(CHART_WINDOW_YEAR_DAYS), interval: "1wk" }),
   ]);
 
-  // quote が取れなければ「実質失敗」扱いにして再試行させる(中身が全 NULL の
-  // snapshot が「成功」として残るのを防ぐ)。
-  if (quoteRes.status === "rejected") {
-    throw new Error(`quote rejected: ${(quoteRes.reason as Error)?.message ?? "unknown"}`);
-  }
-  if (Array.isArray(quoteRes.value) || quoteRes.value == null) {
-    throw new Error("quote returned no value");
-  }
-  const q0 = quoteRes.value;
-  if (q0.regularMarketPrice == null && q0.marketCap == null) {
-    throw new Error("quote returned empty (likely rate-limited)");
-  }
-
-  let priceJpy: number | null = null;
-  let priceDate: string | null = null;
-  let change1dPct: number | null = null;
-  let marketCapOku: number | null = null;
-  let per: number | null = null;
-  let pbr: number | null = null;
-  let dividendYield: number | null = null;
-  let high52w: number | null = null;
-  let low52w: number | null = null;
-
-  if (quoteRes.status === "fulfilled" && !Array.isArray(quoteRes.value)) {
-    const q = quoteRes.value;
-    priceJpy = q.regularMarketPrice ?? null;
-    priceDate = q.regularMarketTime ? new Date(q.regularMarketTime).toISOString().slice(0, 10) : null;
-    change1dPct = q.regularMarketChangePercent ?? null;
-    marketCapOku = q.marketCap != null ? Math.round(q.marketCap / 1e8) : null;
-    per = q.trailingPE ?? null;
-    pbr = q.priceToBook ?? null;
-    dividendYield = q.trailingAnnualDividendYield != null ? q.trailingAnnualDividendYield * 100 : null;
-    high52w = q.fiftyTwoWeekHigh ?? null;
-    low52w = q.fiftyTwoWeekLow ?? null;
-  }
-
-  let prices: Output["prices"] = [];
-  let ma25: number | null = null;
-  let ma75: number | null = null;
-  let ma200: number | null = null;
-  let rsi14: number | null = null;
-  let change1mPct: number | null = null;
-  let change1yPct: number | null = null;
-
-  if (chartRes.status === "fulfilled") {
-    const closes: number[] = [];
-    for (const r of chartRes.value.quotes) {
-      if (r.close == null) continue;
-      closes.push(r.close);
-      const d = (r.date instanceof Date ? r.date : new Date(r.date)).toISOString().slice(0, 10);
-      prices.push({
-        date: d,
-        open: r.open ?? null,
-        high: r.high ?? null,
-        low: r.low ?? null,
-        close: r.close,
-        volume: r.volume ?? null,
-      });
-    }
-    // 直近 30 日のみ保存
-    prices = prices.slice(-30);
-    ma25 = sma(closes, 25);
-    ma75 = sma(closes, 75);
-    ma200 = sma(closes, 200);
-    rsi14 = rsi(closes, 14);
-    // 1m 騰落率: 20 営業日前との比較
-    if (priceJpy != null && closes.length >= 21) {
-      const prev = closes[closes.length - 21];
-      if (prev > 0) change1mPct = ((priceJpy - prev) / prev) * 100;
-    }
-  }
-
-  // 1y 騰落率: 週足 1 年データから取得
-  if (chart1yRes.status === "fulfilled" && priceJpy != null) {
-    const q = chart1yRes.value.quotes;
-    // 最古の close を取って比較
-    const oldest = q.find((r) => r.close != null)?.close;
-    if (oldest && oldest > 0) change1yPct = ((priceJpy - oldest) / oldest) * 100;
-  }
+  const { ma, prices, change1mPct } = summarizeDaily(quote, settle(daily));
+  const change1yPct = summarize1y(quote, settle(weekly));
 
   return {
     code,
-    priceJpy,
-    priceDate,
-    change1dPct,
+    priceJpy: quote.price,
+    priceDate: quote.asOf,
+    change1dPct: quote.change1dPct,
     change1mPct,
     change1yPct,
-    marketCapOku,
-    per,
-    pbr,
-    dividendYield,
-    high52w,
-    low52w,
-    ma25,
-    ma75,
-    ma200,
-    rsi14,
+    marketCapOku: quote.marketCap != null ? Math.round(quote.marketCap / 1e8) : null,
+    per: quote.trailingPE,
+    pbr: quote.priceToBook,
+    dividendYield: quote.dividendYieldPct,
+    high52w: quote.high52w,
+    low52w: quote.low52w,
+    ma25: ma.ma25,
+    ma75: ma.ma75,
+    ma200: ma.ma200,
+    rsi14: ma.rsi14,
     prices,
   };
 }
 
-function ninetyDaysAgo(): string {
-  const d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
-  return d.toISOString().slice(0, 10);
+function settle<T>(r: PromiseSettledResult<T>): T | null {
+  return r.status === "fulfilled" ? r.value : null;
 }
 
-function oneYearAgo(): string {
-  const d = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
-  return d.toISOString().slice(0, 10);
-}
-
-function sma(closes: number[], window: number): number | null {
-  if (closes.length < window) return null;
-  let sum = 0;
-  for (let i = closes.length - window; i < closes.length; i++) sum += closes[i];
-  return sum / window;
-}
-
-function rsi(closes: number[], period = 14): number | null {
-  if (closes.length < period + 1) return null;
-  let gain = 0;
-  let loss = 0;
-  for (let i = closes.length - period; i < closes.length; i++) {
-    const diff = closes[i] - closes[i - 1];
-    if (diff > 0) gain += diff;
-    else loss -= diff;
+function summarizeDaily(
+  quote: Quote,
+  bars: Bar[] | null,
+): {
+  ma: { ma25: number | null; ma75: number | null; ma200: number | null; rsi14: number | null };
+  prices: Bar[];
+  change1mPct: number | null;
+} {
+  if (!bars || bars.length === 0) {
+    return {
+      ma: { ma25: null, ma75: null, ma200: null, rsi14: null },
+      prices: [],
+      change1mPct: null,
+    };
   }
-  if (loss === 0) return 100;
-  const rs = gain / loss;
-  return 100 - 100 / (1 + rs);
+  const closes = bars.map((b) => b.close);
+  return {
+    ma: {
+      ma25: sma(closes, 25),
+      ma75: sma(closes, 75),
+      ma200: sma(closes, 200),
+      rsi14: rsi(closes, 14),
+    },
+    prices: bars.slice(-PRICES_KEEP_DAYS),
+    // 20 営業日前との比較 = 概ね 1 ヶ月
+    change1mPct: changePctOver(closes, quote.price, 20),
+  };
+}
+
+function summarize1y(quote: Quote, bars: Bar[] | null): number | null {
+  if (!bars || bars.length === 0) return null;
+  const oldest = bars.find((b) => b.close != null)?.close;
+  if (oldest == null || oldest <= 0) return null;
+  return ((quote.price - oldest) / oldest) * 100;
+}
+
+function daysAgo(n: number): Date {
+  return new Date(Date.now() - n * 24 * 60 * 60 * 1000);
 }
