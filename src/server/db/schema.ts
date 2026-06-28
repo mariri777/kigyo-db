@@ -293,36 +293,82 @@ export const adminSessions = sqliteTable("admin_sessions", {
   idxUserId: index("idx_admin_sessions_user_id").on(t.userId),
 }));
 
-export const posts = sqliteTable("posts", {
+// ─── 記事カテゴリ (decoding-earnings / industry-overview / theme-dive / primer) ───
+
+export const categories = sqliteTable("categories", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull(),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+}, (t) => ({
+  uqSlug: uniqueIndex("uq_categories_slug").on(t.slug),
+}));
+
+// ─── 記事 (articles) ──────────────────────────────────
+//   v2 の記事フォーマット (Block[] JSON + 派生 HTML キャッシュ)
+//   subject: 主役 (company/industry/theme/metric) を 1 つ
+//   actions: 末尾「この記事のあとに」の 3 リンク
+//   image: hero サムネ (R2/MinIO のオブジェクトキー)
+//
+//   標準準拠フィールド: id / slug (unique) / title / lede / status /
+//     published_at / scheduled_at / created_at / updated_at / author
+
+export const articles = sqliteTable("articles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   slug: text("slug").notNull(),
   title: text("title").notNull(),
   lede: text("lede").notNull(),
-  bodyHtml: text("body_html").notNull(),
-  category: text("category", {
-    enum: ["earnings", "industry-watch", "analysis", "disclosure", "primer"],
+
+  // Hero 画像 (MinIO/R2 のキー、不要なら null)
+  heroImageKey: text("hero_image_key"),
+  heroImageAlt: text("hero_image_alt"),
+  heroImageCredit: text("hero_image_credit"),
+
+  // 主役 (1記事1つ)
+  subjectKind: text("subject_kind", {
+    enum: ["company", "industry", "theme", "metric"],
   }).notNull(),
-  status: text("status", { enum: ["draft", "published"] })
+  /** company: 銘柄コード / industry/theme/metric: slug */
+  subjectRef: text("subject_ref").notNull(),
+  /** 一覧で都度 join しないための非正規化キャッシュ */
+  subjectName: text("subject_name").notNull(),
+
+  // 本文 (Tiptap JSON) + 派生 HTML
+  contentJson: text("content_json").notNull(),
+  contentHtml: text("content_html").notNull(),
+
+  readMinutes: integer("read_minutes").notNull().default(3),
+
+  // 末尾アクション 3 つ (JSON: [{label, hint?, href, iconKey}, ...] 最大3)
+  actionsJson: text("actions_json").notNull().default("[]"),
+
+  // カテゴリ (1記事1カテゴリ)
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => categories.id, { onDelete: "restrict" }),
+
+  // 公開状態
+  status: text("status", { enum: ["draft", "published", "scheduled", "archived"] })
     .notNull()
     .default("draft"),
-  author: text("author", { enum: ["editor", "ai-editor"] })
-    .notNull()
-    .default("editor"),
-  readTimeMin: integer("read_time_min").notNull().default(3),
-  fiscalPeriod: text("fiscal_period"),
-  relatedStocksJson: text("related_stocks_json").notNull().default("[]"),
-  relatedIndustriesJson: text("related_industries_json").notNull().default("[]"),
   publishedAt: text("published_at"),
-  authorUserId: integer("author_user_id").references(() => adminUsers.id, {
+  scheduledAt: text("scheduled_at"),
+
+  // 著者
+  authorId: integer("author_id").references(() => adminUsers.id, {
     onDelete: "set null",
   }),
+
   createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 }, (t) => ({
-  uqSlug: uniqueIndex("uq_posts_slug").on(t.slug),
-  idxStatusPublished: index("idx_posts_status_published_at").on(t.status, t.publishedAt),
-  idxCategory: index("idx_posts_category").on(t.category),
+  uqSlug: uniqueIndex("uq_articles_slug").on(t.slug),
+  idxStatusPublished: index("idx_articles_status_published_at").on(t.status, t.publishedAt),
+  idxCategory: index("idx_articles_category").on(t.categoryId),
+  idxSubject: index("idx_articles_subject").on(t.subjectKind, t.subjectRef),
 }));
+
+// ─── タグ ──────────────────────────────────────────────
 
 export const tags = sqliteTable("tags", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -333,16 +379,44 @@ export const tags = sqliteTable("tags", {
   uqSlug: uniqueIndex("uq_tags_slug").on(t.slug),
 }));
 
-export const postTags = sqliteTable("post_tags", {
-  postId: integer("post_id")
+export const articleTags = sqliteTable("article_tags", {
+  articleId: integer("article_id")
     .notNull()
-    .references(() => posts.id, { onDelete: "cascade" }),
+    .references(() => articles.id, { onDelete: "cascade" }),
   tagId: integer("tag_id")
     .notNull()
     .references(() => tags.id, { onDelete: "cascade" }),
 }, (t) => ({
-  pk: primaryKey({ columns: [t.postId, t.tagId] }),
-  idxTagId: index("idx_post_tags_tag_id").on(t.tagId),
+  pk: primaryKey({ columns: [t.articleId, t.tagId] }),
+  idxTagId: index("idx_article_tags_tag_id").on(t.tagId),
+}));
+
+// ─── 記事 ↔ 銘柄 ──────────────────────────────────────
+//   関連企業として記事末尾サイド・本文中ticker に出す
+
+export const articleCompanies = sqliteTable("article_companies", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  /** 銘柄コード ("9984" など) */
+  code: text("code").notNull(),
+  position: integer("position").notNull().default(0),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.articleId, t.code] }),
+  idxCode: index("idx_article_companies_code").on(t.code),
+}));
+
+// ─── 記事 ↔ 業界 ──────────────────────────────────────
+
+export const articleIndustries = sqliteTable("article_industries", {
+  articleId: integer("article_id")
+    .notNull()
+    .references(() => articles.id, { onDelete: "cascade" }),
+  industrySlug: text("industry_slug").notNull(),
+  position: integer("position").notNull().default(0),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.articleId, t.industrySlug] }),
+  idxIndustry: index("idx_article_industries_slug").on(t.industrySlug),
 }));
 
 // ─────────────────────────────────────────────────────────

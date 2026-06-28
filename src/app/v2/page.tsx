@@ -668,15 +668,11 @@ function MarketSignals() {
   return (
     <section id="signals" className="scroll-mt-20">
       <div className="flex items-end justify-between gap-3 pb-2 border-b-2 border-neutral-900">
-        <h2 className="text-xl sm:text-2xl font-black tracking-tight inline-flex items-center gap-2">
-          シグナル
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-rose-500">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-            LIVE
-          </span>
+        <h2 className="text-xl sm:text-2xl font-black tracking-tight">
+          本日のハイライト
         </h2>
         <span className="text-[11px] font-mono text-neutral-500 uppercase tracking-widest">
-          DB自動生成 / 当日分
+          当日分 / DB自動生成
         </span>
       </div>
       <ul className="mt-3 divide-y divide-neutral-200 bg-white rounded-xl shadow-sm overflow-hidden">
@@ -686,9 +682,6 @@ function MarketSignals() {
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[11px] text-neutral-500 font-mono">
-        ※ シグナルは記事ではありません。DBの更新イベントを 1 行に要約したものです。
-      </p>
     </section>
   );
 }

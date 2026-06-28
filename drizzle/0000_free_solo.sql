@@ -20,6 +20,71 @@ CREATE TABLE `admin_users` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `uq_admin_users_email` ON `admin_users` (`email`);--> statement-breakpoint
+CREATE TABLE `article_companies` (
+	`article_id` integer NOT NULL,
+	`code` text NOT NULL,
+	`position` integer DEFAULT 0 NOT NULL,
+	PRIMARY KEY(`article_id`, `code`),
+	FOREIGN KEY (`article_id`) REFERENCES `articles`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `idx_article_companies_code` ON `article_companies` (`code`);--> statement-breakpoint
+CREATE TABLE `article_industries` (
+	`article_id` integer NOT NULL,
+	`industry_slug` text NOT NULL,
+	`position` integer DEFAULT 0 NOT NULL,
+	PRIMARY KEY(`article_id`, `industry_slug`),
+	FOREIGN KEY (`article_id`) REFERENCES `articles`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `idx_article_industries_slug` ON `article_industries` (`industry_slug`);--> statement-breakpoint
+CREATE TABLE `article_tags` (
+	`article_id` integer NOT NULL,
+	`tag_id` integer NOT NULL,
+	PRIMARY KEY(`article_id`, `tag_id`),
+	FOREIGN KEY (`article_id`) REFERENCES `articles`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE INDEX `idx_article_tags_tag_id` ON `article_tags` (`tag_id`);--> statement-breakpoint
+CREATE TABLE `articles` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`slug` text NOT NULL,
+	`title` text NOT NULL,
+	`lede` text NOT NULL,
+	`hero_image_key` text,
+	`hero_image_alt` text,
+	`hero_image_credit` text,
+	`subject_kind` text NOT NULL,
+	`subject_ref` text NOT NULL,
+	`subject_name` text NOT NULL,
+	`content_json` text NOT NULL,
+	`content_html` text NOT NULL,
+	`read_minutes` integer DEFAULT 3 NOT NULL,
+	`actions_json` text DEFAULT '[]' NOT NULL,
+	`category_id` integer NOT NULL,
+	`status` text DEFAULT 'draft' NOT NULL,
+	`published_at` text,
+	`scheduled_at` text,
+	`author_id` integer,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL,
+	FOREIGN KEY (`category_id`) REFERENCES `categories`(`id`) ON UPDATE no action ON DELETE restrict,
+	FOREIGN KEY (`author_id`) REFERENCES `admin_users`(`id`) ON UPDATE no action ON DELETE set null
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_articles_slug` ON `articles` (`slug`);--> statement-breakpoint
+CREATE INDEX `idx_articles_status_published_at` ON `articles` (`status`,`published_at`);--> statement-breakpoint
+CREATE INDEX `idx_articles_category` ON `articles` (`category_id`);--> statement-breakpoint
+CREATE INDEX `idx_articles_subject` ON `articles` (`subject_kind`,`subject_ref`);--> statement-breakpoint
+CREATE TABLE `categories` (
+	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
+	`slug` text NOT NULL,
+	`name` text NOT NULL,
+	`sort_order` integer DEFAULT 0 NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_categories_slug` ON `categories` (`slug`);--> statement-breakpoint
 CREATE TABLE `companies` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`name` text NOT NULL,
@@ -151,38 +216,6 @@ CREATE TABLE `market_brief` (
 	`generated_at` text
 );
 --> statement-breakpoint
-CREATE TABLE `post_tags` (
-	`post_id` integer NOT NULL,
-	`tag_id` integer NOT NULL,
-	PRIMARY KEY(`post_id`, `tag_id`),
-	FOREIGN KEY (`post_id`) REFERENCES `posts`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`tag_id`) REFERENCES `tags`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE INDEX `idx_post_tags_tag_id` ON `post_tags` (`tag_id`);--> statement-breakpoint
-CREATE TABLE `posts` (
-	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`slug` text NOT NULL,
-	`title` text NOT NULL,
-	`lede` text NOT NULL,
-	`body_html` text NOT NULL,
-	`category` text NOT NULL,
-	`status` text DEFAULT 'draft' NOT NULL,
-	`author` text DEFAULT 'editor' NOT NULL,
-	`read_time_min` integer DEFAULT 3 NOT NULL,
-	`fiscal_period` text,
-	`related_stocks_json` text DEFAULT '[]' NOT NULL,
-	`related_industries_json` text DEFAULT '[]' NOT NULL,
-	`published_at` text,
-	`author_user_id` integer,
-	`created_at` text NOT NULL,
-	`updated_at` text NOT NULL,
-	FOREIGN KEY (`author_user_id`) REFERENCES `admin_users`(`id`) ON UPDATE no action ON DELETE set null
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `uq_posts_slug` ON `posts` (`slug`);--> statement-breakpoint
-CREATE INDEX `idx_posts_status_published_at` ON `posts` (`status`,`published_at`);--> statement-breakpoint
-CREATE INDEX `idx_posts_category` ON `posts` (`category`);--> statement-breakpoint
 CREATE TABLE `prediction_shifts` (
 	`prediction_id` integer NOT NULL,
 	`at` text NOT NULL,
