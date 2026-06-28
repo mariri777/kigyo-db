@@ -124,7 +124,9 @@ export async function runTask<I, O>(
       try {
         outputs.set(t.key, await task.run(t, ctx));
       } catch (e) {
-        failed.push({ key: t.key, reason: formatError(e) });
+        const reason = formatError(e);
+        failed.push({ key: t.key, reason });
+        process.stdout.write(`    ✗ ${t.key} (run): ${reason}\n`);
       }
     }
   }

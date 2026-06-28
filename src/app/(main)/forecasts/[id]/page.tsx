@@ -144,7 +144,6 @@ export default async function ForecastDetailPage({
 
           <aside className="lg:col-span-4 space-y-6">
             <ShiftPanel detail={detail} stance={stance} />
-            <ResolvePanel detail={detail} />
             {related.length > 0 && <RelatedPanel related={related} targetName={detail.targetName} />}
           </aside>
         </div>
@@ -216,7 +215,7 @@ function Hero({
               {isLive ? (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               ) : null}
-              {isLive ? `観測中 ・ ${remaining}` : "解決済"}
+              {isLive ? `観測中 ・ ${remaining}` : "アーカイブ"}
             </span>
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest ${confidence.color}`}>
               {confidence.label}
@@ -240,7 +239,7 @@ function Hero({
 
           <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono uppercase tracking-widest text-neutral-400">
             <span className="inline-flex items-center gap-1">
-              <Clock className="w-3 h-3" /> 答え合わせ {formatResolveAtLong(detail.resolveAt)}
+              <Clock className="w-3 h-3" /> 対象 {formatResolveAtLong(detail.resolveAt)}
             </span>
             <span className="text-neutral-600">·</span>
             <span>最終更新 {formatGeneratedAt(detail.generatedAt)}</span>
@@ -513,63 +512,6 @@ function ShiftPanel({
       <div className="mt-3 text-[10px] font-mono uppercase tracking-widest text-neutral-500 flex justify-between">
         <span>{first.at.slice(5).replace("T", " ")}</span>
         <span>{last.at.slice(5).replace("T", " ")}</span>
-      </div>
-    </aside>
-  );
-}
-
-function ResolvePanel({ detail }: { detail: ForecastDetail }) {
-  if (detail.status === "resolved") {
-    return (
-      <aside className="bg-white rounded-2xl shadow-sm p-5 space-y-2">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">
-          解決
-        </div>
-        <div className="flex items-baseline gap-3">
-          <span
-            className={`font-mono tabular text-3xl font-black ${
-              detail.outcome === "up"
-                ? "text-emerald-600"
-                : detail.outcome === "down"
-                  ? "text-rose-600"
-                  : "text-neutral-700"
-            }`}
-          >
-            {detail.outcome === "up" ? "↑" : detail.outcome === "down" ? "↓" : "→"}
-          </span>
-          <div>
-            <div className="font-bold text-sm">
-              {detail.outcome === "up"
-                ? "上がった"
-                : detail.outcome === "down"
-                  ? "下がった"
-                  : "ほぼ横ばい"}
-            </div>
-            {detail.outcomePrice != null && (
-              <div className="text-[11px] font-mono tabular text-neutral-500">
-                終値 {detail.outcomePrice.toLocaleString()}
-              </div>
-            )}
-          </div>
-        </div>
-        {detail.outcomeAt && (
-          <div className="text-[11px] font-mono tabular text-neutral-500">
-            {detail.outcomeAt.slice(0, 16).replace("T", " ")}
-          </div>
-        )}
-      </aside>
-    );
-  }
-  return (
-    <aside className="bg-gradient-to-br from-neutral-900 to-neutral-800 text-white rounded-2xl shadow-sm p-5 space-y-1">
-      <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-400">
-        答え合わせ
-      </div>
-      <div className="text-lg font-bold leading-snug">
-        {formatResolveAtLong(detail.resolveAt)}
-      </div>
-      <div className="text-[11px] font-mono uppercase tracking-widest text-emerald-300">
-        ・{timeUntilResolveJp(detail.resolveAt)}
       </div>
     </aside>
   );

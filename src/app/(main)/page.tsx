@@ -974,14 +974,14 @@ function ForecastCard({ forecast }: { forecast: ForecastSummary }) {
       href={`/forecasts/${forecast.id}`}
       className="group relative bg-white rounded-2xl shadow-sm hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden border border-neutral-100"
     >
-      {/* 上ヘッダー: 対象指数 + 答え合わせ時刻 */}
+      {/* 上ヘッダー: 対象指数 + 対象時刻 */}
       <div className="px-5 pt-4 pb-3 flex items-center justify-between border-b border-neutral-100">
         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-neutral-900 text-white text-[11px] font-bold tracking-wide">
           <Globe className="w-3 h-3" />
           {forecast.targetName}
         </span>
         <span className="text-[11px] text-neutral-500 font-mono tabular">
-          答え合わせ {formatResolveAtJp(forecast.resolveAt)}
+          対象 {formatResolveAtJp(forecast.resolveAt)}
         </span>
       </div>
 

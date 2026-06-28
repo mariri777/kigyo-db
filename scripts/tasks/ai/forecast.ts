@@ -83,7 +83,7 @@ const ScenarioSchema = z.object({
   probability: z.number().int().min(0).max(100),
   priceLow: z.number().nullable().optional(),
   priceHigh: z.number().nullable().optional(),
-  note: z.string().min(40).max(220),
+  note: z.string().min(30).max(220),
 });
 
 const ISO_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -163,6 +163,13 @@ const PROMPT = `\
 - 「絶対」「確実」「暴落」「爆上げ」のような煽り語は禁止
 - 入力 indices / marketBrief に無い数値は引用しない (捏造禁止)
 - 投資助言と読める言い回し ("買い時です" 等) は禁止
+- 読み物として人間が読みやすい日本語にすること。具体的には:
+  - 「日経 = 42,318.47、TOPIX = 2,983.12、SOX = +2.18%、USD/JPY = 152.18…」のような
+    数値の羅列・データダンプは禁止。
+  - 数値は本当に意味があるものを1段落に2つ以内、文章として自然に織り込む
+  - 「○○ = △△、××(±N%)」のような統計表記ではなく、
+    「日経は前日比+1.2%と堅調」のような自然文を使う
+  - 「key-data」kind の take を使う場合も、ダッシュボード風の数値羅列は禁止
 
 【入力】
 - indices: 主要指数のスナップショット

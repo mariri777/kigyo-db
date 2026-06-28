@@ -1,0 +1,9 @@
+id,kind,subject_kind,subject_code,subject_name,one_liner,key_metric_label,key_metric_value,key_metric_positive,source,published_at,published_at_iso,related_article_slug,score,as_of
+price-2026-06-28-3133,price_anomaly,company,3133,3133 海帆,前日比 -41.3% で急落。終値 ¥71。,前日比,-41.3%,0,stock_snapshot.change_1d_pct,15:01,2026-06-26T15:01:00+09:00,,51.322315,2026-06-28
+price-2026-06-28-3696,price_anomaly,company,3696,3696 セレス,"前日比 +20.0% で急騰。終値 ¥2,039。",前日比,+20.0%,1,stock_snapshot.change_1d_pct,15:01,2026-06-26T15:01:00+09:00,,30.011772,2026-06-28
+price-2026-06-28-2354,price_anomaly,company,2354,2354 ＹＥ　ＤＩＧＩＴＡＬ,前日比 -14.8% で急落。終値 ¥773。,前日比,-14.8%,0,stock_snapshot.change_1d_pct,15:01,2026-06-26T15:01:00+09:00,,24.77398,2026-06-28
+price-2026-06-28-3041,price_anomaly,company,3041,3041 ビューティカダンホールディングス,前日比 -14.0% で急落。終値 ¥454。,前日比,-14.0%,0,stock_snapshot.change_1d_pct,15:01,2026-06-26T15:01:00+09:00,,24.015152,2026-06-28
+price-2026-06-28-3905,price_anomaly,company,3905,3905 データセクション,"前日比 -14.0% で急落。終値 ¥4,180。",前日比,-14.0%,0,stock_snapshot.change_1d_pct,15:01,2026-06-26T15:01:00+09:00,,23.991770000000002,2026-06-28
+price-2026-06-28-2962,price_anomaly,company,2962,2962 テクニスコ,"前日比 +13.1% で急騰。終値 ¥1,888。",前日比,+13.1%,1,stock_snapshot.change_1d_pct,15:01,2026-06-26T15:01:00+09:00,,23.121631,2026-06-28
+div-2026-06-28-2491,dividend_shift,company,2491,2491 バリューコマース,配当利回り 10.6% で再評価。本日 +0.2%。,配当利回り,10.6%,1,stock_snapshot.dividend_yield,09:15,2026-06-26T09:15:00+09:00,,10.560345,2026-06-28
+div-2026-06-28-1414,dividend_shift,company,1414,1414 ショーボンドホールディングス,配当利回り 8.8% で再評価。本日 +0.5%。,配当利回り,8.8%,1,stock_snapshot.dividend_yield,09:15,2026-06-26T09:15:00+09:00,,8.7970376,2026-06-28

@@ -75,13 +75,13 @@ export default async function ForecastsIndex() {
         <section>
           <SectionTitle
             kicker="アーカイブ"
-            title="過去の予想と答え合わせ"
+            title="過去の予想"
             icon={Target}
             note={`${resolved.length}件`}
           />
           {resolved.length === 0 ? (
             <div className="mt-4 bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-neutral-500">
-              まだ解決済みの予想はありません。
+              まだアーカイブされた予想はありません。
             </div>
           ) : (
             <ul className="mt-4 divide-y divide-neutral-200 bg-white rounded-2xl shadow-sm overflow-hidden">
@@ -145,9 +145,9 @@ function Hero({
             </span>
           </h1>
           <p className="text-sm sm:text-base text-neutral-300 leading-relaxed max-w-xl">
-            主要指数の翌営業日終値が前日比プラスとなる確率を、
-            マクロ・テクニカル・センチメントの 3 視点で 6 時間ごとに再計算。
-            読み物として根拠・シナリオまで踏み込んで公開しています。
+            過去の統計と、その日の多角的なニュース分析から、
+            AI が「明日のマーケットがどう動くか」をガチで予想します。
+            日々の地合いを踏まえて、毎晩アップデート。
           </p>
           {latestGeneratedAt && (
             <div className="text-[11px] font-mono tracking-widest text-neutral-400">
@@ -273,7 +273,7 @@ function LiveCard({ forecast }: { forecast: ForecastSummary }) {
         )}
         <div className="px-5 py-3 flex items-center justify-between text-[11px] font-bold tracking-wide">
           <span className="text-neutral-500 font-mono tabular">
-            答え合わせ {formatResolveAtJp(forecast.resolveAt)}
+            対象 {formatResolveAtJp(forecast.resolveAt)}
           </span>
           <span className="text-neutral-900 inline-flex items-center gap-1 group-hover:text-emerald-700 transition">
             根拠とシナリオを読む
@@ -313,7 +313,7 @@ function ResolvedRow({ forecast }: { forecast: ForecastSummary }) {
             {forecast.headline || forecast.question}
           </div>
           <div className="text-[11px] text-neutral-500 font-mono tabular mt-0.5">
-            答え合わせ {formatResolveAtJp(forecast.resolveAt)}
+            対象 {formatResolveAtJp(forecast.resolveAt)}
           </div>
         </div>
         <div className="hidden md:flex items-center gap-2 shrink-0">
