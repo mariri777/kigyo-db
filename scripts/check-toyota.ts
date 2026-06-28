@@ -1,0 +1,14 @@
+import { getLocalDb } from "./lib/local-db.js";
+import { financialsAnnual, dividends, companies, stocks } from "../src/server/db/schema.js";
+import { eq } from "drizzle-orm";
+const db = getLocalDb();
+const toyota = db.select().from(stocks).where(eq(stocks.code, "7203")).all()[0];
+console.log(`Toyota: code=${toyota.code} companyId=${toyota.companyId}`);
+const ann = db.select().from(financialsAnnual).where(eq(financialsAnnual.companyId, toyota.companyId)).all();
+console.log("\nfinancialsAnnual:");
+for (const r of ann) console.log(`  ${r.fy} 売上=${r.revenueOku} 営業益=${r.operatingProfitOku} 純利益=${r.netProfitOku} EPS=${r.eps}`);
+const divs = db.select().from(dividends).where(eq(dividends.companyId, toyota.companyId)).all();
+console.log("\ndividends:");
+for (const r of divs) console.log(`  ${r.fy} ¥${r.amount}`);
+const c = db.select().from(companies).where(eq(companies.id, toyota.companyId)).all()[0];
+console.log(`\nemployees=${c.employeesConsolidated}, edinet=${c.edinetCode}`);

@@ -36,21 +36,22 @@ const SELECT_COLUMNS = {
   description: s.companies.description,
   oneLiner: s.companies.oneLiner,
   exchange: s.stocks.exchange,
-  sectorTSE: s.stocks.sectorTSE,
-  priceJpy: s.stocks.priceJpy,
-  priceDate: s.stocks.priceDate,
-  changePct: s.stocks.changePct,
-  marketCapOku: s.stocks.marketCapOku,
-  per: s.stocks.per,
-  pbr: s.stocks.pbr,
-  dividendYield: s.stocks.dividendYield,
+  sectorTSE: s.stocks.sectorTse,
+  priceJpy: s.stockSnapshot.priceJpy,
+  priceDate: s.stockSnapshot.priceDate,
+  changePct: s.stockSnapshot.change1dPct,
+  marketCapOku: s.stockSnapshot.marketCapOku,
+  per: s.stockSnapshot.per,
+  pbr: s.stockSnapshot.pbr,
+  dividendYield: s.stockSnapshot.dividendYield,
 } as const;
 
 export async function listAll(db: Db): Promise<StockRow[]> {
   return (await db
     .select(SELECT_COLUMNS)
     .from(s.stocks)
-    .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))) as StockRow[];
+    .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+    .leftJoin(s.stockSnapshot, eq(s.stockSnapshot.code, s.stocks.code))) as StockRow[];
 }
 
 export async function findByCode(db: Db, code: string): Promise<StockRow | null> {
@@ -58,6 +59,7 @@ export async function findByCode(db: Db, code: string): Promise<StockRow | null>
     .select(SELECT_COLUMNS)
     .from(s.stocks)
     .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+    .leftJoin(s.stockSnapshot, eq(s.stockSnapshot.code, s.stocks.code))
     .where(eq(s.stocks.code, code))
     .limit(1)) as StockRow[];
   return rows[0] ?? null;
@@ -72,6 +74,7 @@ export async function listByCompanyIds(
       .select(SELECT_COLUMNS)
       .from(s.stocks)
       .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+      .leftJoin(s.stockSnapshot, eq(s.stockSnapshot.code, s.stocks.code))
       .where(inArray(s.stocks.companyId, chunk)) as unknown as Promise<StockRow[]>,
   );
 }
@@ -91,6 +94,7 @@ export async function listByCodes(
       .select(SELECT_COLUMNS)
       .from(s.stocks)
       .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+      .leftJoin(s.stockSnapshot, eq(s.stockSnapshot.code, s.stocks.code))
       .where(inArray(s.stocks.code, chunk)) as unknown as Promise<StockRow[]>,
   );
   // 呼び出し側で order が壊れないように、引数の codes 順に整列する
@@ -119,11 +123,11 @@ export type StockSortDir = "asc" | "desc";
 
 const SORT_COLUMN = {
   code: s.stocks.code,
-  priceJpy: s.stocks.priceJpy,
-  marketCapOku: s.stocks.marketCapOku,
-  per: s.stocks.per,
-  pbr: s.stocks.pbr,
-  dividendYield: s.stocks.dividendYield,
+  priceJpy: s.stockSnapshot.priceJpy,
+  marketCapOku: s.stockSnapshot.marketCapOku,
+  per: s.stockSnapshot.per,
+  pbr: s.stockSnapshot.pbr,
+  dividendYield: s.stockSnapshot.dividendYield,
 } as const satisfies Record<StockSortKey, unknown>;
 
 export async function listPaginated(
@@ -146,6 +150,7 @@ export async function listPaginated(
     .select(SELECT_COLUMNS)
     .from(s.stocks)
     .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+    .leftJoin(s.stockSnapshot, eq(s.stockSnapshot.code, s.stocks.code))
     .orderBy(nullsLastExpr, directionExpr)
     .limit(opts.limit)
     .offset(opts.offset);
@@ -191,7 +196,7 @@ export async function search(
       code: s.stocks.code,
       name: s.companies.name,
       nameEn: s.companies.nameEn,
-      sectorTSE: s.stocks.sectorTSE,
+      sectorTSE: s.stocks.sectorTse,
     })
     .from(s.stocks)
     .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
@@ -200,7 +205,7 @@ export async function search(
         like(sql`lower(${s.stocks.code})`, prefix),
         like(sql`lower(${s.companies.name})`, partial),
         like(sql`lower(${s.companies.nameEn})`, partial),
-        like(sql`lower(${s.stocks.sectorTSE})`, partial),
+        like(sql`lower(${s.stocks.sectorTse})`, partial),
       ),
     )
     .limit(limit);

@@ -167,6 +167,10 @@ p, li, dd, summary {
 /* リンク・インタラクション基本 */
 ::selection { background: var(--foreground); color: var(--background); }
 
+/* スクロールバー非表示 (横スライダー用) */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* 管理画面 WYSIWYG 用の最小限スタイル
  * 公開ページ側は Tailwind クラスを付与した HTML を保存しているのでそのまま
  * 表示できるが、editor の中ではユーザーが ENTER で作る生の <p>/<h2>/<ul> に

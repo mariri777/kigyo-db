@@ -1,3 +1,12 @@
+/**
+ * 超!企業DB v2 D1 スキーマ。
+ *
+ * 設計詳細は docs/data-design.md / docs/data-pipeline.md を参照。
+ * 3 原則:
+ *   1. 読み出しを軽く — stock_snapshot に詳細ページの派生値を全部詰める
+ *   2. 書き込みは頻度別に分離 — 日次/週次/月次/四半期/編集/イベント駆動
+ *   3. イベントは 1 本に集約 (events)、予測だけ独立
+ */
 import {
   sqliteTable,
   text,
@@ -8,104 +17,231 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-/**
- * 全体構造:
- *   companies(企業マスタ)── 1:N ─ stocks(銘柄、価格スナップショット込)
- *                          ─ 1:N ─ business_tags / company_segments / company_insights / etc.
- *   stocks ─ 1:N ─ stock_prices_daily(OHLCV 履歴)
- *   industries ─ 1:N ─ industry_clusters ─ N:N ─ companies (company_industry_clusters)
- *   sources(引用元の共有マスタ)を業績・タグ・insight・valuation から FK 参照
- *
- * data.ts(モック 68 銘柄)は seed 元としてのみ残し、UI は将来 DB を読む。
- */
-
 // ─────────────────────────────────────────────────────────
-// 企業 / 銘柄 / 価格
+// A. 企業マスタ層
 // ─────────────────────────────────────────────────────────
 
 export const companies = sqliteTable("companies", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   nameEn: text("name_en"),
+  /** EDINET コード (例: "E02144" トヨタ) */
+  edinetCode: text("edinet_code"),
   description: text("description"),
   oneLiner: text("one_liner"),
-  /** 有報・XBRL 連携のための EDINET コード(将来用、現状は NULL) */
-  edinetCode: text("edinet_code"),
+  /** 設立日 "1937-08-28" */
+  founded: text("founded"),
+  /** 上場日 "1949-05" */
+  listed: text("listed"),
+  headquarters: text("headquarters"),
+  ceoName: text("ceo_name"),
+  website: text("website"),
+  employeesConsolidated: integer("employees_consolidated"),
+  /** ロゴカラー "#e60012" */
+  logoColor: text("logo_color"),
   createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (t) => ({
+  uqEdinet: uniqueIndex("uq_companies_edinet_code").on(t.edinetCode),
+}));
+
+export const stocks = sqliteTable("stocks", {
+  /** 証券コード 4桁 "7203" */
+  code: text("code").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  /** プライム / スタンダード / グロース */
+  exchange: text("exchange", { enum: ["Prime", "Standard", "Growth"] }).notNull(),
+  /** JPX 33業種 */
+  sectorTse: text("sector_tse").notNull(),
+  /** 指数組入 CSV: "TOPIX,JPX400,N225" */
+  indexMembership: text("index_membership"),
+  /** 発行済株式数 (千株単位) */
+  listedShares: integer("listed_shares"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (t) => ({
+  idxCompanyId: index("idx_stocks_company_id").on(t.companyId),
+}));
+
+// ─────────────────────────────────────────────────────────
+// B. 価格時系列層 (日次cron、31日窓)
+// ─────────────────────────────────────────────────────────
+
+export const stockPricesDaily = sqliteTable("stock_prices_daily", {
+  code: text("code")
+    .notNull()
+    .references(() => stocks.code, { onDelete: "cascade" }),
+  date: text("date").notNull(), // YYYY-MM-DD
+  open: real("open"),
+  high: real("high"),
+  low: real("low"),
+  close: real("close").notNull(),
+  volume: integer("volume"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.code, t.date] }),
+  idxDate: index("idx_stock_prices_daily_date").on(t.date),
+}));
+
+// ─────────────────────────────────────────────────────────
+// C. 銘柄スナップショット層 — 詳細ページの派生値を全部詰める
+// ─────────────────────────────────────────────────────────
+
+export const stockSnapshot = sqliteTable("stock_snapshot", {
+  code: text("code")
+    .primaryKey()
+    .references(() => stocks.code, { onDelete: "cascade" }),
+
+  // 価格
+  priceJpy: real("price_jpy"),
+  priceDate: text("price_date"),
+  change1dPct: real("change_1d_pct"),
+  change1mPct: real("change_1m_pct"),
+  change1yPct: real("change_1y_pct"),
+
+  // 時価総額・バリュエーション
+  marketCapOku: integer("market_cap_oku"),
+  /** "メガ" / "大型" / "中型" / "小型" */
+  marketCapTier: text("market_cap_tier"),
+  per: real("per"),
+  perForecast: real("per_forecast"),
+  pbr: real("pbr"),
+  psr: real("psr"),
+  evEbitda: real("ev_ebitda"),
+  peg: real("peg"),
+  roe: real("roe"),
+
+  // 配当 (現在値)
+  dividendYield: real("dividend_yield"),
+  dividendAnnual: real("dividend_annual"),
+  dividendPayoutRatio: real("dividend_payout_ratio"),
+  totalReturnYield: real("total_return_yield"),
+
+  // テクニカル
+  ma25: real("ma_25"),
+  ma75: real("ma_75"),
+  ma200: real("ma_200"),
+  high52w: real("high_52w"),
+  low52w: real("low_52w"),
+  rsi14: real("rsi_14"),
+  /** "28.6M" 表示用 */
+  avgVolume3m: text("avg_volume_3m"),
+  creditBuy: text("credit_buy"),
+  creditSell: text("credit_sell"),
+  creditRatio: real("credit_ratio"),
+
+  // チャート用 90日 OHLC ダウンサンプル
+  priceHistoryJson: text("price_history_json"),
+
+  // 株主構成サマリ
+  foreignOwnership: real("foreign_ownership"),
+  individualOwnership: real("individual_ownership"),
+  stableOwnership: real("stable_ownership"),
+
+  // 業績スナップ (最新期)
+  latestRevenueOku: integer("latest_revenue_oku"),
+  latestOpProfitOku: integer("latest_op_profit_oku"),
+  latestOpMargin: real("latest_op_margin"),
+
+  // AI 目標株価 (アナリスト系の代替)
+  targetConsensus: integer("target_consensus"),
+  targetHigh: integer("target_high"),
+  targetLow: integer("target_low"),
+  analystBuy: integer("analyst_buy"),
+  analystHold: integer("analyst_hold"),
+  analystSell: integer("analyst_sell"),
+
+  // AI バリュエーション評価
+  valuationVerdict: text("valuation_verdict", {
+    enum: ["割安", "ほぼ妥当", "やや割高", "割高"],
+  }),
+  valuationScore: integer("valuation_score"), // 0-100
+
   updatedAt: text("updated_at").notNull(),
 });
 
-export const stocks = sqliteTable(
-  "stocks",
-  {
-    code: text("code").primaryKey(), // 4桁(例: "7203")
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companies.id, { onDelete: "cascade" }),
-    exchange: text("exchange", { enum: ["Prime", "Standard", "Growth"] }).notNull(),
-    /** JPX 33業種区分(例: "輸送用機器") */
-    sectorTSE: text("sector_tse").notNull(),
-
-    // 価格スナップショット(Yahoo Finance から日次更新)
-    priceJpy: real("price_jpy"),
-    priceDate: text("price_date"), // YYYY-MM-DD
-    changePct: real("change_pct"),
-    marketCapOku: integer("market_cap_oku"),
-    per: real("per"),
-    pbr: real("pbr"),
-    dividendYield: real("dividend_yield"),
-
-    updatedAt: text("updated_at").notNull(),
-  },
-  (t) => ({
-    idxCompanyId: index("idx_stocks_company_id").on(t.companyId),
-  }),
-);
-
-export const stockPricesDaily = sqliteTable(
-  "stock_prices_daily",
-  {
-    code: text("code")
-      .notNull()
-      .references(() => stocks.code, { onDelete: "cascade" }),
-    date: text("date").notNull(), // YYYY-MM-DD
-    open: real("open"),
-    high: real("high"),
-    low: real("low"),
-    close: real("close").notNull(),
-    volume: integer("volume"),
-    adjClose: real("adj_close"),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.code, t.date] }),
-    idxDate: index("idx_stock_prices_daily_date").on(t.date),
-  }),
-);
-
 // ─────────────────────────────────────────────────────────
-// 出典(共有マスタ)
+// D. 決算層 (四半期決算トリガー)
 // ─────────────────────────────────────────────────────────
 
-export const sources = sqliteTable(
-  "sources",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    doc: text("doc").notNull(),
-    page: integer("page"),
-    period: text("period"),
-    url: text("url"),
-  },
-  (t) => ({
-    uqDocPagePeriod: uniqueIndex("uq_sources_doc_page_period").on(
-      t.doc,
-      t.page,
-      t.period,
-    ),
-  }),
-);
+export const financialsAnnual = sqliteTable("financials_annual", {
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  /** "2025/3" */
+  fy: text("fy").notNull(),
+  revenueOku: integer("revenue_oku"),
+  operatingProfitOku: integer("operating_profit_oku"),
+  operatingMargin: real("operating_margin"),
+  netProfitOku: integer("net_profit_oku"),
+  eps: real("eps"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.companyId, t.fy] }),
+}));
+
+export const financialsQuarterly = sqliteTable("financials_quarterly", {
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  /** "2025Q3" */
+  period: text("period").notNull(),
+  revenueOku: integer("revenue_oku"),
+  opProfitOku: integer("op_profit_oku"),
+  opMargin: real("op_margin"),
+  netProfitOku: integer("net_profit_oku"),
+  /** JSON 配列 (4 項目) */
+  highlightsJson: text("highlights_json"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.companyId, t.period] }),
+}));
+
+export const dividends = sqliteTable("dividends", {
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  fy: text("fy").notNull(),
+  amount: real("amount"),
+  exDate: text("ex_date"),
+  recordDate: text("record_date"),
+  payDate: text("pay_date"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.companyId, t.fy] }),
+}));
 
 // ─────────────────────────────────────────────────────────
-// 業界・クラスタ
+// E. AI 生成層
+// ─────────────────────────────────────────────────────────
+
+export const companyAiBrief = sqliteTable("company_ai_brief", {
+  companyId: integer("company_id")
+    .primaryKey()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  summary: text("summary"),
+  valuationRationale: text("valuation_rationale"),
+  stockTrendAnalysis: text("stock_trend_analysis"),
+  stockTrendFactorsJson: text("stock_trend_factors_json"),
+  analystSummary: text("analyst_summary"),
+  technicalComment: text("technical_comment"),
+  positioningHeadline: text("positioning_headline"),
+  positioningAnalysis: text("positioning_analysis"),
+  positioningStrengthsJson: text("positioning_strengths_json"),
+  positioningChallengesJson: text("positioning_challenges_json"),
+  ownerActivismJson: text("owner_activism_json"),
+  generatedAt: text("generated_at"),
+});
+
+export const marketBrief = sqliteTable("market_brief", {
+  date: text("date").primaryKey(), // YYYY-MM-DD
+  lede: text("lede"),
+  bulletsJson: text("bullets_json"),
+  watchThemesJson: text("watch_themes_json"),
+  indicesJson: text("indices_json"),
+  generatedAt: text("generated_at"),
+});
+
+// ─────────────────────────────────────────────────────────
+// F. 業界層 (大幅簡素化)
 // ─────────────────────────────────────────────────────────
 
 export const industries = sqliteTable("industries", {
@@ -113,361 +249,253 @@ export const industries = sqliteTable("industries", {
   name: text("name").notNull(),
   shortName: text("short_name").notNull(),
   description: text("description"),
-  /** JSON 配列文字列 — テーマ羅列(例: ["AI 半導体・HBM 需要拡大", ...]) */
-  theme2025Json: text("theme_2025_json"),
-  /** marketScale.headline */
-  marketScaleHeadline: text("market_scale_headline"),
-  marketScaleGrowth: text("market_scale_growth"),
-  marketScaleBreakdown: text("market_scale_breakdown"),
-  /** 業界マップ 3 列構成(UI レイアウト用) */
-  chainColumnsJson: text("chain_columns_json"),
-  /** 業界別の差異が大きいので JSON のまま保持 */
-  competitiveStructureJson: text("competitive_structure_json"),
-  keyKpisJson: text("key_kpis_json"),
-  industryInsightsJson: text("industry_insights_json"),
+  insightsJson: text("insights_json"),
 });
 
-export const industryClusters = sqliteTable(
-  "industry_clusters",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    industrySlug: text("industry_slug")
-      .notNull()
-      .references(() => industries.slug, { onDelete: "cascade" }),
-    /** クラスタの一意キー(例: "front-end-equipment") */
-    key: text("key").notNull(),
-    name: text("name").notNull(),
-    role: text("role").notNull(),
-    /** バリューチェーン位置(例: "前工程", "材料") */
-    position: text("position").notNull(),
-  },
-  (t) => ({
-    uqIndustryKey: uniqueIndex("uq_industry_clusters_industry_key").on(
-      t.industrySlug,
-      t.key,
-    ),
-  }),
-);
-
-export const companyIndustryClusters = sqliteTable(
-  "company_industry_clusters",
-  {
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companies.id, { onDelete: "cascade" }),
-    industryClusterId: integer("industry_cluster_id")
-      .notNull()
-      .references(() => industryClusters.id, { onDelete: "cascade" }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.companyId, t.industryClusterId] }),
-    idxCluster: index("idx_company_industry_clusters_cluster").on(
-      t.industryClusterId,
-    ),
-  }),
-);
-
-// ─────────────────────────────────────────────────────────
-// 事業タグ(6 次元)
-// ─────────────────────────────────────────────────────────
-
-export const businessTags = sqliteTable(
-  "business_tags",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companies.id, { onDelete: "cascade" }),
-    dimension: text("dimension", {
-      enum: [
-        "product",
-        "customer",
-        "channel",
-        "revenue_model",
-        "value_chain",
-        "geography",
-      ],
-    }).notNull(),
-    value: text("value").notNull(),
-    sourceId: integer("source_id").references(() => sources.id, {
-      onDelete: "set null",
-    }),
-  },
-  (t) => ({
-    idxCompanyDim: index("idx_business_tags_company_dimension").on(
-      t.companyId,
-      t.dimension,
-    ),
-  }),
-);
-
-// ─────────────────────────────────────────────────────────
-// セグメント・業績(時系列)
-// ─────────────────────────────────────────────────────────
-
-export const companySegments = sqliteTable(
-  "company_segments",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companies.id, { onDelete: "cascade" }),
-    period: text("period").notNull(), // 例: "2025/3"
-    name: text("name").notNull(),
-    revenueOku: real("revenue_oku"),
-    share: real("share"),
-    operatingMargin: real("operating_margin"),
-    sourceId: integer("source_id").references(() => sources.id, {
-      onDelete: "set null",
-    }),
-  },
-  (t) => ({
-    uqCompanyPeriodName: uniqueIndex(
-      "uq_company_segments_company_period_name",
-    ).on(t.companyId, t.period, t.name),
-  }),
-);
-
-/**
- * 業績の四半期スナップショット。
- * スキーマだけ用意し、seed では入れない(将来 EDINET 連携で蓄積していく前提)。
- */
-export const companyFinancialsQuarterly = sqliteTable(
-  "company_financials_quarterly",
-  {
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companies.id, { onDelete: "cascade" }),
-    period: text("period").notNull(),
-    revenueOku: real("revenue_oku"),
-    operatingProfitOku: real("operating_profit_oku"),
-    operatingMargin: real("operating_margin"),
-    roe: real("roe"),
-    revenueGrowth3y: real("revenue_growth_3y"),
-    sourceId: integer("source_id").references(() => sources.id, {
-      onDelete: "set null",
-    }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.companyId, t.period] }),
-  }),
-);
-
-// ─────────────────────────────────────────────────────────
-// AI 生成データ
-// ─────────────────────────────────────────────────────────
-
-export const companyInsights = sqliteTable(
-  "company_insights",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companies.id, { onDelete: "cascade" }),
-    title: text("title").notNull(),
-    lede: text("lede"),
-    body: text("body").notNull(),
-    generatedAt: text("generated_at").notNull(),
-  },
-  (t) => ({
-    idxCompany: index("idx_company_insights_company").on(t.companyId),
-  }),
-);
-
-export const insightSources = sqliteTable(
-  "insight_sources",
-  {
-    insightId: integer("insight_id")
-      .notNull()
-      .references(() => companyInsights.id, { onDelete: "cascade" }),
-    sourceId: integer("source_id")
-      .notNull()
-      .references(() => sources.id, { onDelete: "cascade" }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.insightId, t.sourceId] }),
-  }),
-);
-
-export const companyPhaseScores = sqliteTable("company_phase_scores", {
+export const companyIndustries = sqliteTable("company_industries", {
   companyId: integer("company_id")
-    .primaryKey()
+    .notNull()
     .references(() => companies.id, { onDelete: "cascade" }),
-  launch: real("launch").notNull(),
-  expansion: real("expansion").notNull(),
-  mature: real("mature").notNull(),
-  decline: real("decline").notNull(),
-  rationale: text("rationale"),
+  industrySlug: text("industry_slug")
+    .notNull()
+    .references(() => industries.slug, { onDelete: "cascade" }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.companyId, t.industrySlug] }),
+  idxIndustrySlug: index("idx_company_industries_industry_slug").on(t.industrySlug),
+}));
+
+// ─────────────────────────────────────────────────────────
+// G. ブログ層 (現状維持)
+// ─────────────────────────────────────────────────────────
+
+export const adminUsers = sqliteTable("admin_users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull(),
+  name: text("name").notNull(),
+  passwordHash: text("password_hash").notNull(),
+  passwordSalt: text("password_salt").notNull(),
+  passwordIterations: integer("password_iterations").notNull(),
+  createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
-});
+}, (t) => ({
+  uqEmail: uniqueIndex("uq_admin_users_email").on(t.email),
+}));
 
-export const companyFactorBetas = sqliteTable("company_factor_betas", {
-  companyId: integer("company_id")
-    .primaryKey()
-    .references(() => companies.id, { onDelete: "cascade" }),
-  usdjpy: real("usdjpy").notNull(),
-  us10y: real("us10y").notNull(),
-  oil: real("oil").notNull(),
-  sox: real("sox").notNull(),
-  china: real("china").notNull(),
-  market: real("market").notNull(),
-  size: real("size").notNull(),
-  value: real("value").notNull(),
-  momentum: real("momentum").notNull(),
-  period: text("period"),
-});
+export const adminSessions = sqliteTable("admin_sessions", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+}, (t) => ({
+  idxExpires: index("idx_admin_sessions_expires").on(t.expiresAt),
+  idxUserId: index("idx_admin_sessions_user_id").on(t.userId),
+}));
 
-export const companyValuationCalls = sqliteTable("company_valuation_calls", {
-  companyId: integer("company_id")
-    .primaryKey()
-    .references(() => companies.id, { onDelete: "cascade" }),
-  verdict: text("verdict", {
-    enum: ["割安", "ほぼ妥当", "やや割高", "割高"],
+export const posts = sqliteTable("posts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull(),
+  title: text("title").notNull(),
+  lede: text("lede").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  category: text("category", {
+    enum: ["earnings", "industry-watch", "analysis", "disclosure", "primer"],
   }).notNull(),
-  score: integer("score").notNull(),
-  rationale: text("rationale"),
+  status: text("status", { enum: ["draft", "published"] })
+    .notNull()
+    .default("draft"),
+  author: text("author", { enum: ["editor", "ai-editor"] })
+    .notNull()
+    .default("editor"),
+  readTimeMin: integer("read_time_min").notNull().default(3),
+  fiscalPeriod: text("fiscal_period"),
+  relatedStocksJson: text("related_stocks_json").notNull().default("[]"),
+  relatedIndustriesJson: text("related_industries_json").notNull().default("[]"),
+  publishedAt: text("published_at"),
+  authorUserId: integer("author_user_id").references(() => adminUsers.id, {
+    onDelete: "set null",
+  }),
+  createdAt: text("created_at").notNull(),
   updatedAt: text("updated_at").notNull(),
-});
+}, (t) => ({
+  uqSlug: uniqueIndex("uq_posts_slug").on(t.slug),
+  idxStatusPublished: index("idx_posts_status_published_at").on(t.status, t.publishedAt),
+  idxCategory: index("idx_posts_category").on(t.category),
+}));
 
-export const valuationSources = sqliteTable(
-  "valuation_sources",
-  {
-    companyId: integer("company_id")
-      .notNull()
-      .references(() => companyValuationCalls.companyId, {
-        onDelete: "cascade",
-      }),
-    sourceId: integer("source_id")
-      .notNull()
-      .references(() => sources.id, { onDelete: "cascade" }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.companyId, t.sourceId] }),
-  }),
-);
+export const tags = sqliteTable("tags", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull(),
+  name: text("name").notNull(),
+  createdAt: text("created_at").notNull(),
+}, (t) => ({
+  uqSlug: uniqueIndex("uq_tags_slug").on(t.slug),
+}));
+
+export const postTags = sqliteTable("post_tags", {
+  postId: integer("post_id")
+    .notNull()
+    .references(() => posts.id, { onDelete: "cascade" }),
+  tagId: integer("tag_id")
+    .notNull()
+    .references(() => tags.id, { onDelete: "cascade" }),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.postId, t.tagId] }),
+  idxTagId: index("idx_post_tags_tag_id").on(t.tagId),
+}));
 
 // ─────────────────────────────────────────────────────────
-// ブログ / 管理画面
+// H. イベント層 (汎用)
 // ─────────────────────────────────────────────────────────
 
-/**
- * 管理画面の認証ユーザー。
- * password_hash と password_salt は PBKDF2-SHA256(イテレーション 200,000)で生成。
- * Workers / Node どちらでも Web Crypto SubtleCrypto 経由で同一実装が動く。
- */
-export const adminUsers = sqliteTable(
-  "admin_users",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    email: text("email").notNull(),
-    name: text("name").notNull(),
-    /** Base64 (PBKDF2-SHA256 出力 32 バイト) */
-    passwordHash: text("password_hash").notNull(),
-    /** Base64 (16 バイト ランダム salt) */
-    passwordSalt: text("password_salt").notNull(),
-    /** PBKDF2 イテレーション回数。将来上げたとき検証ロジックを保つために行ごとに持つ */
-    passwordIterations: integer("password_iterations").notNull(),
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  },
-  (t) => ({
-    uqEmail: uniqueIndex("uq_admin_users_email").on(t.email),
-  }),
-);
+export const events = sqliteTable("events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  kind: text("kind", {
+    enum: [
+      "catalyst",
+      "risk",
+      "disclosure",
+      "theme_signal",
+      "buyback",
+      "earnings_event",
+      "guidance_revision",
+    ],
+  }).notNull(),
+  scope: text("scope", { enum: ["company", "industry", "market"] }).notNull(),
+  /** scope に応じて company_id (文字列化) / industry_slug / "JP" */
+  scopeRef: text("scope_ref").notNull(),
+  title: text("title").notNull(),
+  body: text("body"),
+  /** "2026年Q2" or YYYY-MM-DD */
+  occursAt: text("occurs_at"),
+  impact: text("impact", { enum: ["強", "中", "弱"] }),
+  direction: text("direction", { enum: ["up", "down"] }),
+  sourceUrl: text("source_url"),
+  createdAt: text("created_at").notNull(),
+}, (t) => ({
+  idxScope: index("idx_events_scope").on(t.scope, t.scopeRef, t.kind),
+  idxOccursAt: index("idx_events_occurs_at").on(t.occursAt),
+}));
 
-/**
- * ログインセッション。Cookie には id だけ載せ、DB を都度引いて検証する。
- */
-export const adminSessions = sqliteTable(
-  "admin_sessions",
-  {
-    id: text("id").primaryKey(),
-    userId: integer("user_id")
-      .notNull()
-      .references(() => adminUsers.id, { onDelete: "cascade" }),
-    createdAt: text("created_at").notNull(),
-    expiresAt: text("expires_at").notNull(),
-  },
-  (t) => ({
-    idxExpires: index("idx_admin_sessions_expires").on(t.expiresAt),
-    idxUserId: index("idx_admin_sessions_user_id").on(t.userId),
-  }),
-);
+// ─────────────────────────────────────────────────────────
+// I. 予測層 (独立)
+// ─────────────────────────────────────────────────────────
 
-/**
- * ブログ記事本体。本文は WYSIWYG エディタから出力された HTML を保存する。
- * 関連銘柄・関連業界は、企業マスタとの強い FK ではなく JSON 配列として保持する
- * (公開ページ側で getStockBrief で照会する従来挙動と互換)。
- */
-export const posts = sqliteTable(
-  "posts",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    slug: text("slug").notNull(),
-    title: text("title").notNull(),
-    /** 一覧・OG・記事冒頭で使うリード文 */
-    lede: text("lede").notNull(),
-    /** WYSIWYG が吐く HTML。サニタイズしてから保存する */
-    bodyHtml: text("body_html").notNull(),
-    category: text("category", {
-      enum: ["earnings", "industry-watch", "analysis", "disclosure", "primer"],
-    }).notNull(),
-    status: text("status", { enum: ["draft", "published"] })
-      .notNull()
-      .default("draft"),
-    author: text("author", { enum: ["editor", "ai-editor"] })
-      .notNull()
-      .default("editor"),
-    readTimeMin: integer("read_time_min").notNull().default(3),
-    fiscalPeriod: text("fiscal_period"),
-    /** JSON 配列 (例 ["7203","8035"])。公開ページが getStockBrief で照会 */
-    relatedStocksJson: text("related_stocks_json").notNull().default("[]"),
-    /** JSON 配列 (例 ["semiconductor"])。公開ページが getIndustry で照会 */
-    relatedIndustriesJson: text("related_industries_json").notNull().default("[]"),
-    /** 下書き時は null。公開済みは公開日(YYYY-MM-DD) */
-    publishedAt: text("published_at"),
-    /** 作成者(管理者ユーザー)。NULL は seed 由来の互換記事 */
-    authorUserId: integer("author_user_id").references(() => adminUsers.id, {
-      onDelete: "set null",
-    }),
-    createdAt: text("created_at").notNull(),
-    updatedAt: text("updated_at").notNull(),
-  },
-  (t) => ({
-    uqSlug: uniqueIndex("uq_posts_slug").on(t.slug),
-    idxStatusPublished: index("idx_posts_status_published_at").on(
-      t.status,
-      t.publishedAt,
-    ),
-    idxCategory: index("idx_posts_category").on(t.category),
-  }),
-);
+export const predictions = sqliteTable("predictions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  code: text("code").references(() => stocks.code, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  question: text("question").notNull(),
+  pickLabel: text("pick_label").notNull(),
+  noLabel: text("no_label").notNull(),
+  probability: integer("probability").notNull(),
+  rationale: text("rationale"),
+  resolveAt: text("resolve_at").notNull(),
+  status: text("status", { enum: ["live", "soon", "resolved"] })
+    .notNull()
+    .default("soon"),
+  outcome: text("outcome", { enum: ["yes", "no"] }),
+  outcomeAt: text("outcome_at"),
+  /** "¥1.2M" 表示用 */
+  volume: text("volume"),
+  voters: integer("voters").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+}, (t) => ({
+  idxStatus: index("idx_predictions_status").on(t.status),
+  idxCode: index("idx_predictions_code").on(t.code),
+  idxResolveAt: index("idx_predictions_resolve_at").on(t.resolveAt),
+}));
 
-export const tags = sqliteTable(
-  "tags",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    slug: text("slug").notNull(),
-    name: text("name").notNull(),
-    createdAt: text("created_at").notNull(),
-  },
-  (t) => ({
-    uqSlug: uniqueIndex("uq_tags_slug").on(t.slug),
-  }),
-);
+export const predictionShifts = sqliteTable("prediction_shifts", {
+  predictionId: integer("prediction_id")
+    .notNull()
+    .references(() => predictions.id, { onDelete: "cascade" }),
+  /** YYYY-MM-DDTHH:MM */
+  at: text("at").notNull(),
+  probability: integer("probability").notNull(),
+  reason: text("reason"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.predictionId, t.at] }),
+}));
 
-export const postTags = sqliteTable(
-  "post_tags",
-  {
-    postId: integer("post_id")
-      .notNull()
-      .references(() => posts.id, { onDelete: "cascade" }),
-    tagId: integer("tag_id")
-      .notNull()
-      .references(() => tags.id, { onDelete: "cascade" }),
-  },
-  (t) => ({
-    pk: primaryKey({ columns: [t.postId, t.tagId] }),
-    idxTagId: index("idx_post_tags_tag_id").on(t.tagId),
-  }),
-);
+// ─────────────────────────────────────────────────────────
+// J. ストーリー層 (沿革紙芝居)
+// ─────────────────────────────────────────────────────────
+
+export const storyDecks = sqliteTable("story_decks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  sourceNote: text("source_note"),
+  publishedAt: text("published_at"),
+}, (t) => ({
+  idxCompany: index("idx_story_decks_company").on(t.companyId),
+}));
+
+export const storySlides = sqliteTable("story_slides", {
+  deckId: integer("deck_id")
+    .notNull()
+    .references(() => storyDecks.id, { onDelete: "cascade" }),
+  n: integer("n").notNull(),
+  era: text("era"),
+  year: text("year"),
+  title: text("title").notNull(),
+  lead: text("lead"),
+  body: text("body"),
+  /** Unsplash photo ID */
+  image: text("image"),
+  highlight: text("highlight"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.deckId, t.n] }),
+}));
+
+// ─────────────────────────────────────────────────────────
+// K. 株主構成
+// ─────────────────────────────────────────────────────────
+
+export const topShareholders = sqliteTable("top_shareholders", {
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companies.id, { onDelete: "cascade" }),
+  rank: integer("rank").notNull(),
+  name: text("name").notNull(),
+  sharePct: real("share_pct"),
+  /** "信託口/法人(グループ)/法人(生保)/外国機関" */
+  holderType: text("holder_type"),
+  /** "2025-03-31" */
+  asOf: text("as_of"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.companyId, t.rank] }),
+}));
+
+// ─────────────────────────────────────────────────────────
+// L. EDINET パイプライン管理 (data-pipeline.md 参照)
+// ─────────────────────────────────────────────────────────
+
+export const edinetDocs = sqliteTable("edinet_docs", {
+  /** EDINET docID "S100Y8NY" */
+  docId: text("doc_id").primaryKey(),
+  edinetCode: text("edinet_code").notNull(),
+  /** 上場銘柄なら 5桁の証券コード "72030" */
+  secCode: text("sec_code"),
+  /** "120"=有報 / "140"=四半期 / "160"=半期 */
+  docTypeCode: text("doc_type_code").notNull(),
+  periodStart: text("period_start"),
+  periodEnd: text("period_end"),
+  submitDate: text("submit_date").notNull(),
+  fetchStatus: text("fetch_status", {
+    enum: ["discovered", "downloaded", "parsed", "failed"],
+  }).notNull(),
+  failedReason: text("failed_reason"),
+  r2ZipKey: text("r2_zip_key"),
+  r2XbrlKey: text("r2_xbrl_key"),
+  discoveredAt: text("discovered_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (t) => ({
+  idxFetchStatus: index("idx_edinet_docs_fetch_status").on(t.fetchStatus),
+  idxSecCode: index("idx_edinet_docs_sec_code").on(t.secCode, t.docTypeCode),
+}));
