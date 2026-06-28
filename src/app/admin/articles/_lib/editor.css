@@ -166,3 +166,14 @@
 .tippy-arrow {
   display: none !important;
 }
+
+/* figure (本文中の画像ブロック) */
+.v2-editor .v2-figure-edit {
+  /* NodeView 直下なので Tailwind の指定はここから当ててもよい */
+}
+.v2-editor .v2-figure-edit .v2-figcaption-edit {
+  font-size: 12px;
+  color: #525252;
+  text-align: center;
+  margin-top: 0.5rem;
+}

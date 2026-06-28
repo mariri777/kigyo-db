@@ -194,6 +194,55 @@ function renderNode(node: AnyNode, ctx: RenderCtx): React.ReactNode {
       return <TickerCard t={t} />;
     }
 
+    case "figure": {
+      const src = String(node.attrs?.src ?? "");
+      if (!src) return null;
+      const alt = String(node.attrs?.alt ?? "");
+      const href = String(node.attrs?.href ?? "");
+      const width = String(node.attrs?.width ?? "normal") as
+        | "narrow"
+        | "normal"
+        | "wide"
+        | "full";
+      const widthClass =
+        width === "narrow"
+          ? "max-w-[480px]"
+          : width === "normal"
+            ? "max-w-[640px]"
+            : width === "wide"
+              ? "max-w-[920px]"
+              : "w-full";
+      const captionNode = (node.content ?? []).find((c) => c.type === "figcaption");
+      const hasCaption = captionNode && (captionNode.content ?? []).length > 0;
+      // eslint-disable-next-line @next/next/no-img-element
+      const img = (
+        <img
+          src={src}
+          alt={alt}
+          className="w-full h-auto block"
+          aria-hidden={alt ? undefined : true}
+        />
+      );
+      return (
+        <figure className={`my-8 mx-auto ${widthClass}`}>
+          <div className="rounded-lg overflow-hidden bg-neutral-100">
+            {href ? (
+              <a href={href} target="_blank" rel="noopener noreferrer">
+                {img}
+              </a>
+            ) : (
+              img
+            )}
+          </div>
+          {hasCaption && (
+            <figcaption className="mt-2 text-xs text-neutral-500 text-center leading-relaxed">
+              {renderInline(captionNode!.content ?? [])}
+            </figcaption>
+          )}
+        </figure>
+      );
+    }
+
     default:
       return null;
   }

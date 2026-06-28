@@ -7,7 +7,6 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TipLink from "@tiptap/extension-link";
-import TipImage from "@tiptap/extension-image";
 import {
   CalloutNode,
   LeadNode,
@@ -15,7 +14,9 @@ import {
   StatGridNode,
   TickerNode,
 } from "./_lib/nodes";
+import { FigureNode, FigcaptionNode } from "./_lib/figureNode";
 import { createSlashCommandExtension } from "./_lib/slashCommand";
+import { HeroImageField } from "./_HeroImageField";
 import {
   saveArticleAction,
   deleteArticleAction,
@@ -45,29 +46,6 @@ const SUBJECT_KINDS: { value: SubjectKind; label: string }[] = [
   { value: "theme", label: "テーマ" },
   { value: "metric", label: "指標" },
 ];
-
-/**
- * 画像 URL の正規化。
- *   - "photo-xxxx" のような Unsplash photo ID を https://images.unsplash.com/photo-xxxx?auto=format... に展開
- *   - "https://" / "http://" / "/" で始まるならそのまま使う
- */
-function normalizeImageSrc(input: string): string {
-  const v = input.trim();
-  if (!v) return v;
-  if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) {
-    return v;
-  }
-  if (v.startsWith("photo-")) {
-    const params = new URLSearchParams({
-      auto: "format",
-      fit: "crop",
-      w: "1200",
-      q: "75",
-    });
-    return `https://images.unsplash.com/${v}?${params.toString()}`;
-  }
-  return v;
-}
 
 function slugify(s: string): string {
   return s
@@ -149,11 +127,8 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
       StatGridNode,
       StatGridItemNode,
       TickerNode,
-      TipImage.configure({
-        inline: false,
-        allowBase64: false,
-        HTMLAttributes: { class: "v2-image" },
-      }),
+      FigureNode,
+      FigcaptionNode,
       createSlashCommandExtension(),
     ],
     content: initial?.contentJson
@@ -497,19 +472,7 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
               />
               <BlockInsertButton
                 label="画像"
-                onClick={() => {
-                  const src = window.prompt(
-                    "画像 URL (Unsplash photo-... 形式 or https:// で始まる任意 URL)",
-                    "",
-                  );
-                  if (!src) return;
-                  const alt = window.prompt("代替テキスト (alt) 任意", "") ?? "";
-                  editor
-                    ?.chain()
-                    .focus()
-                    .setImage({ src: normalizeImageSrc(src), alt })
-                    .run();
-                }}
+                onClick={() => editor?.chain().focus().insertFigure().run()}
               />
             </div>
             <button
@@ -571,26 +534,14 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
             />
           </Field>
 
-          <Field label="カバー画像 (Unsplash photo ID)">
-            <input
-              value={heroImageKey}
-              onChange={(e) => setHeroImageKey(e.target.value)}
-              placeholder="photo-1518770660439-..."
-              className="w-full text-sm bg-neutral-50 border border-neutral-200 rounded-md px-3 py-1.5 font-mono focus:bg-white focus:border-neutral-900 focus:outline-none"
-            />
-            <input
-              value={heroImageAlt}
-              onChange={(e) => setHeroImageAlt(e.target.value)}
-              placeholder="代替テキスト (alt)"
-              className="mt-1.5 w-full text-sm bg-neutral-50 border border-neutral-200 rounded-md px-3 py-1.5 focus:bg-white focus:border-neutral-900 focus:outline-none"
-            />
-            <input
-              value={heroImageCredit}
-              onChange={(e) => setHeroImageCredit(e.target.value)}
-              placeholder="クレジット (例: Photo · Taylor Vick / Unsplash)"
-              className="mt-1.5 w-full text-sm bg-neutral-50 border border-neutral-200 rounded-md px-3 py-1.5 focus:bg-white focus:border-neutral-900 focus:outline-none"
-            />
-          </Field>
+          <HeroImageField
+            value={{ key: heroImageKey, alt: heroImageAlt, credit: heroImageCredit }}
+            onChange={(next) => {
+              setHeroImageKey(next.key);
+              setHeroImageAlt(next.alt);
+              setHeroImageCredit(next.credit);
+            }}
+          />
 
           <Field label="タグ (カンマ区切り)">
             <input

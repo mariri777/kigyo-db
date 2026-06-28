@@ -33,6 +33,7 @@ export function V2Header() {
   }, [open]);
 
   return (
+    <>
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur border-b border-neutral-200">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 h-14 flex items-center gap-4">
         <Link href="/v2" className="flex items-center gap-2 shrink-0">
@@ -75,6 +76,7 @@ export function V2Header() {
           <Menu className="w-4 h-4" />
         </button>
       </div>
+    </header>
 
       {open && (
         <div
@@ -128,6 +130,6 @@ export function V2Header() {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

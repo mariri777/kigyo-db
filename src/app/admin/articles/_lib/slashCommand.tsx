@@ -127,6 +127,20 @@ const ITEMS: SlashItem[] = [
     },
   },
   {
+    key: "image",
+    label: "画像 (キャプション付き)",
+    hint: "URL を貼り付けて挿入",
+    aliases: ["image", "img", "figure", "画像", "写真"],
+    command: ({ editor, range }) => {
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .insertFigure()
+        .run();
+    },
+  },
+  {
     key: "divider",
     label: "区切り線",
     aliases: ["divider", "hr", "horizontal"],
