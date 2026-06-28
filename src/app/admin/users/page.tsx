@@ -4,19 +4,29 @@ import { getCurrentAdmin } from "@/server/auth/session";
 import { getDb } from "@/server/db/client";
 import { listUsers } from "@/server/repo/userRepo";
 import { CreateUserForm } from "./CreateUserForm";
+import { DeleteUserButton } from "./DeleteUserButton";
 
 export const dynamic = "force-dynamic";
+
+const DELETE_MESSAGES: Record<string, { tone: "ok" | "err"; text: string }> = {
+  "1": { tone: "ok", text: "ユーザーを削除しました。" },
+  self: { tone: "err", text: "自分自身は削除できません。" },
+  last: { tone: "err", text: "最後の管理者ユーザーは削除できません。" },
+  missing: { tone: "err", text: "対象のユーザーが見つかりませんでした。" },
+  invalid: { tone: "err", text: "削除リクエストが不正です。" },
+};
 
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ created?: string }>;
+  searchParams: Promise<{ created?: string; deleted?: string }>;
 }) {
   const admin = await getCurrentAdmin();
   if (!admin) redirect("/admin/login");
   const db = await getDb();
   const users = await listUsers(db);
-  const { created } = await searchParams;
+  const { created, deleted } = await searchParams;
+  const deletedMessage = deleted ? DELETE_MESSAGES[deleted] : undefined;
 
   return (
     <div className="max-w-3xl">
@@ -34,6 +44,18 @@ export default async function UsersPage({
         </div>
       )}
 
+      {deletedMessage && (
+        <div
+          className={`mb-6 border-l-2 rounded-md p-3 text-sm ${
+            deletedMessage.tone === "ok"
+              ? "bg-muted border-foreground"
+              : "bg-red-500/10 border-red-400 text-red-300"
+          }`}
+        >
+          {deletedMessage.text}
+        </div>
+      )}
+
       <section className="bg-surface border border-border rounded-md overflow-hidden mb-10">
         <table className="w-full text-sm">
           <thead className="text-left text-[11px] uppercase tracking-widest text-muted-foreground border-b border-border">
@@ -41,23 +63,32 @@ export default async function UsersPage({
               <th className="px-4 py-3">名前</th>
               <th className="px-4 py-3">メール</th>
               <th className="px-4 py-3 w-32">作成日</th>
+              <th className="px-4 py-3 w-20"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td className="px-4 py-3 font-medium">
-                  {u.name}
-                  {u.id === admin.userId && (
-                    <span className="text-[10px] text-foreground/60 ml-2">(自分)</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-[12px] font-mono text-muted-foreground">{u.email}</td>
-                <td className="px-4 py-3 text-[12px] text-foreground/60 tabular">
-                  {u.createdAt.slice(0, 10)}
-                </td>
-              </tr>
-            ))}
+            {users.map((u) => {
+              const isSelf = u.id === admin.userId;
+              return (
+                <tr key={u.id}>
+                  <td className="px-4 py-3 font-medium">
+                    {u.name}
+                    {isSelf && (
+                      <span className="text-[10px] text-foreground/60 ml-2">(自分)</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-[12px] font-mono text-muted-foreground">
+                    {u.email}
+                  </td>
+                  <td className="px-4 py-3 text-[12px] text-foreground/60 tabular">
+                    {u.createdAt.slice(0, 10)}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    {!isSelf && <DeleteUserButton userId={u.id} name={u.name} />}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </section>

@@ -114,16 +114,17 @@ const stockTrendTask: Task<Input, Output> & SyncCapable<Output> = {
   },
 
   validateOutput(output) {
-    if (!output.stockTrendAnalysis || output.stockTrendAnalysis.length < 60) {
+    const o = output as Output;
+    if (!o.stockTrendAnalysis || o.stockTrendAnalysis.length < 60) {
       return {
         ok: false,
-        reason: `stockTrendAnalysis 短すぎ (${output.stockTrendAnalysis?.length ?? 0} 字)`,
+        reason: `stockTrendAnalysis 短すぎ (${o.stockTrendAnalysis?.length ?? 0} 字)`,
       };
     }
-    if (!Array.isArray(output.stockTrendFactors) || output.stockTrendFactors.length < 2) {
+    if (!Array.isArray(o.stockTrendFactors) || o.stockTrendFactors.length < 2) {
       return {
         ok: false,
-        reason: `stockTrendFactors ${output.stockTrendFactors?.length ?? 0} 件 < 2`,
+        reason: `stockTrendFactors ${o.stockTrendFactors?.length ?? 0} 件 < 2`,
       };
     }
     return { ok: true };

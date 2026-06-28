@@ -5,7 +5,9 @@ import { getDb } from "@/server/db/client";
 import { requireAdmin } from "@/server/auth/session";
 import { hashPassword, verifyPassword } from "@/server/auth/password";
 import {
+  countUsers,
   createUser,
+  deleteUser,
   findUserById,
   updateUserPassword,
 } from "@/server/repo/userRepo";
@@ -115,4 +117,28 @@ export async function createAdminUserAction(
   });
 
   redirect("/admin/users?created=1");
+}
+
+export async function deleteAdminUserAction(formData: FormData): Promise<void> {
+  const admin = await requireAdmin();
+  const userId = Number(formData.get("userId"));
+  if (!Number.isInteger(userId) || userId <= 0) {
+    redirect("/admin/users?deleted=invalid");
+  }
+  if (userId === admin.userId) {
+    redirect("/admin/users?deleted=self");
+  }
+
+  const db = await getDb();
+  const target = await findUserById(db, userId);
+  if (!target) {
+    redirect("/admin/users?deleted=missing");
+  }
+  const total = await countUsers(db);
+  if (total <= 1) {
+    redirect("/admin/users?deleted=last");
+  }
+
+  await deleteUser(db, userId);
+  redirect("/admin/users?deleted=1");
 }

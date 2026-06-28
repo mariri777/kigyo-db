@@ -129,12 +129,14 @@ pnpm db:reset-local
 
 #### ローカル側(あなたが叩くタイミングで AI を回す)
 
+> ⚠️ **monthly は GH Actions の対象外**。`ai-valuation` / `ai-positioning` / `ai-summary` / `ai-catalysts` / `ai-logo-color` は全部 AI なので、月初に開発者が **手で `pnpm pipeline monthly` を叩く**必要があります。叩かないと月次データが更新されません。
+
 ```bash
 # 全部入り (gh タスクも含む。ローカルで一気通貫したいとき)
 pnpm pipeline daily
 pnpm pipeline weekly
-pnpm pipeline monthly
-pnpm pipeline every-6h
+pnpm pipeline monthly      # ← 月初の必須運用
+pnpm pipeline every-6h     # ← AI Daily Forecast を更新したいとき
 
 # AI タスクだけを上乗せ的に走らせる (GH Actions が gh ぶんを既に流した後など)
 pnpm pipeline daily --runner=local

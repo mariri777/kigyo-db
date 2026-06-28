@@ -114,7 +114,7 @@ export const yahooSnapshotTask: Task<Input, Output> = {
     return out;
   },
 
-  validateOutput(output) {
+  validateOutput(output: Output) {
     // quote が空(rate limit 等)で全 NULL になっていないかをここで弾く。
     // fetchOne 側でも throw するが、二重に防御。
     if (output.priceJpy == null && output.marketCapOku == null) {

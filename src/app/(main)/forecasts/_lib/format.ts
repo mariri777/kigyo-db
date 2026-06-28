@@ -49,6 +49,66 @@ export function dominantProbability(p: number): { value: number; direction: "up"
   return { value: 100 - p, direction: "down" };
 }
 
+/**
+ * Polymarket 風の Yes/No 表示用。
+ *
+ * - probability は「YES 側 (= 上がる/起こる) の 0-100」
+ * - position は AI が取った side。null は 50:50 のときのみ
+ * - sideProbability は AI が取った側の自信度 (= UI で大きく見せる数字)
+ */
+export type Stance = {
+  side: "yes" | "no" | "neutral";
+  /** AI が取った側の確率 (大型表示用) */
+  sideProbability: number;
+  /** 反対側の確率 */
+  oppositeProbability: number;
+  /** UI で使う Polymarket 風カラー */
+  color: string;
+  bg: string;
+  ring: string;
+  glyph: "yes" | "no" | "neutral";
+};
+
+export function readStance(
+  probability: number,
+  position: "yes" | "no" | null,
+): Stance {
+  const fallbackSide: "yes" | "no" | "neutral" =
+    probability >= 51 ? "yes" : probability <= 49 ? "no" : "neutral";
+  const side = position ?? fallbackSide;
+  if (side === "yes") {
+    return {
+      side: "yes",
+      sideProbability: probability,
+      oppositeProbability: 100 - probability,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+      ring: "ring-emerald-200",
+      glyph: "yes",
+    };
+  }
+  if (side === "no") {
+    return {
+      side: "no",
+      sideProbability: 100 - probability,
+      oppositeProbability: probability,
+      color: "text-rose-600",
+      bg: "bg-rose-50",
+      ring: "ring-rose-200",
+      glyph: "no",
+    };
+  }
+  return {
+    side: "neutral",
+    sideProbability: 50,
+    oppositeProbability: 50,
+    color: "text-neutral-700",
+    bg: "bg-neutral-100",
+    ring: "ring-neutral-200",
+    glyph: "neutral",
+  };
+}
+
 export function formatResolveAtJp(iso: string): string {
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
   if (!m) return iso.slice(0, 16);

@@ -62,8 +62,9 @@ const summaryTask: Task<unknown, Output> & SyncCapable<Output> = {
   },
 
   validateOutput(output) {
-    if (!output.summary || output.summary.length < 100) {
-      return { ok: false, reason: `summary 短すぎ (${output.summary?.length ?? 0} 字)` };
+    const o = output as Output;
+    if (!o.summary || o.summary.length < 100) {
+      return { ok: false, reason: `summary 短すぎ (${o.summary?.length ?? 0} 字)` };
     }
     return { ok: true };
   },

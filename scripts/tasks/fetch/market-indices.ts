@@ -99,8 +99,9 @@ const marketIndicesTask: Task<unknown, Output> & SyncCapable<Output> = {
   },
 
   validateOutput(output) {
+    const o = output as Output;
     // 5 指数中 3 本以上は値が取れていないと表示が崩れる
-    const withValue = output.rows.filter((r) => r.value != null).length;
+    const withValue = o.rows.filter((r) => r.value != null).length;
     if (withValue < 3) {
       return { ok: false, reason: `value 入り ${withValue}/5 (3 未満)` };
     }

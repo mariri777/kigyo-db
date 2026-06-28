@@ -77,3 +77,12 @@ export async function findUserById(db: Db, userId: number) {
     .limit(1);
   return rows[0] ?? null;
 }
+
+export async function countUsers(db: Db): Promise<number> {
+  const rows = await db.select({ id: s.adminUsers.id }).from(s.adminUsers);
+  return rows.length;
+}
+
+export async function deleteUser(db: Db, userId: number): Promise<void> {
+  await db.delete(s.adminUsers).where(eq(s.adminUsers.id, userId));
+}

@@ -59,7 +59,7 @@ const logoColorTask: Task<unknown, Output> & SyncCapable<Output> = {
     return m;
   },
 
-  validateOutput(output) {
+  validateOutput(output: Output) {
     // #RRGGBB の形式を最低限チェック
     if (!output.logoColor || !/^#[0-9A-Fa-f]{6}$/.test(output.logoColor)) {
       return { ok: false, reason: `logoColor 形式不正: ${output.logoColor}` };

@@ -42,7 +42,7 @@ const marketBriefTask: Task<unknown, Output> & SyncCapable<Output> = {
     return results[0];
   },
 
-  validateOutput(output) {
+  validateOutput(output: Output) {
     if (!output.lede || output.lede.length < 20) {
       return { ok: false, reason: `lede が短すぎる (${output.lede?.length ?? 0} 字)` };
     }

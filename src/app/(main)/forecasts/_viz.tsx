@@ -2,30 +2,164 @@
  * /forecasts と /forecasts/[id] で共有する可視化部品。
  * Server Component 互換 (純粋 SVG)。
  */
-import { Activity, TrendingDown, TrendingUp } from "lucide-react";
+import { Activity, Check, TrendingDown, TrendingUp, X } from "lucide-react";
 
 import type { ForecastShiftPoint } from "@/server/repo/forecastRepo";
 
-export function VerdictGlyph({ tone, size = "md" }: { tone: "up" | "down" | "neutral"; size?: "sm" | "md" | "lg" }) {
+/** Polymarket 風 tone (Yes/No/中立)。後方互換のために up/down/neutral も受ける */
+export type Tone = "yes" | "no" | "neutral" | "up" | "down";
+
+function toneToHex(tone: Tone): string {
+  if (tone === "yes" || tone === "up") return "#10b981";
+  if (tone === "no" || tone === "down") return "#f43f5e";
+  return "#737373";
+}
+
+export function VerdictGlyph({
+  tone,
+  size = "md",
+}: {
+  tone: Tone;
+  size?: "sm" | "md" | "lg";
+}) {
   const dim = size === "lg" ? "w-14 h-14" : size === "sm" ? "w-9 h-9" : "w-11 h-11";
   const iconSize = size === "lg" ? "w-7 h-7" : size === "sm" ? "w-4 h-4" : "w-5 h-5";
-  if (tone === "up") {
+  if (tone === "yes" || tone === "up") {
     return (
       <div className={`${dim} rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-sm`}>
-        <TrendingUp className={iconSize} strokeWidth={2.5} />
+        {tone === "yes" ? (
+          <Check className={iconSize} strokeWidth={3} />
+        ) : (
+          <TrendingUp className={iconSize} strokeWidth={2.5} />
+        )}
       </div>
     );
   }
-  if (tone === "down") {
+  if (tone === "no" || tone === "down") {
     return (
       <div className={`${dim} rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm`}>
-        <TrendingDown className={iconSize} strokeWidth={2.5} />
+        {tone === "no" ? (
+          <X className={iconSize} strokeWidth={3} />
+        ) : (
+          <TrendingDown className={iconSize} strokeWidth={2.5} />
+        )}
       </div>
     );
   }
   return (
     <div className={`${dim} rounded-full bg-neutral-500 text-white flex items-center justify-center shadow-sm`}>
       <Activity className={iconSize} strokeWidth={2.5} />
+    </div>
+  );
+}
+
+/**
+ * Polymarket 風の Yes/No 大型表示。
+ * yesLabel / noLabel と probability から、AI が取った側を強調する。
+ *
+ * - probability は YES 側の確率 (0-100)
+ * - position は AI が選んだ側 (null は neutral)
+ */
+export function YesNoBlock({
+  probability,
+  position,
+  yesLabel,
+  noLabel,
+  variant = "md",
+}: {
+  probability: number;
+  position: "yes" | "no" | null;
+  yesLabel: string;
+  noLabel: string;
+  variant?: "sm" | "md" | "lg";
+}) {
+  const yes = Math.max(0, Math.min(100, probability));
+  const no = 100 - yes;
+  const yesActive = position === "yes" || (position === null && yes > no);
+  const noActive = position === "no" || (position === null && no > yes);
+  const sizes =
+    variant === "lg"
+      ? { num: "text-5xl sm:text-6xl", label: "text-xs sm:text-sm", chip: "py-3 px-4" }
+      : variant === "sm"
+        ? { num: "text-2xl", label: "text-[10px]", chip: "py-2 px-3" }
+        : { num: "text-3xl sm:text-4xl", label: "text-[11px]", chip: "py-2.5 px-4" };
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <OutcomeChip
+        side="yes"
+        active={yesActive}
+        labelText={yesLabel}
+        percent={yes}
+        sizes={sizes}
+      />
+      <OutcomeChip
+        side="no"
+        active={noActive}
+        labelText={noLabel}
+        percent={no}
+        sizes={sizes}
+      />
+    </div>
+  );
+}
+
+function OutcomeChip({
+  side,
+  active,
+  labelText,
+  percent,
+  sizes,
+}: {
+  side: "yes" | "no";
+  active: boolean;
+  labelText: string;
+  percent: number;
+  sizes: { num: string; label: string; chip: string };
+}) {
+  if (active && side === "yes") {
+    return (
+      <div className={`rounded-xl ${sizes.chip} ring-2 ring-emerald-500/60 bg-emerald-50 flex flex-col`}>
+        <div className={`flex items-center gap-1 ${sizes.label} font-bold uppercase tracking-widest text-emerald-700`}>
+          <Check className="w-3 h-3" strokeWidth={3} />
+          YES ・ {labelText}
+        </div>
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className={`font-mono tabular ${sizes.num} font-black tracking-tight text-emerald-600`}>
+            {percent}
+          </span>
+          <span className="text-lg font-bold text-emerald-600">%</span>
+        </div>
+      </div>
+    );
+  }
+  if (active && side === "no") {
+    return (
+      <div className={`rounded-xl ${sizes.chip} ring-2 ring-rose-500/60 bg-rose-50 flex flex-col`}>
+        <div className={`flex items-center gap-1 ${sizes.label} font-bold uppercase tracking-widest text-rose-700`}>
+          <X className="w-3 h-3" strokeWidth={3} />
+          NO ・ {labelText}
+        </div>
+        <div className="flex items-baseline gap-1 mt-1">
+          <span className={`font-mono tabular ${sizes.num} font-black tracking-tight text-rose-600`}>
+            {percent}
+          </span>
+          <span className="text-lg font-bold text-rose-600">%</span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className={`rounded-xl ${sizes.chip} bg-neutral-50 ring-1 ring-neutral-200 flex flex-col`}>
+      <div className={`flex items-center gap-1 ${sizes.label} font-bold uppercase tracking-widest text-neutral-500`}>
+        {side === "yes" ? "YES" : "NO"} ・ {labelText}
+      </div>
+      <div className="flex items-baseline gap-1 mt-1">
+        <span className={`font-mono tabular ${sizes.num} font-black tracking-tight text-neutral-500`}>
+          {percent}
+        </span>
+        <span className="text-lg font-bold text-neutral-400">%</span>
+      </div>
     </div>
   );
 }
@@ -50,7 +184,19 @@ export function ShiftBadge({ delta }: { delta: number }) {
   );
 }
 
-export function ProbabilityGauge({ probability }: { probability: number }) {
+/**
+ * Polymarket 風のゲージ。Yes / No それぞれの確率を 1 本のバーに収め、
+ * 左下に Yes、右下に No のラベル + パーセントを置く。
+ */
+export function ProbabilityGauge({
+  probability,
+  yesLabel = "Yes",
+  noLabel = "No",
+}: {
+  probability: number;
+  yesLabel?: string;
+  noLabel?: string;
+}) {
   const p = Math.max(0, Math.min(100, probability));
   const inverse = 100 - p;
   return (
@@ -61,12 +207,12 @@ export function ProbabilityGauge({ probability }: { probability: number }) {
       </div>
       <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
         <span className="text-emerald-700 inline-flex items-center gap-1">
-          <TrendingUp className="w-3 h-3" />
-          上がる <span className="font-mono tabular">{p}%</span>
+          <Check className="w-3 h-3" strokeWidth={3} />
+          Yes・{yesLabel} <span className="font-mono tabular">{p}%</span>
         </span>
         <span className="text-rose-700 inline-flex items-center gap-1">
-          <TrendingDown className="w-3 h-3" />
-          下がる <span className="font-mono tabular">{inverse}%</span>
+          <X className="w-3 h-3" strokeWidth={3} />
+          No・{noLabel} <span className="font-mono tabular">{inverse}%</span>
         </span>
       </div>
     </div>
@@ -83,7 +229,7 @@ export function ShiftSparkline({
   variant = "card",
 }: {
   shifts: ForecastShiftPoint[];
-  tone: "up" | "down" | "neutral";
+  tone: Tone;
   variant?: "card" | "wide";
 }) {
   if (shifts.length < 2) return null;
@@ -93,7 +239,7 @@ export function ShiftSparkline({
   const min = Math.min(...probs, 30);
   const max = Math.max(...probs, 70);
   const span = Math.max(max - min, 1);
-  const stroke = tone === "up" ? "#10b981" : tone === "down" ? "#f43f5e" : "#737373";
+  const stroke = toneToHex(tone);
   const fillId = `shift-fill-${tone}-${variant}`;
   const baseY = H - ((50 - min) / span) * (H - 12) - 6;
   const pts = shifts.map((s, i) => {
