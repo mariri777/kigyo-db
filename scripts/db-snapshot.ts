@@ -79,15 +79,24 @@ function writeCsv(path: string, rows: Record<string, unknown>[]): void {
   writeFileSync(path, rowsToCsv(normalized));
 }
 
-async function main() {
-  const target = process.argv[2];
+/**
+ * 外部スクリプト (seed-fill-ai 等) から呼べる snapshot 実行関数。
+ * targetTables を渡すとそのテーブルだけ書き出す。省略時は全テーブル。
+ * 未知のテーブル名は throw (CLI 側で exit 1)。
+ */
+export async function runSnapshot(targetTables?: string[]): Promise<void> {
   const db = getLocalSqlite();
   mkdirSync(OUT_DIR, { recursive: true });
 
-  const tables = target ? TABLES.filter((t) => t.name === target) : TABLES;
-  if (tables.length === 0) {
-    console.error(`未知のテーブル: ${target}. 利用可能: ${TABLES.map((t) => t.name).join(",")}`);
-    process.exit(1);
+  let tables = TABLES;
+  if (targetTables && targetTables.length > 0) {
+    const known = new Set(TABLES.map((t) => t.name));
+    const unknown = targetTables.filter((t) => !known.has(t));
+    if (unknown.length > 0) {
+      throw new Error(`未知のテーブル: ${unknown.join(",")}. 利用可能: ${TABLES.map((t) => t.name).join(",")}`);
+    }
+    const wanted = new Set(targetTables);
+    tables = TABLES.filter((t) => wanted.has(t.name));
   }
 
   let totalRows = 0;
@@ -121,7 +130,13 @@ async function main() {
   console.log(`\n📦 ${writtenTables} テーブル / ${totalRows} 行を保存`);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+// CLI: pnpm db:snapshot [table]
+// import 経由の利用者は runSnapshot() を直接呼ぶこと。
+const invokedFromCli = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (invokedFromCli) {
+  const target = process.argv[2];
+  runSnapshot(target ? [target] : undefined).catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

@@ -15,6 +15,7 @@
     "db:reset-local": "tsx scripts/seed-local.ts",
     "db:snapshot": "tsx scripts/db-snapshot.ts",
     "db:restore": "tsx scripts/db-restore.ts",
+    "seed:fill-ai": "tsx scripts/seed-fill-ai.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
