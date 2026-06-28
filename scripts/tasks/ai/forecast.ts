@@ -337,6 +337,22 @@ const forecastTask: Task<Input, BatchOutput> & SyncCapable<BatchOutput> = {
     };
   },
 
+  validateOutput(output) {
+    // 2 指数(S&P / N225)とも返ってこないと v2 トップが片側欠ける
+    if (!Array.isArray(output.items) || output.items.length < 2) {
+      return { ok: false, reason: `items ${output.items?.length ?? 0} 件 < 2` };
+    }
+    for (const it of output.items) {
+      if (typeof it.probability !== "number") {
+        return { ok: false, reason: "probability 数値でない" };
+      }
+      if (!it.rationale?.macro || it.rationale.macro.length < 20) {
+        return { ok: false, reason: `${it.symbol} rationale.macro 短すぎ` };
+      }
+    }
+    return { ok: true };
+  },
+
   async applyLocal(_target: Target<Input>, output: BatchOutput, _ctx: PipelineCtx) {
     const now = new Date().toISOString();
     const shiftAt = now.slice(0, 16);

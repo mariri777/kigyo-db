@@ -87,3 +87,87 @@ export async function deleteUserSessionsExcept(
       ),
     );
 }
+
+/** パスワードリセット: 全セッション破棄 */
+export async function deleteAllUserSessions(
+  db: Db,
+  userId: number,
+): Promise<void> {
+  await db.delete(s.adminSessions).where(eq(s.adminSessions.userId, userId));
+}
+
+/**
+ * パスワードリセットトークンを 1 件追加。
+ * id = sha256(raw token) hex を保存する(生 token は DB に残さない)。
+ */
+export async function createPasswordReset(
+  db: Db,
+  opts: { id: string; userId: number; expiresAt: string },
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db.insert(s.adminPasswordResets).values({
+    id: opts.id,
+    userId: opts.userId,
+    createdAt: now,
+    expiresAt: opts.expiresAt,
+    usedAt: null,
+  });
+}
+
+/**
+ * パスワードリセットトークンを引いて、使えるかどうか判定して返す。
+ *   - 期限切れ → null
+ *   - 使用済み → null
+ *   - 有効   → userId を返す
+ */
+export async function findUsablePasswordReset(
+  db: Db,
+  id: string,
+): Promise<{ id: string; userId: number } | null> {
+  const nowIso = new Date().toISOString();
+  const rows = await db
+    .select({
+      id: s.adminPasswordResets.id,
+      userId: s.adminPasswordResets.userId,
+      usedAt: s.adminPasswordResets.usedAt,
+      expiresAt: s.adminPasswordResets.expiresAt,
+    })
+    .from(s.adminPasswordResets)
+    .where(eq(s.adminPasswordResets.id, id))
+    .limit(1);
+  const r = rows[0];
+  if (!r) return null;
+  if (r.usedAt) return null;
+  if (r.expiresAt <= nowIso) return null;
+  return { id: r.id, userId: r.userId };
+}
+
+/** トークンを「使用済み」マークする(同 id でもう一度使えなくする)。 */
+export async function markPasswordResetUsed(
+  db: Db,
+  id: string,
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db
+    .update(s.adminPasswordResets)
+    .set({ usedAt: now })
+    .where(eq(s.adminPasswordResets.id, id));
+}
+
+/** ユーザーのパスワードを更新する。 */
+export async function updateUserPassword(
+  db: Db,
+  userId: number,
+  hash: { hashB64: string; saltB64: string; iterations: number },
+): Promise<void> {
+  const now = new Date().toISOString();
+  await db
+    .update(s.adminUsers)
+    .set({
+      passwordHash: hash.hashB64,
+      passwordSalt: hash.saltB64,
+      passwordIterations: hash.iterations,
+      updatedAt: now,
+    })
+    .where(eq(s.adminUsers.id, userId));
+}

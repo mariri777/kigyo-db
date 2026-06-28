@@ -1,12 +1,23 @@
 name: pipeline-daily
 
-# JST 04:00 (UTC 19:00) に 1 回。
-# JPX / Yahoo / EDINET の取得 → AI 動意分 + market-brief 生成 → 本番 D1 反映。
-# 詳細は scripts/lib/schedule.ts の SCHEDULE 配列(frequency: "daily")。
+# 日次パイプライン (GH Actions runner 担当分のみ)。
+# JST 16:00 = UTC 07:00 (東証 15:30 引け後、Yahoo に終値が反映された頃)。
+#
+# 含むタスク (scripts/lib/schedule.ts daily + runner=gh|both):
+#   1. fetch-jpx              : JPX 銘柄一覧を再取得
+#   2. fetch-yahoo-snapshot   : 全銘柄の quote/chart 更新 (~10-15 分)
+#   3. fetch-market-indices   : 指数値を確定
+#   4. edinet-pipeline        : EDINET XBRL を R2 へ
+#   5. derive-highlights      : SQL ルールベースで homepage_highlights を更新
+#   6. sync-remote            : 上記すべての結果を本番 D1 へ反映
+#
+# 含まないタスク (ローカル AI 専用):
+#   - ai-stock-trend / ai-market-brief (サブスク Claude が必要)
+#   → 開発者が「pnpm pipeline daily --runner=local」を後追いで叩く
 
 on:
   schedule:
-    - cron: "0 19 * * *"
+    - cron: "0 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -19,12 +30,12 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
-      EDINET_R2: remote
+      # EDINET API キー (Cloudflare secret 名が typo のまま運用されているのに合わせる)
+      EDITNET_API_KEY: ${{ secrets.EDITNET_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -33,5 +44,9 @@ jobs:
           node-version: "22"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run daily pipeline
-        run: pnpm pipeline daily
+
+      - name: Bootstrap local D1 (no fetch)
+        run: pnpm db:seed-local --no-fetch
+
+      - name: Run daily (gh runner only)
+        run: pnpm pipeline daily --runner=gh

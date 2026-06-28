@@ -49,6 +49,8 @@ export type RunSummary = {
   skipped: number;
   failed: Array<{ key: string; reason: string }>;
   durationMs: number;
+  /** health-check が ok=false で終わった場合 true(後段の sync を止めるため使う) */
+  unhealthy?: boolean;
 };
 
 export async function runTask<I, O>(
@@ -131,6 +133,15 @@ export async function runTask<I, O>(
   for (const t of targets) {
     const output = outputs.get(t.key);
     if (output === undefined) continue;
+    // タスクの validateOutput で「中身が本当に成功と呼べるか」確認(再発防止)
+    if (task.validateOutput) {
+      const v = task.validateOutput(output, t);
+      if (!v.ok) {
+        failed.push({ key: t.key, reason: `validate: ${v.reason}` });
+        process.stdout.write(`    ✗ ${t.key} (validate): ${v.reason}\n`);
+        continue;
+      }
+    }
     try {
       if (task.writeLakePath) {
         const path = task.writeLakePath(t, ctx);
@@ -153,5 +164,33 @@ export async function runTask<I, O>(
   const durationMs = Date.now() - startedAt;
   console.log(`    ✅ ${succeeded} 成功 / ${skipped} skip / ${failed.length} 失敗 (${durationMs}ms)`);
 
-  return { task: task.name, selected: targets.length, succeeded, skipped, failed, durationMs };
+  // 事後 health-check。タスクが「N% 以上は埋まっているはず」等を判定する。
+  let unhealthy = false;
+  if (task.healthCheck) {
+    try {
+      const hc = await task.healthCheck(ctx);
+      for (const m of hc.metrics) console.log(`    🩺 ${m}`);
+      if (hc.warnings) for (const w of hc.warnings) console.warn(`    ⚠ ${w}`);
+      if (!hc.ok) {
+        unhealthy = true;
+        for (const r of hc.reasons ?? []) console.error(`    🚨 ${r}`);
+        console.error(
+          `    ❌ ${task.name} health-check FAILED ─ 後段の sync を止めるべき`,
+        );
+      }
+    } catch (e) {
+      unhealthy = true;
+      console.error(`    🚨 health-check 自体が例外: ${formatError(e)}`);
+    }
+  }
+
+  return {
+    task: task.name,
+    selected: targets.length,
+    succeeded,
+    skipped,
+    failed,
+    durationMs,
+    unhealthy,
+  };
 }

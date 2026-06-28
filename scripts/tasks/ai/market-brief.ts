@@ -42,6 +42,16 @@ const marketBriefTask: Task<unknown, Output> & SyncCapable<Output> = {
     return results[0];
   },
 
+  validateOutput(output) {
+    if (!output.lede || output.lede.length < 20) {
+      return { ok: false, reason: `lede が短すぎる (${output.lede?.length ?? 0} 字)` };
+    }
+    if (!Array.isArray(output.bullets) || output.bullets.length < 2) {
+      return { ok: false, reason: `bullets ${output.bullets?.length ?? 0} 件 < 2` };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     await legacy.applyOne(ctx.db, target.key, output);
   },

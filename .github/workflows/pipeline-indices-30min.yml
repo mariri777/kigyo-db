@@ -1,0 +1,46 @@
+name: pipeline-indices-30min
+
+# 主要指数 (^N225 / ^TOPX / JPY=X / ^SOX / ^GSPC) を 30 分ごとに
+# Yahoo Finance から取得して本番 D1 (market_indices) を更新する。
+#
+# トップページの「マーケット概況」が常に最新値で表示される目的。
+# AI は一切呼ばない (sync-remote まで)。
+#
+# 詳細は scripts/lib/schedule.ts。every-6h frequency + runner=gh のエントリだけが対象。
+# (ここでは every-6h ではなく、より頻繁に market-indices だけ単独で叩く)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pipeline-indices-30min
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap local D1 (no fetch)
+        run: pnpm db:seed-local --no-fetch
+
+      - name: fetch-market-indices + sync-remote
+        run: |
+          pnpm pipeline run fetch-market-indices
+          pnpm pipeline sync

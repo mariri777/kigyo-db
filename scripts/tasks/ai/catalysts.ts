@@ -72,6 +72,20 @@ const catalystsTask: Task<unknown, Output> & SyncCapable<Output> = {
     return m;
   },
 
+  validateOutput(output) {
+    // upside/downside がそれぞれ最低 3 件は欲しい(空回しの 1 件で済まされない)
+    if (!Array.isArray(output.upside) || output.upside.length < 3) {
+      return { ok: false, reason: `upside ${output.upside?.length ?? 0} 件 < 3` };
+    }
+    if (!Array.isArray(output.downside) || output.downside.length < 3) {
+      return { ok: false, reason: `downside ${output.downside?.length ?? 0} 件 < 3` };
+    }
+    if (output.upside.some((c) => !c.title || c.title.length < 5)) {
+      return { ok: false, reason: "upside.title が空または短すぎる" };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     await legacy.applyOne(ctx.db, target.key, output);
   },

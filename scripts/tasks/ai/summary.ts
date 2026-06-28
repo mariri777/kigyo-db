@@ -61,6 +61,13 @@ const summaryTask: Task<unknown, Output> & SyncCapable<Output> = {
     return m;
   },
 
+  validateOutput(output) {
+    if (!output.summary || output.summary.length < 100) {
+      return { ok: false, reason: `summary 短すぎ (${output.summary?.length ?? 0} 字)` };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     await legacy.applyOne(ctx.db, target.key, output);
   },

@@ -364,6 +364,24 @@ export const adminSessions = sqliteTable("admin_sessions", {
   idxUserId: index("idx_admin_sessions_user_id").on(t.userId),
 }));
 
+/**
+ * パスワードリセット用 1 回限りトークン。
+ * id 列は生トークンの SHA-256 hex を保存(DB が漏れてもメール本文に出した
+ * 生トークンと照合できない)。期限切れ・使用済みは usedAt が NULL かどうかで判別。
+ */
+export const adminPasswordResets = sqliteTable("admin_password_resets", {
+  id: text("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: "cascade" }),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+}, (t) => ({
+  idxUser: index("idx_admin_password_resets_user").on(t.userId),
+  idxExpires: index("idx_admin_password_resets_expires").on(t.expiresAt),
+}));
+
 // ─── 記事カテゴリ (decoding-earnings / industry-overview / theme-dive / primer) ───
 
 export const categories = sqliteTable("categories", {
@@ -666,6 +684,22 @@ export const forecasts = sqliteTable("forecasts", {
   resolveAt: text("resolve_at").notNull(),
   /** 観測スナップショット時の価格 (= 予測時の前日終値) */
   referencePrice: real("reference_price"),
+  /**
+   * 固定指数 vs AI スクラッチ
+   *   - "fixed-index": S&P 500 / 日経平均 など、こちらでテーマを定義した予測
+   *   - "ai-scratch":  AI がその日に立てた旬な Issue。target_symbol は topic_slug を入れる
+   */
+  issueKind: text("issue_kind", { enum: ["fixed-index", "ai-scratch"] })
+    .notNull()
+    .default("fixed-index"),
+  /** AI が取ったポジション。Polymarket 風 Yes/No 二択を強制 */
+  position: text("position", { enum: ["yes", "no"] }),
+  /** Yes 側の自然語ラベル "プラス" / "152円超え" / "実施する" */
+  yesLabel: text("yes_label"),
+  /** No 側の自然語ラベル */
+  noLabel: text("no_label"),
+  /** スクラッチ Issue の自然キー (例 "boj-hike-2026-07")。固定指数は null */
+  topicSlug: text("topic_slug"),
   /** "live" 公開中 / "resolved" 解決済 / "archived" 非表示 */
   status: text("status", { enum: ["live", "resolved", "archived"] })
     .notNull()
@@ -725,8 +759,13 @@ export const forecastScenarios = sqliteTable("forecast_scenarios", {
   forecastId: integer("forecast_id")
     .notNull()
     .references(() => forecasts.id, { onDelete: "cascade" }),
-  /** "base" / "bull" / "bear" */
-  kind: text("kind", { enum: ["base", "bull", "bear"] }).notNull(),
+  /**
+   * "base" / "bull" / "bear" — 指数系の方向性シナリオ
+   * "yes-case" / "no-case" — AI スクラッチ Issue (Yes/No 二項) 用
+   */
+  kind: text("kind", {
+    enum: ["base", "bull", "bear", "yes-case", "no-case"],
+  }).notNull(),
   /** "もみ合い" 等の短いラベル */
   label: text("label").notNull(),
   /** このシナリオの想定確率 0-100 */
@@ -771,11 +810,9 @@ export const edinetDocs = sqliteTable("edinet_docs", {
   periodEnd: text("period_end"),
   submitDate: text("submit_date").notNull(),
   fetchStatus: text("fetch_status", {
-    enum: ["discovered", "downloaded", "parsed", "failed"],
+    enum: ["discovered", "parsed", "failed"],
   }).notNull(),
   failedReason: text("failed_reason"),
-  r2ZipKey: text("r2_zip_key"),
-  r2XbrlKey: text("r2_xbrl_key"),
   discoveredAt: text("discovered_at").notNull(),
   updatedAt: text("updated_at").notNull(),
 }, (t) => ({

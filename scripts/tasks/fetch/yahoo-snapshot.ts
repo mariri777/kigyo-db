@@ -50,7 +50,12 @@ type Output = {
   }>;
 };
 
-const BATCH_CONCURRENCY = 8;
+// Yahoo Finance はリクエスト多重度を上げるとサイレントに rate limit する
+// (返答自体は来るが半数以上が空に近い)。BATCH_CONCURRENCY=8 で 3572 銘柄を
+// 192 秒で処理した結果、quote 取得率は 27% (957/3572) だった。
+// 並列度を 2 に落とし、失敗時はバックオフリトライを 2 回入れる。
+const BATCH_CONCURRENCY = 2;
+const RETRY_DELAYS_MS = [800, 2400];
 
 export const yahooSnapshotTask: Task<Input, Output> = {
   name: "fetch-yahoo-snapshot",
@@ -68,21 +73,89 @@ export const yahooSnapshotTask: Task<Input, Output> = {
   },
 
   async run(target): Promise<Output> {
-    return fetchOne(target.input.code);
+    return fetchOneWithRetry(target.input.code);
   },
 
   async runBatch(targets, _ctx): Promise<Map<string, Output>> {
     const out = new Map<string, Output>();
-    // BATCH_CONCURRENCY 件ずつ並列
+    let okCount = 0;
+    let failCount = 0;
     for (let i = 0; i < targets.length; i += BATCH_CONCURRENCY) {
       const slice = targets.slice(i, i + BATCH_CONCURRENCY);
-      const results = await Promise.allSettled(slice.map((t) => fetchOne(t.input.code)));
+      const results = await Promise.allSettled(
+        slice.map((t) => fetchOneWithRetry(t.input.code)),
+      );
       for (let j = 0; j < slice.length; j++) {
         const r = results[j];
-        if (r.status === "fulfilled") out.set(slice[j].key, r.value);
+        if (r.status === "fulfilled") {
+          out.set(slice[j].key, r.value);
+          okCount += 1;
+        } else {
+          failCount += 1;
+          if (failCount <= 5 || failCount % 50 === 0) {
+            console.warn(
+              `    ! yahoo-snapshot ${slice[j].key}: ${(r.reason as Error).message}`,
+            );
+          }
+        }
+      }
+      // 進捗を 200 件ごとに stderr に
+      if ((i + slice.length) % 200 < BATCH_CONCURRENCY) {
+        console.log(
+          `    … ${i + slice.length}/${targets.length} ok=${okCount} fail=${failCount}`,
+        );
       }
     }
+    if (failCount > 0) {
+      console.warn(
+        `    ⚠ yahoo-snapshot fail=${failCount}/${targets.length} (${((failCount / targets.length) * 100).toFixed(1)}%)`,
+      );
+    }
     return out;
+  },
+
+  validateOutput(output) {
+    // quote が空(rate limit 等)で全 NULL になっていないかをここで弾く。
+    // fetchOne 側でも throw するが、二重に防御。
+    if (output.priceJpy == null && output.marketCapOku == null) {
+      return { ok: false, reason: "priceJpy / marketCapOku が両方 NULL" };
+    }
+    return { ok: true };
+  },
+
+  async healthCheck(ctx) {
+    // 「3572 銘柄中 price_jpy が埋まってる割合」を見て 80% を下回ったら異常
+    const totalRow = (await ctx.db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM stocks`,
+    )) as Array<{ n: number }>;
+    const totalStocks = totalRow[0]?.n ?? 0;
+    const okRow = (await ctx.db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM stock_snapshot WHERE price_jpy IS NOT NULL`,
+    )) as Array<{ n: number }>;
+    const okSnapshots = okRow[0]?.n ?? 0;
+    const ratio = totalStocks > 0 ? okSnapshots / totalStocks : 0;
+    const pct = (ratio * 100).toFixed(1);
+    const metrics = [
+      `stock_snapshot.price_jpy 埋まり ${pct}% (${okSnapshots}/${totalStocks})`,
+    ];
+    if (totalStocks === 0) {
+      return { ok: false, metrics, reasons: ["stocks テーブルが空"] };
+    }
+    if (ratio < 0.8) {
+      return {
+        ok: false,
+        metrics,
+        reasons: [
+          `snapshot 充足率 ${pct}% < 80%。Yahoo の rate limit を疑い、` +
+            `BATCH_CONCURRENCY と RETRY_DELAYS_MS を見直すこと。`,
+        ],
+      };
+    }
+    return {
+      ok: true,
+      metrics,
+      warnings: ratio < 0.95 ? [`充足率 ${pct}%。可能なら未取得分を再実行`] : undefined,
+    };
   },
 
   async applyLocal(target, output, ctx) {
@@ -172,6 +245,21 @@ function yf() {
   return _yf;
 }
 
+async function fetchOneWithRetry(code: string): Promise<Output> {
+  let lastErr: Error | null = null;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await fetchOne(code);
+    } catch (e) {
+      lastErr = e as Error;
+      const delay = RETRY_DELAYS_MS[attempt];
+      if (delay == null) break;
+      await new Promise((r) => setTimeout(r, delay));
+    }
+  }
+  throw lastErr ?? new Error(`fetchOne ${code} failed`);
+}
+
 async function fetchOne(code: string): Promise<Output> {
   const symbol = `${code}.T`;
 
@@ -186,6 +274,19 @@ async function fetchOne(code: string): Promise<Output> {
       interval: "1wk",
     }),
   ]);
+
+  // quote が取れなければ「実質失敗」扱いにして再試行させる(中身が全 NULL の
+  // snapshot が「成功」として残るのを防ぐ)。
+  if (quoteRes.status === "rejected") {
+    throw new Error(`quote rejected: ${(quoteRes.reason as Error)?.message ?? "unknown"}`);
+  }
+  if (Array.isArray(quoteRes.value) || quoteRes.value == null) {
+    throw new Error("quote returned no value");
+  }
+  const q0 = quoteRes.value;
+  if (q0.regularMarketPrice == null && q0.marketCap == null) {
+    throw new Error("quote returned empty (likely rate-limited)");
+  }
 
   let priceJpy: number | null = null;
   let priceDate: string | null = null;

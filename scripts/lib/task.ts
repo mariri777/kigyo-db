@@ -84,4 +84,37 @@ export type Task<I = unknown, O = unknown> = {
   promptTemplate?: string;
   /** ai のとき出力 JSON のひな形(エンジニアと LLM の双方が読む) */
   outputTemplate?: unknown;
+
+  /**
+   * 1 件の output が「本当に成功」と呼べるか判定する。
+   *
+   * 設計理由: Yahoo の rate limit で空 quote が「成功扱い」になっていた事故への
+   * 再発防止。run が値を返したことと「データが取れたこと」を分離する。
+   * - 返り値 ok=false → runner が該当 target を失敗扱いし、applyLocal を呼ばない
+   * - エラーメッセージは fail の reason として記録
+   *
+   * 省略時は ok=true (全 output を成功扱い)。後方互換のため optional。
+   */
+  validateOutput?(output: O, target: Target<I>): { ok: true } | { ok: false; reason: string };
+
+  /**
+   * タスク全体の事後 health-check。run+apply が全部終わった後に runner が呼ぶ。
+   * 「想定件数の何%は埋まっているべき」「主要キーは入っているはず」等を確認する。
+   *
+   * - 返り値 ok=false → runner が ⚠ 警告ログを出し、exit code 1 にする
+   * - 返り値 ok=true でも warnings に注意を入れられる
+   *
+   * 省略時は health-check スキップ。
+   */
+  healthCheck?(ctx: PipelineCtx): Promise<HealthCheckResult>;
+};
+
+export type HealthCheckResult = {
+  ok: boolean;
+  /** "snapshot: price_jpy 埋まり 99% (3540/3572)" 等 */
+  metrics: string[];
+  /** ok=false のときの致命的な理由 */
+  reasons?: string[];
+  /** ok=true でも気になる点があれば */
+  warnings?: string[];
 };

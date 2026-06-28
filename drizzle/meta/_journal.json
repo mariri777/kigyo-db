@@ -36,6 +36,27 @@
       "when": 1782700000000,
       "tag": "0004_add_forecasts",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1782643821455,
+      "tag": "0005_sleepy_harry_osborn",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782710000000,
+      "tag": "0006_polymarket_forecasts",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1782644691012,
+      "tag": "0007_drop_edinet_r2_cols",
+      "breakpoints": true
     }
   ]
 }

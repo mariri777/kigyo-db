@@ -59,6 +59,14 @@ const logoColorTask: Task<unknown, Output> & SyncCapable<Output> = {
     return m;
   },
 
+  validateOutput(output) {
+    // #RRGGBB の形式を最低限チェック
+    if (!output.logoColor || !/^#[0-9A-Fa-f]{6}$/.test(output.logoColor)) {
+      return { ok: false, reason: `logoColor 形式不正: ${output.logoColor}` };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     await legacy.applyOne(ctx.db, target.key, output);
   },

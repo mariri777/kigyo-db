@@ -239,6 +239,26 @@ const derivedHighlightsTask: Task<unknown, Output> & SyncCapable<Output> = {
     return { date, rows: rows.slice(0, MAX_HIGHLIGHTS) };
   },
 
+  async healthCheck(ctx) {
+    // 最新 as_of の行数を見る。トップに 0 件並ぶのは事故。
+    const row = (await ctx.db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM homepage_highlights WHERE as_of = (SELECT MAX(as_of) FROM homepage_highlights)`,
+    )) as Array<{ n: number }>;
+    const n = row[0]?.n ?? 0;
+    const metrics = [`homepage_highlights 最新 ${n} 件`];
+    if (n === 0) {
+      return {
+        ok: false,
+        metrics,
+        reasons: [
+          "ハイライトが 0 件。先行する stock_snapshot に値が入っていないか、" +
+            "閾値(PRICE_ANOMALY_THRESHOLD=5%, MA200_OVERSHOOT_MAX=1.03 等)が厳しすぎる",
+        ],
+      };
+    }
+    return { ok: true, metrics };
+  },
+
   async applyLocal(_target, output, ctx) {
     const o = output as Output;
     // 同日付の既存ハイライトをいったん全削除して入れ替え (冪等)

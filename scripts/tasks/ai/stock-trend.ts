@@ -113,6 +113,22 @@ const stockTrendTask: Task<Input, Output> & SyncCapable<Output> = {
     return out;
   },
 
+  validateOutput(output) {
+    if (!output.stockTrendAnalysis || output.stockTrendAnalysis.length < 60) {
+      return {
+        ok: false,
+        reason: `stockTrendAnalysis 短すぎ (${output.stockTrendAnalysis?.length ?? 0} 字)`,
+      };
+    }
+    if (!Array.isArray(output.stockTrendFactors) || output.stockTrendFactors.length < 2) {
+      return {
+        ok: false,
+        reason: `stockTrendFactors ${output.stockTrendFactors?.length ?? 0} 件 < 2`,
+      };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     // legacy.applyOne を再利用
     await legacy.applyOne(ctx.db, target.key, output);

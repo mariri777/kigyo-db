@@ -65,14 +65,14 @@ export function formatResolveAtLong(iso: string): string {
   return `${Number(mm)}月${Number(dd)}日 (${wd}) ${Number(hh)}:${mi}`;
 }
 
-export function formatGeneratedAtJst(iso: string): string {
+export function formatGeneratedAt(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 16);
-  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
-  const mm = String(jst.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(jst.getUTCDate()).padStart(2, "0");
-  const hh = String(jst.getUTCHours()).padStart(2, "0");
-  const mi = String(jst.getUTCMinutes()).padStart(2, "0");
+  const local = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  const mm = String(local.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(local.getUTCDate()).padStart(2, "0");
+  const hh = String(local.getUTCHours()).padStart(2, "0");
+  const mi = String(local.getUTCMinutes()).padStart(2, "0");
   return `${mm}/${dd} ${hh}:${mi}`;
 }
 

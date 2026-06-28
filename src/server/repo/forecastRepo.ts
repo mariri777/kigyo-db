@@ -28,9 +28,18 @@ export type ForecastSummary = {
   targetSymbol: string;
   targetName: string;
   targetKind: "global-index" | "jp-stock" | "fx" | "commodity";
+  issueKind: "fixed-index" | "ai-scratch";
+  /** AI が取ったポジション。null は 50:50 のときのみ (極めて稀) */
+  position: "yes" | "no" | null;
+  /** Polymarket 風 Outcome 表示用。例「プラス」「152円超え」 */
+  yesLabel: string | null;
+  noLabel: string | null;
+  /** スクラッチ Issue の自然キー */
+  topicSlug: string | null;
   question: string;
   headline: string;
   lede: string;
+  /** YES (= 上がる/起こる) 側の確率 0-100 */
   probability: number;
   confidence: "low" | "med" | "high";
   resolveAt: string;
@@ -59,7 +68,7 @@ export type ForecastTake = {
 };
 
 export type ForecastScenario = {
-  kind: "base" | "bull" | "bear";
+  kind: "base" | "bull" | "bear" | "yes-case" | "no-case";
   label: string;
   probability: number;
   priceLow: number | null;
@@ -200,6 +209,30 @@ export async function listForecastsByTarget(
   return out;
 }
 
+/**
+ * スクラッチ Issue の topic_slug で履歴を引く。
+ * 同じ Issue が複数回 (6h ごとに) 更新されるため、resolveAt 降順で。
+ */
+export async function listForecastsByTopic(
+  db: DbClient,
+  topicSlug: string,
+  limit = 12,
+): Promise<ForecastSummary[]> {
+  const rows = await db
+    .select()
+    .from(forecasts)
+    .where(eq(forecasts.topicSlug, topicSlug))
+    .orderBy(desc(forecasts.resolveAt))
+    .limit(limit)
+    .all();
+  const out: ForecastSummary[] = [];
+  for (const r of rows) {
+    const shifts = await fetchShifts(db, r.id, 4);
+    out.push(rowToSummary(r, shifts));
+  }
+  return out;
+}
+
 // ─────────────────────────────────────────────────────────
 // helpers
 // ─────────────────────────────────────────────────────────
@@ -224,11 +257,18 @@ function rowToSummary(
   r: typeof forecasts.$inferSelect,
   shifts: ForecastShiftPoint[],
 ): ForecastSummary {
+  const fallbackPosition: "yes" | "no" | null =
+    r.probability >= 51 ? "yes" : r.probability <= 49 ? "no" : null;
   return {
     id: r.id,
     targetSymbol: r.targetSymbol,
     targetName: r.targetName,
     targetKind: r.targetKind as ForecastSummary["targetKind"],
+    issueKind: (r.issueKind ?? "fixed-index") as ForecastSummary["issueKind"],
+    position: (r.position as ForecastSummary["position"]) ?? fallbackPosition,
+    yesLabel: r.yesLabel,
+    noLabel: r.noLabel,
+    topicSlug: r.topicSlug,
     question: r.question,
     headline: r.headline,
     lede: r.lede,

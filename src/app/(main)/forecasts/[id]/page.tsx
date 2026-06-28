@@ -24,7 +24,7 @@ import {
 import {
   confidenceMeta,
   dominantProbability,
-  formatGeneratedAtJst,
+  formatGeneratedAt,
   formatResolveAtJp,
   formatResolveAtLong,
   readVerdict,
@@ -239,7 +239,7 @@ function Hero({
               <Clock className="w-3 h-3" /> 答え合わせ {formatResolveAtLong(detail.resolveAt)}
             </span>
             <span className="text-neutral-600">·</span>
-            <span>最終更新 {formatGeneratedAtJst(detail.generatedAt)}</span>
+            <span>最終更新 {formatGeneratedAt(detail.generatedAt)}</span>
           </div>
         </div>
 

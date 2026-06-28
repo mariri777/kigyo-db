@@ -1,19 +1,23 @@
 /**
- * Step 4. parse
- * R2 の XBRL を読み、SUMMARY_METRICS + PL_METRICS から
- *   - financials_annual (連結, Summary 5期分)
- *   - dividends (10年分)
- *   - companies.employees_consolidated
- *   - stock_snapshot.latest_*, ev_ebitda 等は今回スキップ (LLM 派生は別)
- * を upsert する。
+ * Step 2-4 (in-memory).
  *
- * 注意: companies は EDINET コードを uq に持つ (schema.ts)。既存社にマッチしない場合は
- *   - secCode が一致する stock がいれば、その companyId を取る
- *   - どちらも無ければスキップ (seed が先に走っている前提)
+ * discovered な edinet_docs を 1 件ずつ:
+ *   1. EDINET から ZIP をメモリに DL
+ *   2. ZIP を fflate で in-memory unzip し、PublicDoc 配下のメイン XBRL を抽出
+ *   3. XBRL を parse して financials_annual / dividends / companies を UPSERT
+ *
+ * R2 や一時ディレクトリには一切書かない。同一プロセス内で完結。
+ *
+ * 旧 download/extract/parse の 3 step を廃止し本ファイルに統合した。理由:
+ *   - EDINET XBRL の生 ZIP を永続保管するモチベが無くなった
+ *   - GH Actions 1 ジョブ内で完結するなら中間 R2 は不要
+ *   - 同一ジョブ内でやり直したいケースは、status='failed' を一度クリアして再 discover で十分
  */
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull } from "drizzle-orm";
+import { unzipSync } from "fflate";
+
+import { fetchDocZip, sleep } from "../lib/edinet-api.js";
 import { getLocalDb } from "../lib/local-db.js";
-import { createR2Client, type R2Target } from "../lib/r2.js";
 import {
   companies,
   dividends,
@@ -30,44 +34,53 @@ import {
   type ExtractedFinancials,
 } from "../lib/edinet-parser.js";
 
-export async function parseDownloaded(target: R2Target): Promise<{
+const REQUEST_DELAY_MS = 200;
+
+export async function processDiscovered(): Promise<{
   attempted: number;
   succeeded: number;
   failed: number;
   skippedNoCompany: number;
 }> {
   const db = getLocalDb();
-  const r2 = createR2Client(target);
-  const candidates = db
+  const pending = db
     .select()
     .from(edinetDocs)
-    .where(eq(edinetDocs.fetchStatus, "downloaded"))
-    .all()
-    .filter((d) => d.r2XbrlKey != null);
+    .where(and(eq(edinetDocs.fetchStatus, "discovered"), isNotNull(edinetDocs.secCode)))
+    .all();
 
   let succeeded = 0;
   let failed = 0;
   let skipped = 0;
 
-  for (const doc of candidates) {
+  for (const doc of pending) {
     const now = new Date().toISOString();
     try {
-      const xml = new TextDecoder("utf-8").decode(await r2.get(doc.r2XbrlKey!));
+      // 1. DL
+      const zipBuf = await fetchDocZip(doc.docId);
+
+      // 2. unzip in-memory, pick the main PublicDoc xbrl
+      const files = unzipSync(new Uint8Array(zipBuf));
+      const xbrlPaths = Object.keys(files).filter(
+        (p) => p.includes("PublicDoc") && p.endsWith(".xbrl"),
+      );
+      if (xbrlPaths.length === 0) {
+        markFailed(doc.docId, "no PublicDoc xbrl in zip", now);
+        failed++;
+        continue;
+      }
+      // Audit は捨てる、本体は通常一番大きい
+      const mainPath = xbrlPaths.sort((a, b) => files[b].length - files[a].length)[0];
+      const xml = new TextDecoder("utf-8").decode(files[mainPath]);
+
+      // 3. parse
       const extracted = extractFromXbrl(xml);
       const coverMeta = extractCoverMeta(xml);
       const dividendSchedules = extractDividendSchedules(xml);
 
-      // companies を edinet_code で探す。なければ secCode (4桁) で探す
       const companyId = resolveCompanyId(extracted, doc.edinetCode, doc.secCode);
       if (companyId == null) {
-        db.update(edinetDocs)
-          .set({
-            fetchStatus: "failed",
-            failedReason: "no matching company (seed が必要かも)",
-            updatedAt: now,
-          })
-          .where(eq(edinetDocs.docId, doc.docId))
-          .run();
+        markFailed(doc.docId, "no matching company (seed が必要かも)", now);
         skipped++;
         continue;
       }
@@ -77,24 +90,27 @@ export async function parseDownloaded(target: R2Target): Promise<{
       writeCompanyMeta(companyId, extracted, coverMeta);
 
       db.update(edinetDocs)
-        .set({ fetchStatus: "parsed", updatedAt: now })
+        .set({ fetchStatus: "parsed", failedReason: null, updatedAt: now })
         .where(eq(edinetDocs.docId, doc.docId))
         .run();
       succeeded++;
     } catch (e) {
-      db.update(edinetDocs)
-        .set({
-          fetchStatus: "failed",
-          failedReason: `parse: ${(e as Error).message}`,
-          updatedAt: now,
-        })
-        .where(eq(edinetDocs.docId, doc.docId))
-        .run();
+      markFailed(doc.docId, `process: ${(e as Error).message}`, now);
       failed++;
     }
+    // EDINET の利用ガイドライン上、過度な連続アクセスは避ける
+    await sleep(REQUEST_DELAY_MS);
   }
 
-  return { attempted: candidates.length, succeeded, failed, skippedNoCompany: skipped };
+  return { attempted: pending.length, succeeded, failed, skippedNoCompany: skipped };
+}
+
+function markFailed(docId: string, reason: string, now: string) {
+  getLocalDb()
+    .update(edinetDocs)
+    .set({ fetchStatus: "failed", failedReason: reason, updatedAt: now })
+    .where(eq(edinetDocs.docId, docId))
+    .run();
 }
 
 function resolveCompanyId(
@@ -103,17 +119,14 @@ function resolveCompanyId(
   secCode: string | null,
 ): number | null {
   const db = getLocalDb();
-  // 1. edinet_code 一致
   const byEdinet = db.select().from(companies).where(eq(companies.edinetCode, edinetCode)).all();
   if (byEdinet.length > 0) return byEdinet[0].id;
-
-  // 2. stocks.code (4 桁) 一致
   if (secCode) {
     const code4 = secCode.slice(0, 4);
     const byStock = db.select().from(stocks).where(eq(stocks.code, code4)).all();
     if (byStock.length > 0) return byStock[0].companyId;
   }
-
+  void extracted;
   return null;
 }
 
@@ -123,16 +136,15 @@ function writeFinancials(companyId: number, e: ExtractedFinancials) {
     const fy = row.fyLabel;
     if (!fy) continue;
     const revenueOku = row.revenue != null ? Math.round(row.revenue / 100_000_000) : null;
-    // 注: ordinaryOku は schema にカラム無し (経常利益はテーブルに持たない)。
-    // netOku は当期純利益。
     const netOku = row.netProfit != null ? Math.round(row.netProfit / 100_000_000) : null;
-    // 営業利益は本表 (P/L) からの単一値しかないので、当期 (prior=0) のみ反映、他期は null
     let opOku: number | null = null;
     if (row.prior === 0 && e.currentPl.operatingProfit != null) {
       opOku = Math.round(e.currentPl.operatingProfit / 100_000_000);
     }
     const opMargin =
-      revenueOku && opOku && revenueOku > 0 ? Number(((opOku / revenueOku) * 100).toFixed(2)) : null;
+      revenueOku && opOku && revenueOku > 0
+        ? Number(((opOku / revenueOku) * 100).toFixed(2))
+        : null;
 
     db.insert(financialsAnnual)
       .values({
@@ -164,13 +176,11 @@ function writeDividends(
   schedules: DividendSchedule[] = [],
 ) {
   const db = getLocalDb();
-  // スケジュール (権利付き最終日 / 確定日 / 支払開始日) を fy → 値 でマップ化
   const byFy = new Map<string, DividendSchedule>();
   for (const s of schedules) {
     if (s.fy) byFy.set(s.fy, s);
   }
 
-  // amount があるすべての期と、スケジュールしか無い期の両方を埋める
   const fySet = new Set<string>();
   for (const row of e.summaryByFy) {
     if (row.dividendPerShare != null) fySet.add(row.fyLabel);
@@ -184,10 +194,8 @@ function writeDividends(
     const exDate = sched?.exDate ?? null;
     const recordDate = sched?.recordDate ?? null;
     const payDate = sched?.payDate ?? null;
-    // 何も無ければスキップ
     if (amount == null && !exDate && !recordDate && !payDate) continue;
 
-    // amount は既存値を壊さないように、null の場合 set から外す
     const setOnConflict: Record<string, unknown> = {};
     if (amount != null) setOnConflict.amount = amount;
     if (exDate) setOnConflict.exDate = exDate;
@@ -195,14 +203,7 @@ function writeDividends(
     if (payDate) setOnConflict.payDate = payDate;
 
     db.insert(dividends)
-      .values({
-        companyId,
-        fy,
-        amount,
-        exDate,
-        recordDate,
-        payDate,
-      })
+      .values({ companyId, fy, amount, exDate, recordDate, payDate })
       .onConflictDoUpdate({
         target: [dividends.companyId, dividends.fy],
         set: setOnConflict,
@@ -218,33 +219,22 @@ function writeCompanyMeta(
 ) {
   const db = getLocalDb();
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-
-  // 当期 (prior=0) の従業員数を反映
   const current = e.summaryByFy.find((r) => r.prior === 0);
-  if (current?.employees != null) {
-    updates.employeesConsolidated = current.employees;
-  }
-  // EDINETコードを書き戻す
+  if (current?.employees != null) updates.employeesConsolidated = current.employees;
   if (e.edinetCode) updates.edinetCode = e.edinetCode;
-
-  // 表紙メタ (取れた項目のみ上書き — 既存値を空文字で潰さない)
   if (cover.founded) updates.founded = cover.founded;
   if (cover.listed) updates.listed = cover.listed;
   if (cover.headquarters) updates.headquarters = cover.headquarters;
   if (cover.ceoName) updates.ceoName = cover.ceoName;
   if (cover.website) updates.website = cover.website;
-
-  db.update(companies)
-    .set(updates)
-    .where(eq(companies.id, companyId))
-    .run();
+  db.update(companies).set(updates).where(eq(companies.id, companyId)).run();
 }
 
 // CLI
 if (import.meta.url === `file://${process.argv[1]}`) {
-  parseDownloaded("local").then((r) => {
+  processDiscovered().then((r) => {
     console.log(
-      `parse: attempted=${r.attempted}, succeeded=${r.succeeded}, failed=${r.failed}, skipped=${r.skippedNoCompany}`,
+      `process: attempted=${r.attempted}, succeeded=${r.succeeded}, failed=${r.failed}, skipped=${r.skippedNoCompany}`,
     );
   });
 }

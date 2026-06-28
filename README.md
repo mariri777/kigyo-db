@@ -27,7 +27,7 @@
 - **Tailwind CSS v4**(PostCSS 経由) / shadcn/ui / Radix UI / lucide-react
 - **Tiptap v3**(管理画面の WYSIWYG)
 - **Drizzle ORM 0.45** + **Cloudflare D1**(SQLite)
-- **Cloudflare R2**(EDINET の生 ZIP / XBRL 保管)
+- **Cloudflare R2**(管理画面の画像アップロード保管。EDINET XBRL は保管せず in-memory で処理)
 - **Cloudflare Workers** へデプロイ([`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) 経由)
 - **Zod 4**(AI タスクの出力スキーマ)、**fast-xml-parser / fflate**(XBRL 解析)、**yahoo-finance2**、**better-sqlite3**(ローカル D1 直アクセス)
 - **TypeScript 5** / Noto Sans JP + JetBrains Mono
@@ -97,54 +97,71 @@ pnpm db:reset-local
 
 ## データパイプライン(`pnpm pipeline`)
 
-データ取得・派生抽出・AI 生成・本番反映は、すべて単一のエントリ `pnpm pipeline` 配下に集約しました(`scripts/pipeline.ts`)。スケジュールは `scripts/lib/schedule.ts` の `SCHEDULE` 配列で宣言、各タスクは `scripts/tasks/<kind>/<task>.ts` に 1 ファイル 1 タスクで実装します。
+データ取得・派生抽出・AI 生成・本番反映は、すべて単一のエントリ `pnpm pipeline` 配下に集約しています(`scripts/pipeline.ts`)。スケジュールは `scripts/lib/schedule.ts` の `SCHEDULE` 配列で宣言、各タスクは `scripts/tasks/<kind>/<task>.ts` に 1 ファイル 1 タスクで実装します。
+
+### ローカル実行と GitHub Actions の分担
+
+サブスクの Claude を使う AI 系タスクは GH Actions のランナーでは動かないため、**runner** という概念で 2 系統に分けて管理しています(`scripts/lib/schedule.ts` の各エントリに `runner: "local" | "gh" | "both"`)。
+
+| runner | 中身 | 走る場所 |
+|---|---|---|
+| `gh` | JPX / Yahoo / EDINET / market-indices / derive-highlights | GitHub Actions (cron) |
+| `local` | ai-stock-trend / ai-market-brief / ai-valuation / ai-positioning / ai-summary / ai-catalysts / ai-logo-color / ai-forecast | 開発者ローカル(`claude` CLI 経由でサブスク消費) |
+| `both` | sync-remote | 両方の末尾。最後にローカル/本番 D1 に揃える |
+
+#### GitHub Actions 側(自動、無料の Yahoo/JPX/EDINET を毎日取り続ける)
+
+| workflow | cron (UTC) | JST | 内容 |
+|---|---|---|---|
+| `pipeline-indices-30min.yml` | `*/30 * * * *` | 30分ごと | 主要指数 5 本だけ更新 → sync (トップの最新値) |
+| `pipeline-daily.yml` | `0 7 * * *` | 16:00 | JPX/Yahoo/EDINET/market-indices/highlights → sync |
+| `pipeline-weekly.yml` | `0 21 * * 5` | 土 06:00 | EDINET 過去 8 日補修 → sync |
+
+裏側のコマンドは `pnpm pipeline <freq> --runner=gh` だけ。新タスクを GH Actions で動かしたくなったら `schedule.ts` に 1 行 (`runner: "gh"`) 足すだけで反映されます。
+
+必要な GitHub Actions secrets:
+
+| secret | 用途 |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | wrangler d1 execute --remote |
+| `CLOUDFLARE_ACCOUNT_ID` | 同上 |
+| `EDITNET_API_KEY` | EDINET 書類一覧/取得 API (typo は Cloudflare 側の secret 名と合わせている) |
+
+#### ローカル側(あなたが叩くタイミングで AI を回す)
 
 ```bash
-# JST 04:00 cron 相当
-#   fetch-jpx → fetch-yahoo-snapshot → fetch-market-indices
-#   → edinet-pipeline → ai-stock-trend(動意) → derive-highlights
-#   → ai-market-brief → sync-remote
+# 全部入り (gh タスクも含む。ローカルで一気通貫したいとき)
 pnpm pipeline daily
-
-# 土曜 JST 06:00 相当
-#   edinet-pipeline(過去8日補修) → ai-stock-trend ローテ 1/4 → sync-remote
 pnpm pipeline weekly
-
-# 月初 JST 05:00 相当
-#   ai-valuation / ai-positioning / ai-summary / ai-catalysts のローテ 1/8
-#   → ai-logo-color → sync-remote
 pnpm pipeline monthly
+pnpm pipeline every-6h
 
-# ローカルで生成済みの local/ai-generated/*.json を本番 D1 に UPSERT するだけ
-pnpm pipeline sync
+# AI タスクだけを上乗せ的に走らせる (GH Actions が gh ぶんを既に流した後など)
+pnpm pipeline daily --runner=local
 
 # 1 タスクだけデバッグ実行
 pnpm pipeline run fetch-jpx
 pnpm pipeline run ai-stock-trend --limit 10 --auto
 pnpm pipeline run ai-valuation --codes 7203,9984 --manual
 
-# AI タスクを手動ループで回す場合: prepare 済み入力 → LLM 実行 → output.json で apply
+# lake (local/ai-generated/*.json) を本番 D1 に UPSERT するだけ
+pnpm pipeline sync
+
+# AI 手動ループ: prepare 済み入力 → 外部 LLM → output.json で apply
 pnpm pipeline ai-apply ai-valuation --file ./output.json
 ```
 
 共通オプション:
 
+- `--runner gh|local|both|all` SCHEDULE の runner フィルタ(default: `all`)
 - `--limit N` 対象を先頭 N 件に限定
 - `--codes 7203,9984` 銘柄コード明示
 - `--date YYYY-MM-DD` 論理日付の上書き(default: 今日 JST)
 - `--auto` / `--manual` AI タスクの実行モード(default: `--auto`)
 
-GitHub Actions で日次/週次/月次を回しています:
-
-- `.github/workflows/pipeline-daily.yml`(UTC 19:00 = JST 04:00)
-- `.github/workflows/pipeline-weekly.yml`(UTC 21:00 金 = JST 土 06:00)
-- `.github/workflows/pipeline-monthly.yml`(UTC 月初 20:00 = JST 月初 05:00)
-
-各 workflow は `pnpm pipeline daily/weekly/monthly` を呼ぶだけです。secrets は `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `EDINET_API_KEY`。
-
 ### 実行モデル(なぜ「ローカル D1 → 本番 D1」の 2 段か)
 
-- **fetch / derive 系**(JPX / Yahoo / EDINET / 派生抽出)は決定的に同じ値が返るので、CI 上のローカル D1 にいったん書き、`sync-remote` で本番に UPSERT する
+- **fetch / derive 系**(JPX / Yahoo / EDINET / 派生抽出)は決定的に同じ値が返るので、ランナー内のローカル D1 にいったん書き、`sync-remote` で本番に UPSERT する
 - **ai 系**(LLM 生成)は人間が品質を確認してから本番に出したいので、ローカル D1 と `local/ai-generated/<task>/<key>.json`(lake)に書き、`pnpm pipeline sync` で本番へ反映する
 - `sync-remote` は lake を walk して、タスクごとに UPSERT SQL をテーブル単位でまとめ、`wrangler d1 execute --remote --file` で投入する
 - 冪等性は全 SQL を `INSERT ... ON CONFLICT DO UPDATE` にすることで担保
@@ -153,14 +170,12 @@ GitHub Actions で日次/週次/月次を回しています:
 
 ### EDINET XBRL パイプライン
 
-`edinet-pipeline` タスクは内部で次の 4 段を回します(詳細設計: `docs/data-pipeline.md`):
+`edinet-pipeline` タスクは 2 段で完結します:
 
 1. **discover**: 書類一覧 API から前日提出書類の docID を `edinet_docs` に INSERT
-2. **download**: docID ごとに書類取得 API を叩き、ZIP を R2(`raw/<yyyy>/<edinet>/<docID>.zip`)に put
-3. **extract**: ZIP からメイン XBRL を取り出し R2(`xbrl/<yyyy>/<edinet>/<docID>.xbrl`)に put
-4. **parse**: XBRL を `fast-xml-parser` で読み、`financials_annual` / `dividends` / `companies` / `stock_snapshot` に UPSERT
+2. **process**: discovered 行を 1 件ずつ DL → in-memory で unzip → XBRL を parse して `financials_annual` / `dividends` / `companies` に UPSERT
 
-R2 バケット名は `cho-kigyo-db-edinet-raw`。会計基準別タグの対応表は `scripts/lib/edinet-tags.ts`。週次の `edinet-pipeline (backfill: 8)` で過去 8 日分の取りこぼしを回収します。
+R2 や一時ファイルは使わず、同一ジョブ内のメモリで完結。会計基準別タグの対応表は `scripts/lib/edinet-tags.ts`。週次の `edinet-pipeline (backfill: 8)` で過去 8 日分の取りこぼしを回収します。
 
 ### AI 生成パイプライン
 

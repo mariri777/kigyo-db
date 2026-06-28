@@ -156,5 +156,22 @@ export const jpxSyncTask: Task<Input, Output> = {
     const result: Output = { baseDate, added, updated, totalAfter };
     return new Map([[target.key, result]]);
   },
+
+  async healthCheck(ctx) {
+    // 東証上場は概ね 3500 社以上。3000 未満なら JPX 解析が壊れた疑い。
+    const totalRow = (await ctx.db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM stocks`,
+    )) as Array<{ n: number }>;
+    const total = totalRow[0]?.n ?? 0;
+    const metrics = [`stocks 件数 ${total}`];
+    if (total < 3000) {
+      return {
+        ok: false,
+        metrics,
+        reasons: [`stocks=${total} は東証上場の想定 3500+ を大きく下回る。JPX Excel 形式変更を疑え`],
+      };
+    }
+    return { ok: true, metrics };
+  },
 };
 

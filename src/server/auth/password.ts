@@ -113,3 +113,28 @@ export function generateSessionId(): string {
   const b64 = typeof btoa === "function" ? btoa(s) : bytesToBase64(bytes);
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+
+/**
+ * パスワードリセット用トークン(URL セーフな base64url、32 byte entropy)。
+ * 生トークンはメール本文に出し、DB には sha256 のみ保存する。
+ */
+export function generateResetToken(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  const b64 = typeof btoa === "function" ? btoa(s) : bytesToBase64(bytes);
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/** SHA-256 で生トークン → 16 進文字列。DB の id 列に保存する用。 */
+export async function sha256Hex(input: string): Promise<string> {
+  const enc = new TextEncoder().encode(input);
+  const buf = await crypto.subtle.digest("SHA-256", enc);
+  const bytes = new Uint8Array(buf);
+  let hex = "";
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, "0");
+  }
+  return hex;
+}

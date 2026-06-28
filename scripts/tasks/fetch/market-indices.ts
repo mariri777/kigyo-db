@@ -98,6 +98,27 @@ const marketIndicesTask: Task<unknown, Output> & SyncCapable<Output> = {
     return { date: input.date, rows };
   },
 
+  validateOutput(output) {
+    // 5 指数中 3 本以上は値が取れていないと表示が崩れる
+    const withValue = output.rows.filter((r) => r.value != null).length;
+    if (withValue < 3) {
+      return { ok: false, reason: `value 入り ${withValue}/5 (3 未満)` };
+    }
+    return { ok: true };
+  },
+
+  async healthCheck(ctx) {
+    const okRow = (await ctx.db.all<{ n: number }>(
+      sql`SELECT COUNT(*) AS n FROM market_indices WHERE value IS NOT NULL`,
+    )) as Array<{ n: number }>;
+    const ok = okRow[0]?.n ?? 0;
+    const metrics = [`market_indices.value 入り ${ok}/${INDEX_DEFS.length}`];
+    if (ok < 3) {
+      return { ok: false, metrics, reasons: [`指数の値が ${ok} 本しか入っていない`] };
+    }
+    return { ok: true, metrics };
+  },
+
   async applyLocal(_target, output, ctx) {
     const o = output as Output;
     const now = new Date().toISOString();

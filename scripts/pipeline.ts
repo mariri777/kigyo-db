@@ -22,14 +22,23 @@ import { z } from "zod";
 
 import { getLocalDb } from "./lib/d1-local.js";
 import { writeJsonAtomic } from "./lib/lake.js";
-import { entriesFor, type Frequency } from "./lib/schedule.js";
+import { entriesFor, type Frequency, type Runner } from "./lib/schedule.js";
 import { runTask, type RunSummary } from "./lib/runner.js";
 import { syncRemote } from "./lib/sync-remote.js";
 import type { PipelineCtx, Target } from "./lib/task.js";
 import { ALL_TASKS, getTask } from "./tasks/index.js";
 
 type ParsedArgs = {
-  subcommand: "every-6h" | "daily" | "weekly" | "monthly" | "sync" | "run" | "ai-apply" | "help";
+  subcommand:
+    | "every-6h"
+    | "daily"
+    | "weekly"
+    | "monthly"
+    | "sync"
+    | "run"
+    | "ai-apply"
+    | "doctor"
+    | "help";
   taskName?: string;
   limit?: number;
   codes?: string[];
@@ -37,6 +46,7 @@ type ParsedArgs = {
   auto: boolean;
   manual: boolean;
   file?: string;
+  runner: Runner | "all";
 };
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -46,13 +56,15 @@ function parseArgs(argv: string[]): ParsedArgs {
     subcommand: "help",
     auto: true,
     manual: false,
+    runner: "all",
   };
   if (
     sub === "every-6h" ||
     sub === "daily" ||
     sub === "weekly" ||
     sub === "monthly" ||
-    sub === "sync"
+    sub === "sync" ||
+    sub === "doctor"
   ) {
     out.subcommand = sub;
   } else if (sub === "run") {
@@ -78,9 +90,18 @@ function parseArgs(argv: string[]): ParsedArgs {
     } else if (a === "--manual") {
       out.manual = true;
       out.auto = false;
+    } else if (a === "--runner") {
+      out.runner = normalizeRunner(args[++i]);
+    } else if (a.startsWith("--runner=")) {
+      out.runner = normalizeRunner(a.slice("--runner=".length));
     }
   }
   return out;
+}
+
+function normalizeRunner(v: string | undefined): Runner | "all" {
+  if (v === "local" || v === "gh" || v === "both" || v === "all") return v;
+  throw new Error(`--runner は local / gh / both / all のいずれか (受け取った: ${v ?? "undefined"})`);
 }
 
 function todayJst(): string {
@@ -122,6 +143,11 @@ options:
   --date YYYY-MM-DD  論理日付の上書き(default: 今日 JST)
   --auto / --manual  AI タスクの実行モード(default: auto)
   --file <path>      ai-apply で読み込む output.json
+  --runner gh|local|both|all
+                     実行する runner で SCHEDULE をフィルタ(default: all)
+                     - all   : 全部 (ローカル開発機で一気に流したいとき)
+                     - local : サブスク Claude が必要なタスク + both
+                     - gh    : GH Actions で安全に動くタスク + both
 
 利用可能タスク:
 ${ALL_TASKS.map((t) => `  ${t.name.padEnd(28)} ${t.description}`).join("\n") || "  (まだ登録なし)"}
@@ -129,13 +155,23 @@ ${ALL_TASKS.map((t) => `  ${t.name.padEnd(28)} ${t.description}`).join("\n") || 
 }
 
 async function runSchedule(frequency: Frequency, args: ParsedArgs): Promise<void> {
-  const entries = entriesFor(frequency);
-  console.log(`==> ${frequency} schedule (${entries.length} エントリ)`);
+  const entries = entriesFor(frequency, args.runner);
+  console.log(
+    `==> ${frequency} schedule (${entries.length} エントリ, runner=${args.runner})`,
+  );
   const ctx = makeCtx(args);
   const summaries: RunSummary[] = [];
 
+  // 致命的失敗(health-check 不通過)があったら後段の sync-remote は止める。
+  // 「全 NULL の snapshot を本番に流して上書き」事故を防ぐため。
+  let abortSync = false;
+
   for (const e of entries) {
     if (e.task === "sync-remote") {
+      if (abortSync) {
+        console.error(`  ⏭ sync-remote: 直前のタスクが unhealthy のため skip`);
+        continue;
+      }
       await syncRemote();
       continue;
     }
@@ -145,13 +181,23 @@ async function runSchedule(frequency: Frequency, args: ParsedArgs): Promise<void
       codes: args.codes,
     });
     summaries.push(summary);
+    if (summary.unhealthy) abortSync = true;
   }
 
   console.log("\n==> summary");
+  let anyUnhealthy = false;
   for (const s of summaries) {
+    const flag = s.unhealthy ? " 🚨UNHEALTHY" : "";
     console.log(
-      `  ${s.task.padEnd(28)} selected=${s.selected} ok=${s.succeeded} fail=${s.failed.length} (${s.durationMs}ms)`,
+      `  ${s.task.padEnd(28)} selected=${s.selected} ok=${s.succeeded} fail=${s.failed.length} (${s.durationMs}ms)${flag}`,
     );
+    if (s.unhealthy) anyUnhealthy = true;
+  }
+  if (anyUnhealthy) {
+    console.error(
+      "\n❌ 1 つ以上のタスクが health-check に失敗。CI を red にするため exit 1。",
+    );
+    process.exit(1);
   }
 }
 
@@ -168,11 +214,23 @@ async function main() {
     return;
   }
 
+  if (args.subcommand === "doctor") {
+    const { runDoctor } = await import("./lib/doctor.js");
+    await runDoctor();
+    return;
+  }
+
   if (args.subcommand === "run") {
     if (!args.taskName) throw new Error("pnpm pipeline run <task> でタスク名を指定してください");
     const task = getTask(args.taskName);
     const ctx = makeCtx(args);
-    await runTask(task, ctx, { limit: args.limit, codes: args.codes });
+    const summary = await runTask(task, ctx, { limit: args.limit, codes: args.codes });
+    if (summary.unhealthy) {
+      console.error(
+        `\n❌ ${task.name} が health-check に失敗。データ事故防止のため exit 1。`,
+      );
+      process.exit(1);
+    }
     return;
   }
 

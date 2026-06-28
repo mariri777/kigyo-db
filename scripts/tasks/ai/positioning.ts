@@ -61,6 +61,23 @@ const positioningTask: Task<unknown, Output> & SyncCapable<Output> = {
     return m;
   },
 
+  validateOutput(output) {
+    const o = output as Output;
+    if (!o.positioningHeadline || o.positioningHeadline.length < 10) {
+      return { ok: false, reason: "positioningHeadline 短すぎ" };
+    }
+    if (!o.positioningAnalysis || o.positioningAnalysis.length < 80) {
+      return { ok: false, reason: "positioningAnalysis 短すぎ" };
+    }
+    if (
+      !Array.isArray(o.positioningStrengths) ||
+      o.positioningStrengths.length < 2
+    ) {
+      return { ok: false, reason: "positioningStrengths < 2" };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     await legacy.applyOne(ctx.db, target.key, output);
   },

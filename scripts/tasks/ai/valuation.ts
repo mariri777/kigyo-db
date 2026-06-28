@@ -61,6 +61,17 @@ const valuationTask: Task<unknown, Output> & SyncCapable<Output> = {
     return m;
   },
 
+  validateOutput(output) {
+    if (!output.valuationVerdict) return { ok: false, reason: "valuationVerdict 空" };
+    if (typeof output.valuationScore !== "number") {
+      return { ok: false, reason: "valuationScore 数値でない" };
+    }
+    if (!output.valuationRationale || output.valuationRationale.length < 40) {
+      return { ok: false, reason: "valuationRationale 短すぎ" };
+    }
+    return { ok: true };
+  },
+
   async applyLocal(target, output, ctx) {
     await legacy.applyOne(ctx.db, target.key, output);
   },

@@ -17,7 +17,7 @@ import {
 import {
   confidenceMeta,
   dominantProbability,
-  formatGeneratedAtJst,
+  formatGeneratedAt,
   formatResolveAtJp,
   readVerdict,
   timeUntilResolveJp,
@@ -152,7 +152,7 @@ function Hero({
           </p>
           {latestGeneratedAt && (
             <div className="text-[11px] font-mono tracking-widest text-neutral-400">
-              最終更新 {formatGeneratedAtJst(latestGeneratedAt)}
+              最終更新 {formatGeneratedAt(latestGeneratedAt)}
             </div>
           )}
         </div>
