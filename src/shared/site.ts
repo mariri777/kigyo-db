@@ -2,9 +2,9 @@
 
 export const SITE_URL = "https://kigyo.cho-super.com";
 export const SITE_NAME = "超!企業DB";
-export const SITE_TAGLINE = "AI が掘る、日本株の発見";
+export const SITE_TAGLINE = "AIが掘る、日本株の発見";
 export const SITE_DESCRIPTION =
-  "東証上場の約 3,800 社を対象に、AI が事業類似銘柄・市場の見落とし論点・業界構造を掘り出す、先回りキュレーション型の銘柄分析データベース。業界マップ・スクリーン・特集・予測まで 1 つに。";
+  "東証上場の約 3,800 社を対象に、AIが事業類似銘柄・市場の見落とし論点・業界構造を掘り出す、先回りキュレーション型の銘柄分析データベース。業界マップ・スクリーン・特集・予測まで 1 つに。";
 export const SITE_LOCALE = "ja_JP";
 export const SITE_LANG = "ja";
 export const SITE_PUBLISHER = "超!企業DB 編集部";
@@ -20,7 +20,7 @@ export const SITE_KEYWORDS = [
   "上場企業",
   "銘柄分析",
   "業界マップ",
-  "AI 銘柄分析",
+  "AI銘柄分析",
   "競合分析",
   "類似銘柄",
   "PER",

@@ -22,29 +22,48 @@ import {
   CircleDot,
 } from "lucide-react";
 import {
-  posts as _allArticles,
-  themeEntries,
   ANGLE_META,
-  type Post as EditorialPost,
+  angleFromCategorySlug,
   type Subject as ArticleSubject,
 } from "./articles/_lib/posts";
+import { SIGNAL_META, type SignalKind } from "./articles/_lib/signals";
+import { getDb } from "@/server/db/client";
 import {
-  signalsSorted,
-  SIGNAL_META,
-  type Signal,
-} from "./articles/_lib/signals";
+  findLatestMarketBrief,
+  listLatestHighlights,
+  listMarketIndices,
+  type HighlightRow,
+  type MarketBriefRow,
+  type MarketIndexRow,
+} from "@/server/repo/homepageRepo";
+import { listAll as listAllArticles, type ArticleListItem } from "@/server/repo/articleRepo";
+
+// 動的データ取得 (D1) が入るため、build 時 prerender を避ける
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "v2 プロトタイプ",
-  description: "新しいトップページの試作 (データ非接続)。",
-  robots: { index: false, follow: false },
+  title: "日本株 3800 社のAI銘柄分析データベース",
+  description:
+    "東証上場 3,800 社をAIが掘り下げる銘柄分析データベース。今日の市場サマリ・AI Daily Brief・注目企業/業界カード・予測コーナー・業界マップ・記事を 1 つに。日々の見落とし論点と先回りキュレーションをまとめて読める。",
+  alternates: { canonical: "/v2" },
+  openGraph: {
+    title: "日本株 3800 社のAI銘柄分析データベース | 超!企業DB",
+    description:
+      "東証上場 3,800 社をAIが掘り下げる銘柄分析データベース。市場サマリ・AI Daily Brief・注目企業/業界・予測・業界マップ・記事を 1 つに。",
+    url: "/v2",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "日本株 3800 社のAI銘柄分析データベース | 超!企業DB",
+    description:
+      "東証上場 3,800 社をAIが掘り下げる銘柄分析データベース。市場サマリ・AI Daily Brief・注目企業/業界・予測・業界マップ・記事を 1 つに。",
+  },
 };
 
 // ─────────────────────────────────────────────────────────
-// ダミーデータ
+// ダミーデータ (D1 接続失敗時の fallback)
 // ─────────────────────────────────────────────────────────
-
-const TODAY = "2026年6月28日 (金)";
 
 const INDICES = [
   { name: "日経平均", value: "42,318.47", change: "+1.24%", delta: "+517.84", positive: true },
@@ -266,14 +285,19 @@ const SECTOR_CHIPS = [
 // Page
 // ─────────────────────────────────────────────────────────
 
-export default function V2HomePage() {
+export default async function V2HomePage() {
+  // D1 取得は並列。ローカルで未seedの場合は空配列が返って fallback に倒れる。
+  const data = await loadHomepageData();
   return (
     <div className="bg-neutral-50 min-h-screen">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-12">
+        <h1 className="sr-only">
+          超!企業DB — 日本株 3800 社の AI 銘柄分析データベース
+        </h1>
         <PrototypeBanner />
-        <MarketSummary />
-        <MarketSignals />
-        <ArticlesSection />
+        <MarketSummary indices={data.indices} brief={data.brief} today={data.today} />
+        <MarketSignals highlights={data.highlights} />
+        <ArticlesSection posts={data.latestArticles} />
         <Featured />
         <Predictions />
         <ExploreRails />
@@ -281,6 +305,174 @@ export default function V2HomePage() {
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────
+// Data loaders
+// ─────────────────────────────────────────────────────────
+
+type HomepageData = {
+  today: string;
+  indices: IndexView[];
+  brief: BriefView;
+  highlights: HighlightView[];
+  latestArticles: ArticleListItem[];
+};
+
+async function loadHomepageData(): Promise<HomepageData> {
+  try {
+    const db = await getDb();
+    const [indices, brief, highlights, articles] = await Promise.all([
+      listMarketIndices(db),
+      findLatestMarketBrief(db),
+      listLatestHighlights(db, 6),
+      listAllArticles(db),
+    ]);
+    return {
+      today: formatTodayJp(brief?.date),
+      indices: indices.length > 0 ? indices.map(toIndexView) : FALLBACK_INDICES,
+      brief: brief ? toBriefView(brief) : FALLBACK_BRIEF,
+      highlights:
+        highlights.length > 0 ? highlights.map(toHighlightView) : FALLBACK_HIGHLIGHTS,
+      latestArticles: articles
+        .filter((a) => a.status === "published")
+        .slice(0, 5),
+    };
+  } catch {
+    // D1 バインディングが無い (例: 一部の preview) ときは fallback で安全に表示
+    return {
+      today: formatTodayJp(undefined),
+      indices: FALLBACK_INDICES,
+      brief: FALLBACK_BRIEF,
+      highlights: FALLBACK_HIGHLIGHTS,
+      latestArticles: [],
+    };
+  }
+}
+
+type IndexView = {
+  key: string;
+  name: string;
+  value: string;
+  change: string;
+  delta: string;
+  positive: boolean;
+};
+
+type BriefView = {
+  lede: string;
+  bullets: string[];
+  watchThemes: Array<{ name: string; change: string; icon: typeof Cpu }>;
+};
+
+type HighlightView = {
+  id: string;
+  kind: SignalKind;
+  publishedAt: string;
+  publishedAtIso: string;
+  subjectKind: ArticleSubject["kind"];
+  subjectCode: string | null;
+  subjectName: string;
+  oneLiner: string;
+  keyMetric: { label: string; value: string; positive: boolean | null };
+  relatedHref: string | null;
+};
+
+function toIndexView(r: MarketIndexRow): IndexView {
+  const positive = (r.change1dPct ?? 0) >= 0;
+  return {
+    key: r.symbol,
+    name: r.name,
+    value: r.value != null ? formatNumber(r.value) : "—",
+    change: r.change1dPct != null ? formatPctSigned(r.change1dPct) : "—",
+    delta: r.change1dAbs != null ? formatPctSigned(r.change1dAbs) : "—",
+    positive,
+  };
+}
+
+function toBriefView(b: MarketBriefRow): BriefView {
+  return {
+    lede: b.lede ?? "",
+    bullets: b.bullets,
+    watchThemes: b.watchThemes.map((t) => ({
+      name: t.name,
+      change: formatPctSigned(t.changePct),
+      icon: themeIcon(t.name),
+    })),
+  };
+}
+
+function toHighlightView(h: HighlightRow): HighlightView {
+  const SUPPORTED: SignalKind[] = ["earnings_brief", "price_anomaly", "indicator_shift"];
+  const kind = (SUPPORTED.includes(h.kind as SignalKind) ? h.kind : "indicator_shift") as SignalKind;
+  return {
+    id: h.id,
+    kind,
+    publishedAt: h.publishedAt,
+    publishedAtIso: h.publishedAtIso,
+    subjectKind: h.subjectKind as ArticleSubject["kind"],
+    subjectCode: h.subjectCode,
+    subjectName: h.subjectName,
+    oneLiner: h.oneLiner,
+    keyMetric: {
+      label: h.keyMetricLabel,
+      value: h.keyMetricValue,
+      positive: h.keyMetricPositive,
+    },
+    relatedHref: h.relatedArticleSlug
+      ? `/v2/articles/${h.relatedArticleSlug}`
+      : h.subjectKind === "company" && h.subjectCode
+        ? `/v2/stocks/${h.subjectCode}`
+        : null,
+  };
+}
+
+// Watch テーマ名 → アイコンの軽いマッピング。当たらなければ Sparkles。
+function themeIcon(name: string): typeof Cpu {
+  if (/半導体|HBM|チップ/i.test(name)) return Cpu;
+  if (/電力|エネルギ|送配電/i.test(name)) return Zap;
+  if (/防衛|宇宙/i.test(name)) return Activity;
+  return Sparkles;
+}
+
+function formatNumber(v: number): string {
+  return v.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function formatPctSigned(v: number): string {
+  const sign = v > 0 ? "+" : "";
+  return `${sign}${v.toFixed(2)}%`;
+}
+
+function formatTodayJp(isoDate?: string): string {
+  const d = isoDate ? new Date(`${isoDate}T00:00:00+09:00`) : new Date();
+  const y = d.getFullYear();
+  const m = d.getMonth() + 1;
+  const day = d.getDate();
+  const wd = ["日", "月", "火", "水", "木", "金", "土"][d.getDay()];
+  return `${y}年${m}月${day}日 (${wd})`;
+}
+
+// D1 が空のときの fallback。デザイン崩れを防ぐ。
+const FALLBACK_INDICES: IndexView[] = INDICES.map((i) => ({
+  key: i.name,
+  name: i.name,
+  value: i.value,
+  change: i.change,
+  delta: i.delta,
+  positive: i.positive,
+}));
+
+const FALLBACK_BRIEF: BriefView = {
+  lede: AI_SUMMARY.lede,
+  bullets: [...AI_SUMMARY.bullets],
+  watchThemes: AI_SUMMARY.watchThemes.map((t) => ({
+    name: t.name,
+    change: t.change,
+    icon: t.icon,
+  })),
+};
+
+const FALLBACK_HIGHLIGHTS: HighlightView[] = [];
 
 // ─────────────────────────────────────────────────────────
 // Banner
@@ -307,13 +499,21 @@ function PrototypeBanner() {
 // Market Summary
 // ─────────────────────────────────────────────────────────
 
-function MarketSummary() {
-  const hero = INDICES[0];
-  const subIndices = INDICES.slice(1);
+function MarketSummary({
+  indices,
+  brief,
+  today,
+}: {
+  indices: IndexView[];
+  brief: BriefView;
+  today: string;
+}) {
+  const hero = indices[0] ?? FALLBACK_INDICES[0];
+  const subIndices = indices.slice(1);
   return (
     <section>
       <SectionHeader
-        kicker={TODAY}
+        kicker={today}
         title="本日の市場サマリ"
         icon={Activity}
         tag={{ label: "AI 要約", color: "bg-emerald-500 text-white" }}
@@ -365,7 +565,7 @@ function MarketSummary() {
             {/* sub indices inline */}
             <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {subIndices.map((idx) => (
-                <div key={idx.name} className="rounded-xl bg-white/5 backdrop-blur px-3 py-2.5 hover:bg-white/10 transition cursor-pointer">
+                <div key={idx.key} className="rounded-xl bg-white/5 backdrop-blur px-3 py-2.5 hover:bg-white/10 transition cursor-pointer">
                   <div className="text-[10px] text-neutral-300 font-semibold mb-0.5 truncate">
                     {idx.name}
                   </div>
@@ -413,10 +613,10 @@ function MarketSummary() {
           </div>
           <div className="px-5 pb-4 space-y-4 flex-1">
             <p className="text-base font-bold leading-snug tracking-tight">
-              {AI_SUMMARY.lede}
+              {brief.lede}
             </p>
             <ul className="space-y-2.5">
-              {AI_SUMMARY.bullets.map((b, i) => (
+              {brief.bullets.map((b, i) => (
                 <li key={i} className="flex gap-2.5 text-xs leading-relaxed">
                   <span className="font-mono text-emerald-600 font-bold tabular shrink-0">
                     {String(i + 1).padStart(2, "0")}
@@ -434,7 +634,7 @@ function MarketSummary() {
               </span>
             </div>
             <ul className="px-3 pb-3">
-              {AI_SUMMARY.watchThemes.map((t) => {
+              {brief.watchThemes.map((t) => {
                 const Icon = t.icon;
                 return (
                   <li
@@ -502,11 +702,8 @@ function ChartBackdrop({ positive }: { positive: boolean }) {
 // AI速報 (signals) は MarketSignals セクションに分離。
 // ─────────────────────────────────────────────────────────
 
-function ArticlesSection() {
-  const all = [..._allArticles]
-    .sort((a, b) => b.publishedAtIso.localeCompare(a.publishedAtIso))
-    .slice(0, 5);
-  const [hero, ...rest] = all;
+function ArticlesSection({ posts }: { posts: ArticleListItem[] }) {
+  const [hero, ...rest] = posts;
   return (
     <section id="articles" className="scroll-mt-20">
       <div className="flex items-end justify-between gap-3 pb-2 border-b-2 border-neutral-900">
@@ -520,120 +717,94 @@ function ArticlesSection() {
         </Link>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-8 lg:gap-10">
-        {/* 左: Hero + 縦リスト */}
-        <div className="space-y-1">
+      {posts.length === 0 ? (
+        <p className="mt-5 text-sm text-neutral-500 bg-white rounded-xl shadow-sm px-4 py-6 text-center">
+          公開済みの記事はまだありません。
+        </p>
+      ) : (
+        <div className="mt-5 space-y-1">
           {hero && <ArticleHero post={hero} />}
           <ul className="divide-y divide-neutral-200">
             {rest.map((p) => (
-              <li key={p.slug}>
+              <li key={p.id}>
                 <ArticleRowTop post={p} />
               </li>
             ))}
           </ul>
         </div>
-
-        {/* 右: テーマrail (PC のみ表示。Mobile では下に回らないよう非表示) */}
-        <aside className="hidden lg:block">
-          <h3 className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest pb-2 mb-3 border-b border-neutral-300">
-            テーマで横断
-          </h3>
-          <ul className="space-y-2.5">
-            {themeEntries.slice(0, 4).map((t) => {
-              const Icon = t.icon;
-              return (
-                <li key={t.slug}>
-                  <Link
-                    href="#"
-                    className="group flex items-center gap-2 px-2 py-1.5 -mx-2 rounded-lg hover:bg-neutral-100 transition"
-                  >
-                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-neutral-600 group-hover:bg-emerald-100 group-hover:text-emerald-700 transition shrink-0">
-                      <Icon className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-bold truncate group-hover:text-neutral-900">
-                        {t.name}
-                      </div>
-                      <div className="text-[10px] text-neutral-500 font-mono">
-                        {t.count.posts}記事
-                      </div>
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-neutral-300 group-hover:text-neutral-900 transition shrink-0" />
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </aside>
-      </div>
+      )}
     </section>
   );
 }
 
-function ArticleHero({ post }: { post: EditorialPost }) {
-  const angle = ANGLE_META[post.angle];
+function articleSubject(p: ArticleListItem): ArticleSubject {
+  if (p.subjectKind === "company") {
+    return { kind: "company", code: p.subjectRef, name: p.subjectName };
+  }
+  if (p.subjectKind === "industry") {
+    return { kind: "industry", slug: p.subjectRef, name: p.subjectName };
+  }
+  if (p.subjectKind === "theme") {
+    return { kind: "theme", slug: p.subjectRef, name: p.subjectName };
+  }
+  return { kind: "metric", slug: p.subjectRef, name: p.subjectName };
+}
+
+function articleAngleMeta(p: ArticleListItem) {
+  const key = angleFromCategorySlug(p.categorySlug);
+  if (key) return ANGLE_META[key];
+  return { label: p.categoryName, icon: Sparkles, color: "bg-neutral-100 text-neutral-700" };
+}
+
+function formatPublishedAt(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${m}/${day}`;
+}
+
+function ArticleHero({ post }: { post: ArticleListItem }) {
+  const angle = articleAngleMeta(post);
   const AngleIcon = angle.icon;
   return (
     <Link
       href={`/v2/articles/${post.slug}`}
       className="group block bg-white rounded-xl shadow-sm hover:shadow-md transition overflow-hidden mb-2"
     >
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_280px]">
-        <div className="p-5 sm:p-6 flex flex-col gap-2 min-w-0 order-2 md:order-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span
-              className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${angle.color}`}
-            >
-              <AngleIcon className="w-3 h-3" />
-              {angle.label}
-            </span>
-            <ArticleSubjectChip subject={post.subject} />
-          </div>
-          <h3 className="text-lg sm:text-2xl font-black tracking-tight leading-snug group-hover:text-neutral-900 line-clamp-3">
-            {post.title}
-          </h3>
-          <p className="text-[13px] sm:text-sm text-neutral-700 leading-relaxed line-clamp-3">
-            {post.lede}
-          </p>
-          <div className="mt-auto pt-2 text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-            {post.publishedAt} · {post.readMin}分
-          </div>
+      <div className="p-5 sm:p-6 flex flex-col gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${angle.color}`}
+          >
+            <AngleIcon className="w-3 h-3" />
+            {angle.label}
+          </span>
+          <ArticleSubjectChip subject={articleSubject(post)} />
         </div>
-        <div className="relative aspect-[16/10] md:aspect-auto bg-neutral-100 order-1 md:order-2">
-          {post.image && (
-            <Image
-              src={unsplashUrl(post.image, 560, 420)}
-              alt=""
-              fill
-              sizes="(min-width: 768px) 280px, 100vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-          )}
+        <h3 className="text-lg sm:text-2xl font-black tracking-tight leading-snug group-hover:text-neutral-900 line-clamp-3">
+          {post.title}
+        </h3>
+        <p className="text-[13px] sm:text-sm text-neutral-700 leading-relaxed line-clamp-3">
+          {post.lede}
+        </p>
+        <div className="mt-auto pt-2 text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+          {formatPublishedAt(post.publishedAt)}
         </div>
       </div>
     </Link>
   );
 }
 
-function ArticleRowTop({ post }: { post: EditorialPost }) {
-  const angle = ANGLE_META[post.angle];
+function ArticleRowTop({ post }: { post: ArticleListItem }) {
+  const angle = articleAngleMeta(post);
   const AngleIcon = angle.icon;
   return (
     <Link
       href={`/v2/articles/${post.slug}`}
       className="group flex items-start gap-3 sm:gap-4 py-4 hover:bg-neutral-100/40 -mx-2 px-2 rounded-lg transition"
     >
-      <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden bg-neutral-100 shrink-0">
-        {post.image && (
-          <Image
-            src={unsplashUrl(post.image, 160, 160)}
-            alt=""
-            fill
-            sizes="80px"
-            className="object-cover"
-          />
-        )}
-      </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap mb-1">
           <span
@@ -642,7 +813,7 @@ function ArticleRowTop({ post }: { post: EditorialPost }) {
             <AngleIcon className="w-2.5 h-2.5" />
             {angle.label}
           </span>
-          <ArticleSubjectChip subject={post.subject} compact />
+          <ArticleSubjectChip subject={articleSubject(post)} compact />
         </div>
         <h4 className="text-[15px] sm:text-base font-bold tracking-tight leading-snug group-hover:text-neutral-900 line-clamp-2">
           {post.title}
@@ -651,7 +822,7 @@ function ArticleRowTop({ post }: { post: EditorialPost }) {
           {post.lede}
         </p>
         <div className="mt-1.5 text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-          {post.publishedAt.slice(5)} · {post.readMin}分
+          {formatPublishedAt(post.publishedAt)}
         </div>
       </div>
     </Link>
@@ -663,8 +834,7 @@ function ArticleRowTop({ post }: { post: EditorialPost }) {
 // 市場サマリの下に、リアルタイム感のある縦リストとして出す。
 // ─────────────────────────────────────────────────────────
 
-function MarketSignals() {
-  const list = signalsSorted().slice(0, 5);
+function MarketSignals({ highlights }: { highlights: HighlightView[] }) {
   return (
     <section id="signals" className="scroll-mt-20">
       <div className="flex items-end justify-between gap-3 pb-2 border-b-2 border-neutral-900">
@@ -675,45 +845,55 @@ function MarketSignals() {
           当日分 / DB自動生成
         </span>
       </div>
-      <ul className="mt-3 divide-y divide-neutral-200 bg-white rounded-xl shadow-sm overflow-hidden">
-        {list.map((s) => (
-          <li key={s.id}>
-            <SignalRow signal={s} />
-          </li>
-        ))}
-      </ul>
+      {highlights.length === 0 ? (
+        <p className="mt-3 text-sm text-neutral-500 bg-white rounded-xl shadow-sm px-4 py-6 text-center">
+          本日のハイライトはまだありません。パイプラインで <code className="font-mono">derive-highlights</code> を実行してください。
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-neutral-200 bg-white rounded-xl shadow-sm overflow-hidden">
+          {highlights.map((h) => (
+            <li key={h.id}>
+              <SignalRow highlight={h} />
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }
 
-function SignalRow({ signal: s }: { signal: Signal }) {
-  const meta = SIGNAL_META[s.kind];
+function SignalRow({ highlight: h }: { highlight: HighlightView }) {
+  const meta = SIGNAL_META[h.kind];
   const MetaIcon = meta.icon;
-  const positive = s.keyMetric.positive;
-  const href = s.relatedPostSlug
-    ? `/v2/articles/${s.relatedPostSlug}`
-    : s.subject.kind === "company"
-      ? `/v2/stocks/7203`
-      : "/v2/articles";
+  const positive = h.keyMetric.positive;
+  const subject: ArticleSubject =
+    h.subjectKind === "company" && h.subjectCode
+      ? { kind: "company", code: h.subjectCode, name: h.subjectName.replace(/^\d{4}\s*/, "") }
+      : h.subjectKind === "industry"
+        ? { kind: "industry", slug: "industry", name: h.subjectName }
+        : h.subjectKind === "theme"
+          ? { kind: "theme", slug: "theme", name: h.subjectName }
+          : { kind: "metric", slug: "metric", name: h.subjectName };
+  const href = h.relatedHref ?? "/v2/articles";
   return (
     <Link href={href} className="group flex items-center gap-3 sm:gap-4 px-4 py-3 hover:bg-neutral-50 transition">
       <div className="text-[10px] font-mono tabular text-neutral-500 w-12 shrink-0">
-        {s.publishedAt}
+        {h.publishedAt}
       </div>
       <div className="hidden sm:flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-neutral-600 w-28 shrink-0">
         <MetaIcon className="w-3 h-3" />
         {meta.label}
       </div>
-      <ArticleSubjectChip subject={s.subject} compact />
+      <ArticleSubjectChip subject={subject} compact />
       <div className="flex-1 min-w-0">
         <p className="text-[13px] text-neutral-800 leading-snug line-clamp-1 group-hover:text-neutral-900">
-          {s.oneLiner}
+          {h.oneLiner}
         </p>
       </div>
       <div className="text-right shrink-0">
         <div
           className={`font-mono tabular text-sm font-black tracking-tight inline-flex items-center gap-0.5 ${
-            positive === undefined
+            positive === null
               ? "text-neutral-900"
               : positive
                 ? "text-emerald-600"
@@ -722,11 +902,11 @@ function SignalRow({ signal: s }: { signal: Signal }) {
         >
           {positive === true && <TrendingUp className="w-3 h-3" />}
           {positive === false && <TrendingDown className="w-3 h-3" />}
-          {s.keyMetric.value}
+          {h.keyMetric.value}
         </div>
-        <div className="text-[9px] text-neutral-500 font-mono">{s.keyMetric.label}</div>
+        <div className="text-[9px] text-neutral-500 font-mono">{h.keyMetric.label}</div>
       </div>
-      {s.relatedPostSlug && (
+      {h.relatedHref && h.relatedHref.startsWith("/v2/articles/") && (
         <span className="hidden md:inline-flex text-[10px] font-bold uppercase tracking-widest text-emerald-700 shrink-0">
           解釈あり
         </span>
@@ -1090,26 +1270,43 @@ function ExploreRails() {
           </span>
           <span className="font-mono text-xs text-neutral-400">02</span>
         </div>
-        <h3 className="text-3xl sm:text-4xl font-bold tracking-tight">
-          東証 <span className="text-emerald-600">3,800</span> 社、すべて
-        </h3>
-        <div className="flex items-center bg-neutral-50 rounded-xl pl-3 pr-2 py-1 focus-within:ring-2 focus-within:ring-neutral-900 transition">
+        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+          <h3 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            東証 <span className="text-emerald-600">3,800</span> 社、すべて
+          </h3>
+          <Link
+            href="/v2/stocks"
+            className="text-xs font-bold uppercase tracking-widest text-neutral-700 hover:text-neutral-900 inline-flex items-center gap-1 group"
+          >
+            銘柄一覧へ
+            <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
+          </Link>
+        </div>
+        <form
+          action="/v2/stocks"
+          method="get"
+          className="flex items-center bg-neutral-50 rounded-xl pl-3 pr-2 py-1 focus-within:ring-2 focus-within:ring-neutral-900 transition"
+        >
           <Search className="w-4 h-4 text-neutral-400" />
           <input
             type="text"
+            name="q"
             placeholder="銘柄コード・社名で検索 (例: 7203, トヨタ)"
             className="flex-1 bg-transparent px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none"
             aria-label="銘柄検索"
           />
-          <button className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition">
+          <button
+            type="submit"
+            className="px-3 py-1.5 rounded-lg bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition"
+          >
             検索
           </button>
-        </div>
+        </form>
         <div className="flex flex-wrap gap-1.5">
           {SECTOR_CHIPS.map((s) => (
             <Link
               key={s.name}
-              href="/stocks"
+              href={`/v2/stocks?sector=${encodeURIComponent(s.name)}`}
               className={`text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5 transition ${
                 s.hot
                   ? "bg-orange-50 text-orange-700 hover:bg-orange-100"

@@ -14,8 +14,11 @@ import { eq, asc, desc, sql } from "drizzle-orm";
 import {
   companies,
   companyAiBrief,
+  companyIndustries,
   dividends,
+  events,
   financialsAnnual,
+  industries,
   stockSnapshot,
   stocks,
   storyDecks,
@@ -90,6 +93,30 @@ export async function loadStockPageData(code: string) {
         .all()
     : [];
 
+  // 業界(company_industries の最初のひとつを採用)
+  const industryRow = (
+    await db
+      .select({
+        slug: industries.slug,
+        name: industries.name,
+        heroImageId: industries.heroImageId,
+      })
+      .from(companyIndustries)
+      .innerJoin(industries, eq(industries.slug, companyIndustries.industrySlug))
+      .where(eq(companyIndustries.companyId, company.id))
+      .limit(1)
+      .all()
+  )[0];
+
+  // catalysts / risks を events から取得
+  const eventRows = await db
+    .select()
+    .from(events)
+    .where(
+      sql`${events.scope} = 'company' AND ${events.scopeRef} = ${String(company.id)} AND ${events.kind} IN ('catalyst','risk')`,
+    )
+    .all();
+
   // 同セクター 10 銘柄(自社除く、時価総額順)
   const peerRows = await db
     .select({
@@ -123,7 +150,7 @@ export async function loadStockPageData(code: string) {
     headquarters:
       company.headquarters ?? (isToyota ? fallbackBasics.headquarters : "—"),
     employees: company.employeesConsolidated
-      ? `約 ${(company.employeesConsolidated / 10000).toFixed(0)}万人 (連結)`
+      ? formatEmployees(company.employeesConsolidated)
       : isToyota
         ? fallbackBasics.employees
         : "—",
@@ -137,53 +164,80 @@ export async function loadStockPageData(code: string) {
     company.description ??
     (isToyota ? fallbackSummary : `${company.name}(${stockRow.code})は${stockRow.sectorTse}セクターの上場企業。サマリは順次 AI が生成します。`);
 
-  // history10y は financials_annual から組み立て、欠落は fallback で補完
-  const fyMap = new Map(annual.map((a) => [a.fy, a]));
-  const history10y = fallbackHistory10y.map((h) => {
-    const live = fyMap.get(h.period);
-    if (!live || live.revenueOku == null) return h;
-    return {
-      period: h.period,
-      revenueOku: live.revenueOku,
-      operatingProfitOku: live.operatingProfitOku ?? h.operatingProfitOku,
-      operatingMargin: live.operatingMargin ?? h.operatingMargin,
-    };
-  });
+  // history10y は financials_annual から組み立て。
+  // トヨタは _data.ts に手作りの 10 期がある(fy ラベルは Toyota 固定)ので fallback ベースで上書き。
+  // それ以外は D1 の annual を素直に並べる(無ければ空配列)。
+  const history10y = isToyota
+    ? (() => {
+        const fyMap = new Map(annual.map((a) => [a.fy, a]));
+        return fallbackHistory10y.map((h) => {
+          const live = fyMap.get(h.period);
+          if (!live || live.revenueOku == null) return h;
+          return {
+            period: h.period,
+            revenueOku: live.revenueOku,
+            operatingProfitOku: live.operatingProfitOku ?? h.operatingProfitOku,
+            operatingMargin: live.operatingMargin ?? h.operatingMargin,
+          };
+        });
+      })()
+    : annual.map((a) => ({
+        period: a.fy,
+        revenueOku: a.revenueOku ?? 0,
+        operatingProfitOku: a.operatingProfitOku ?? 0,
+        operatingMargin: a.operatingMargin ?? 0,
+      }));
 
-  // latestEarnings は最新 fy から(無ければ fallback)
+  // latestEarnings は最新 fy から(無ければ Toyota だけ fallback、他は最小情報)
   const latestFy = annual[annual.length - 1];
   const latestEarnings = latestFy && latestFy.revenueOku != null
     ? {
         period: `${latestFy.fy} 通期`,
         revenueOku: latestFy.revenueOku,
-        operatingProfitOku: latestFy.operatingProfitOku ?? fallbackLatestEarnings.operatingProfitOku,
-        netProfitOku: latestFy.netProfitOku ?? fallbackLatestEarnings.netProfitOku,
-        operatingMargin: latestFy.operatingMargin ?? fallbackLatestEarnings.operatingMargin,
-        roe: snap?.roe ?? fallbackLatestEarnings.roe,
-        eps: latestFy.eps ?? fallbackLatestEarnings.eps,
-        dividend: fallbackLatestEarnings.dividend,
-        highlights: fallbackLatestEarnings.highlights,
+        operatingProfitOku: latestFy.operatingProfitOku ?? 0,
+        netProfitOku: latestFy.netProfitOku ?? 0,
+        operatingMargin: latestFy.operatingMargin ?? 0,
+        roe: snap?.roe ?? (isToyota ? fallbackLatestEarnings.roe : 0),
+        eps: latestFy.eps ?? 0,
+        dividend: snap?.dividendAnnual ?? (isToyota ? fallbackLatestEarnings.dividend : 0),
+        highlights: isToyota ? fallbackLatestEarnings.highlights : [],
       }
-    : fallbackLatestEarnings;
+    : isToyota
+      ? fallbackLatestEarnings
+      : {
+          period: "—",
+          revenueOku: 0,
+          operatingProfitOku: 0,
+          netProfitOku: 0,
+          operatingMargin: 0,
+          roe: 0,
+          eps: 0,
+          dividend: 0,
+          highlights: [],
+        };
 
   // stockTrend は snapshot + ai_brief から
   const priceSeries = snap?.priceHistoryJson
     ? (JSON.parse(snap.priceHistoryJson) as number[])
-    : fallbackStockTrend.priceSeries;
+    : isToyota
+      ? fallbackStockTrend.priceSeries
+      : [];
   const stockTrend = {
-    currentPrice: snap?.priceJpy ?? fallbackStockTrend.currentPrice,
-    change1d: fmtPct(snap?.change1dPct, fallbackStockTrend.change1d),
-    change1m: fmtPct(snap?.change1mPct, fallbackStockTrend.change1m),
-    change1y: fmtPct(snap?.change1yPct, fallbackStockTrend.change1y),
-    marketCapOku: snap?.marketCapOku ?? fallbackStockTrend.marketCapOku,
-    per: snap?.per ?? fallbackStockTrend.per,
-    pbr: snap?.pbr ?? fallbackStockTrend.pbr,
-    dividendYield: snap?.dividendYield ?? fallbackStockTrend.dividendYield,
+    currentPrice: snap?.priceJpy ?? (isToyota ? fallbackStockTrend.currentPrice : 0),
+    change1d: fmtPct(snap?.change1dPct, isToyota ? fallbackStockTrend.change1d : "—"),
+    change1m: fmtPct(snap?.change1mPct, isToyota ? fallbackStockTrend.change1m : "—"),
+    change1y: fmtPct(snap?.change1yPct, isToyota ? fallbackStockTrend.change1y : "—"),
+    marketCapOku: snap?.marketCapOku ?? (isToyota ? fallbackStockTrend.marketCapOku : 0),
+    per: snap?.per ?? (isToyota ? fallbackStockTrend.per : 0),
+    pbr: snap?.pbr ?? (isToyota ? fallbackStockTrend.pbr : 0),
+    dividendYield: snap?.dividendYield ?? (isToyota ? fallbackStockTrend.dividendYield : 0),
     positive: (snap?.change1dPct ?? 0) >= 0,
-    aiAnalysis: brief?.stockTrendAnalysis ?? fallbackStockTrend.aiAnalysis,
+    aiAnalysis: brief?.stockTrendAnalysis ?? (isToyota ? fallbackStockTrend.aiAnalysis : "AI 分析は順次生成中です。"),
     factors: brief?.stockTrendFactorsJson
       ? (JSON.parse(brief.stockTrendFactorsJson) as typeof fallbackStockTrend.factors)
-      : fallbackStockTrend.factors,
+      : isToyota
+        ? fallbackStockTrend.factors
+        : [],
     priceSeries,
   };
 
@@ -212,7 +266,9 @@ export async function loadStockPageData(code: string) {
           per: p.per ?? -1,
           changePct: p.changePct ?? 0,
         }))
-      : fallbackPeers;
+      : isToyota
+        ? fallbackPeers
+        : [];
 
   // セクター平均(同 sectorTse 銘柄から AVG を都度計算)
   const sectorAvgRow = (
@@ -252,8 +308,8 @@ export async function loadStockPageData(code: string) {
     ? {
         verdict: snap.valuationVerdict as typeof fallbackValuation.verdict,
         score: snap.valuationScore ?? fallbackValuation.score,
-        rationale: brief?.valuationRationale ?? fallbackValuation.rationale,
-        metrics: buildValuationMetrics(snap, sectorAvgRow, fallbackValuation.metrics),
+        rationale: brief?.valuationRationale ?? (isToyota ? fallbackValuation.rationale : ""),
+        metrics: buildValuationMetrics(snap, sectorAvgRow, isToyota ? fallbackValuation.metrics : emptyValuationMetrics()),
         peerComparison:
           peerScatter.length > 0
             ? peerScatter
@@ -266,9 +322,19 @@ export async function loadStockPageData(code: string) {
                   marketCapOku: p.marketCapOku ?? 0,
                   isSelf: p.code === code,
                 }))
-            : fallbackValuation.peerComparison,
+            : isToyota
+              ? fallbackValuation.peerComparison
+              : [],
       }
-    : fallbackValuation;
+    : isToyota
+      ? fallbackValuation
+      : {
+          verdict: "ほぼ妥当" as typeof fallbackValuation.verdict,
+          score: 50,
+          rationale: "",
+          metrics: emptyValuationMetrics(),
+          peerComparison: [],
+        };
 
   // 連続増配年数(配当履歴を新しい順に走査して、amount が増加し続けた連続数)
   const consecutiveYears = computeConsecutiveIncreaseYears(divs.map((d) => d.amount));
@@ -276,33 +342,53 @@ export async function loadStockPageData(code: string) {
   // 自社株買い合計(events kind=buyback を集計、テキスト fallback)
   // events.body に金額が入っていれば抽出を試みるが、複雑なので雑に件数 + fallback の amount を保持
   // 詳細化はここではせず、events に件数があれば fallback.buybackOku を尊重
-  const buybackOku = fallbackDividend.buybackOku;
+  const buybackOku = isToyota ? fallbackDividend.buybackOku : 0;
 
   // 直近の配当スケジュール(最新 fy の dividends から)
   const latestDiv = divs[divs.length - 1];
+  const emptySchedule = { exDate: "—", recordDate: "—", payDate: "—", estimate: "—" };
   const schedule = latestDiv
     ? {
-        exDate: latestDiv.exDate ?? fallbackDividend.schedule.exDate,
-        recordDate: latestDiv.recordDate ?? fallbackDividend.schedule.recordDate,
-        payDate: latestDiv.payDate ?? fallbackDividend.schedule.payDate,
+        exDate: latestDiv.exDate ?? (isToyota ? fallbackDividend.schedule.exDate : "—"),
+        recordDate: latestDiv.recordDate ?? (isToyota ? fallbackDividend.schedule.recordDate : "—"),
+        payDate: latestDiv.payDate ?? (isToyota ? fallbackDividend.schedule.payDate : "—"),
         estimate: snap?.dividendAnnual
           ? `年間予想 ¥${snap.dividendAnnual}`
-          : fallbackDividend.schedule.estimate,
+          : isToyota
+            ? fallbackDividend.schedule.estimate
+            : "—",
       }
-    : fallbackDividend.schedule;
+    : isToyota
+      ? fallbackDividend.schedule
+      : emptySchedule;
 
   const dividend = divs.length > 0
     ? {
-        annualPerShare: snap?.dividendAnnual ?? fallbackDividend.annualPerShare,
-        yield: snap?.dividendYield ?? fallbackDividend.yield,
-        payoutRatio: snap?.dividendPayoutRatio ?? fallbackDividend.payoutRatio,
-        totalReturnYield: snap?.totalReturnYield ?? fallbackDividend.totalReturnYield,
+        annualPerShare: snap?.dividendAnnual ?? (isToyota ? fallbackDividend.annualPerShare : 0),
+        yield: snap?.dividendYield ?? (isToyota ? fallbackDividend.yield : 0),
+        payoutRatio: snap?.dividendPayoutRatio ?? (isToyota ? fallbackDividend.payoutRatio : 0),
+        totalReturnYield: snap?.totalReturnYield ?? (isToyota ? fallbackDividend.totalReturnYield : 0),
         buybackOku,
-        consecutiveYears: consecutiveYears > 0 ? consecutiveYears : fallbackDividend.consecutiveYears,
+        consecutiveYears: consecutiveYears > 0
+          ? consecutiveYears
+          : isToyota
+            ? fallbackDividend.consecutiveYears
+            : 0,
         history: divs.map((d) => ({ fy: d.fy, amount: d.amount ?? 0 })),
         schedule,
       }
-    : fallbackDividend;
+    : isToyota
+      ? fallbackDividend
+      : {
+          annualPerShare: 0,
+          yield: 0,
+          payoutRatio: 0,
+          totalReturnYield: 0,
+          buybackOku: 0,
+          consecutiveYears: 0,
+          history: [],
+          schedule: emptySchedule,
+        };
 
   const shareholdersResolved = shareholdersRows.length > 0
     ? {
@@ -328,36 +414,52 @@ export async function loadStockPageData(code: string) {
   const analystTargets = snap?.targetConsensus
     ? {
         consensus: snap.targetConsensus,
-        high: snap.targetHigh ?? fallbackAnalystTargets.high,
-        low: snap.targetLow ?? fallbackAnalystTargets.low,
-        currentPrice: snap.priceJpy ?? fallbackAnalystTargets.currentPrice,
+        high: snap.targetHigh ?? snap.targetConsensus,
+        low: snap.targetLow ?? snap.targetConsensus,
+        currentPrice: snap.priceJpy ?? 0,
         upsidePct: snap.priceJpy && snap.targetConsensus
           ? ((snap.targetConsensus - snap.priceJpy) / snap.priceJpy) * 100
-          : fallbackAnalystTargets.upsidePct,
+          : 0,
         ratingCount: {
-          buy: snap.analystBuy ?? fallbackAnalystTargets.ratingCount.buy,
-          hold: snap.analystHold ?? fallbackAnalystTargets.ratingCount.hold,
-          sell: snap.analystSell ?? fallbackAnalystTargets.ratingCount.sell,
+          buy: snap.analystBuy ?? 0,
+          hold: snap.analystHold ?? 0,
+          sell: snap.analystSell ?? 0,
         },
-        analystComment: brief?.analystSummary ?? fallbackAnalystTargets.analystComment,
+        analystComment: brief?.analystSummary ?? (isToyota ? fallbackAnalystTargets.analystComment : ""),
       }
-    : fallbackAnalystTargets;
+    : isToyota
+      ? fallbackAnalystTargets
+      : {
+          consensus: snap?.priceJpy ?? 0,
+          high: snap?.priceJpy ?? 0,
+          low: snap?.priceJpy ?? 0,
+          currentPrice: snap?.priceJpy ?? 0,
+          upsidePct: 0,
+          ratingCount: { buy: 0, hold: 0, sell: 0 },
+          analystComment: brief?.analystSummary ?? "",
+        };
 
   const technical = snap
     ? {
-        ma25: snap.ma25 ?? fallbackTechnical.ma25,
-        ma75: snap.ma75 ?? fallbackTechnical.ma75,
-        ma200: snap.ma200 ?? fallbackTechnical.ma200,
-        high52w: snap.high52w ?? fallbackTechnical.high52w,
-        low52w: snap.low52w ?? fallbackTechnical.low52w,
-        avgVolume: snap.avgVolume3m ?? fallbackTechnical.avgVolume,
-        creditBuy: snap.creditBuy ?? fallbackTechnical.creditBuy,
-        creditSell: snap.creditSell ?? fallbackTechnical.creditSell,
-        creditRatio: snap.creditRatio ?? fallbackTechnical.creditRatio,
-        rsi14: snap.rsi14 ?? fallbackTechnical.rsi14,
-        comment: brief?.technicalComment ?? fallbackTechnical.comment,
+        ma25: snap.ma25 ?? (isToyota ? fallbackTechnical.ma25 : snap.priceJpy ?? 0),
+        ma75: snap.ma75 ?? (isToyota ? fallbackTechnical.ma75 : snap.priceJpy ?? 0),
+        ma200: snap.ma200 ?? (isToyota ? fallbackTechnical.ma200 : snap.priceJpy ?? 0),
+        high52w: snap.high52w ?? (isToyota ? fallbackTechnical.high52w : snap.priceJpy ?? 0),
+        low52w: snap.low52w ?? (isToyota ? fallbackTechnical.low52w : snap.priceJpy ?? 0),
+        avgVolume: snap.avgVolume3m ?? (isToyota ? fallbackTechnical.avgVolume : "—"),
+        creditBuy: snap.creditBuy ?? (isToyota ? fallbackTechnical.creditBuy : "—"),
+        creditSell: snap.creditSell ?? (isToyota ? fallbackTechnical.creditSell : "—"),
+        creditRatio: snap.creditRatio ?? (isToyota ? fallbackTechnical.creditRatio : 1),
+        rsi14: snap.rsi14 ?? (isToyota ? fallbackTechnical.rsi14 : 50),
+        comment: brief?.technicalComment ?? (isToyota ? fallbackTechnical.comment : "テクニカル分析は順次生成中。"),
       }
-    : fallbackTechnical;
+    : isToyota
+      ? fallbackTechnical
+      : {
+          ma25: 0, ma75: 0, ma200: 0, high52w: 0, low52w: 0,
+          avgVolume: "—", creditBuy: "—", creditSell: "—", creditRatio: 1, rsi14: 50,
+          comment: "テクニカル分析は順次生成中。",
+        };
 
   const ownerActivism = brief?.ownerActivismJson
     ? (JSON.parse(brief.ownerActivismJson) as typeof fallbackOwnerActivism)
@@ -386,6 +488,31 @@ export async function loadStockPageData(code: string) {
       ? fallbackStoryDeck
       : { deckTitle: "", subtitle: "", source: "", slides: [] };
 
+  // catalysts: events から組み立て(無ければ Toyota だけ fallback、他は空)
+  const catalystsLive = {
+    upside: eventRows
+      .filter((e) => e.kind === "catalyst")
+      .map((e) => ({
+        title: e.title,
+        when: e.occursAt ?? "—",
+        impact: (e.impact ?? "中") as "強" | "中" | "弱",
+        note: e.body ?? "",
+      })),
+    downside: eventRows
+      .filter((e) => e.kind === "risk")
+      .map((e) => ({
+        title: e.title,
+        when: e.occursAt ?? "—",
+        impact: (e.impact ?? "中") as "強" | "中" | "弱",
+        note: e.body ?? "",
+      })),
+  };
+  const catalysts = catalystsLive.upside.length > 0 || catalystsLive.downside.length > 0
+    ? catalystsLive
+    : isToyota
+      ? fallbackCatalysts
+      : { upside: [], downside: [] };
+
   return {
     basics,
     summary,
@@ -394,15 +521,16 @@ export async function loadStockPageData(code: string) {
     stockTrend,
     positioning,
     peers,
-    industryLinkSlug: fallbackIndustrySlug,
-    industryName: fallbackIndustryName,
+    industryLinkSlug: industryRow?.slug ?? (isToyota ? fallbackIndustrySlug : ""),
+    industryName: industryRow?.name ?? (isToyota ? fallbackIndustryName : stockRow.sectorTse),
+    industryHeroImage: industryRow?.heroImageId ?? null,
     storyDeck,
     valuation,
     dividend,
     shareholders: shareholdersResolved,
     analystTargets,
     technical,
-    catalysts: isToyota ? fallbackCatalysts : { upside: [], downside: [] },
+    catalysts,
     ownerActivism,
   };
 }
@@ -418,6 +546,7 @@ function fallbackBundle() {
     peers: fallbackPeers,
     industryLinkSlug: fallbackIndustrySlug,
     industryName: fallbackIndustryName,
+    industryHeroImage: null as string | null,
     storyDeck: fallbackStoryDeck,
     valuation: fallbackValuation,
     dividend: fallbackDividend,
@@ -444,6 +573,32 @@ function computeConsecutiveIncreaseYears(amounts: Array<number | null>): number 
     }
   }
   return count;
+}
+
+function formatEmployees(n: number): string {
+  // 万人/千人/人 のスケールに自動で寄せる(従業員 0万人 という見た目を避ける)
+  if (n >= 10000) {
+    const man = n / 10000;
+    const digits = man >= 10 ? 0 : 1;
+    return `約 ${man.toFixed(digits)}万人 (連結)`;
+  }
+  if (n >= 1000) {
+    return `約 ${(n / 1000).toFixed(1)}千人 (連結)`;
+  }
+  return `${n.toLocaleString()}人 (連結)`;
+}
+
+function emptyValuationMetrics(): typeof fallbackValuation.metrics {
+  const blank = { value: "—", industryAvg: "—", self5yAvg: "—", comment: "—" } as const;
+  return [
+    { label: "PER (実績)", ...blank },
+    { label: "PER (予想)", ...blank },
+    { label: "PBR", ...blank },
+    { label: "PSR", ...blank },
+    { label: "EV/EBITDA", ...blank },
+    { label: "PEG", ...blank },
+    { label: "ROE", ...blank },
+  ];
 }
 
 function buildValuationMetrics(

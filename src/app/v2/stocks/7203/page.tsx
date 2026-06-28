@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 
 import { loadStockPageData } from "./_live";
 import { StockDetailRenderer } from "./_renderer";
+import { buildStockMetadata } from "../_meta";
 
-export const metadata: Metadata = {
-  title: `トヨタ自動車 (7203) — v2`,
-  description: "D1 駆動のリッチ銘柄詳細",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const data = await loadStockPageData("7203");
+  return buildStockMetadata(data);
+}
 
 export default async function ToyotaDetailPage() {
   const data = await loadStockPageData("7203");

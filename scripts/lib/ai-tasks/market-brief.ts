@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   companies,
   marketBrief,
+  marketIndices,
   stockSnapshot,
   stocks,
 } from "../../../src/server/db/schema.js";
@@ -20,7 +21,7 @@ const PROMPT = `\
 2. lede: 30〜60 字の見出し("半導体に火が戻った1日" 等)
 3. bullets: 3〜5 本の箇条書き。各 60〜100 字。当日の主要動意を 1 件ずつ言及
 4. watchThemes: 3 件 [{ name: <12字>, changePct: <平均騰落率%> }]。input.themes の change_pct を引用
-5. indices: 5 件 [{ name, value, changePct }]。input.indices を 1:1 で写す(改変禁止)
+5. indices: input.indices を 1:1 でそのまま写す(改変禁止)。
 
 【厳守】
 - 提供データのみ使用。bullets で銘柄に触れる場合は input.topMovers の中から選ぶ。
@@ -37,7 +38,8 @@ const OutputItem = z.object({
     .length(3),
   indices: z
     .array(z.object({ name: z.string().min(1).max(20), value: z.number(), changePct: z.number() }))
-    .length(5),
+    .min(3)
+    .max(6),
 });
 type Output = z.infer<typeof OutputItem>;
 
@@ -76,7 +78,6 @@ export const marketBriefTask: Task<Input, { results: Partial<Output>[] }> = {
           { name: "", value: 0, changePct: 0 },
           { name: "", value: 0, changePct: 0 },
           { name: "", value: 0, changePct: 0 },
-          { name: "", value: 0, changePct: 0 },
         ],
       },
     ],
@@ -108,21 +109,31 @@ export const marketBriefTask: Task<Input, { results: Partial<Output>[] }> = {
       .limit(10)
       .all();
 
+    // 指数は market_indices テーブルから (fetch-market-indices の出力)
+    const indices = await db
+      .select({
+        name: marketIndices.name,
+        value: marketIndices.value,
+        changePct: marketIndices.change1dPct,
+        displayOrder: marketIndices.displayOrder,
+      })
+      .from(marketIndices)
+      .orderBy(marketIndices.displayOrder)
+      .all();
+
     return [
       {
         key: date,
         input: {
           date,
-          // 指数とテーマは別パイプライン(まだ未実装)が埋める前提。
-          // ここではプレースホルダ。Claude には input をそのまま indices に転記させる。
-          indices: [
-            { name: "TOPIX", value: 0, changePct: 0 },
-            { name: "日経225", value: 0, changePct: 0 },
-            { name: "JPX400", value: 0, changePct: 0 },
-            { name: "マザーズ", value: 0, changePct: 0 },
-            { name: "REIT", value: 0, changePct: 0 },
-          ],
+          indices: indices
+            .filter(
+              (i): i is { name: string; value: number; changePct: number; displayOrder: number } =>
+                i.value != null && i.changePct != null,
+            )
+            .map(({ name, value, changePct }) => ({ name, value, changePct })),
           themes: [
+            // TODO: company_industries + stocks の平均騰落で実値化
             { name: "半導体", changePct: 0 },
             { name: "AI関連", changePct: 0 },
             { name: "ディフェンシブ", changePct: 0 },

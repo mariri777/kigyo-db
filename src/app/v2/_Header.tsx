@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { Search, Menu } from "lucide-react";
 import { BrandMark } from "./_BrandMark";
+import { GlobalSearchKbd, GLOBAL_SEARCH_INPUT_ID } from "./_SearchHotkey";
 
 const NAV_LINKS = [
   { href: "/v2", label: "ホーム" },
   { href: "/v2#predictions", label: "AI予測", highlight: true },
   { href: "/v2/articles", label: "記事" },
   { href: "/v2#featured", label: "注目企業" },
-  { href: "/v2/stocks/7203", label: "銘柄" },
+  { href: "/v2/stocks", label: "銘柄" },
   { href: "/v2#semiconductor", label: "半導体特集" },
 ];
 
@@ -44,14 +45,13 @@ export function V2Header() {
         <div className="flex-1 max-w-md ml-auto hidden md:flex items-center bg-neutral-100 rounded-full px-3 py-1.5 focus-within:ring-2 focus-within:ring-neutral-900/20 focus-within:bg-white focus-within:border-neutral-300 border border-transparent transition">
           <Search className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
           <input
+            id={GLOBAL_SEARCH_INPUT_ID}
             type="text"
             placeholder="銘柄・業界・キーワードを検索"
             className="flex-1 bg-transparent px-2.5 text-sm placeholder:text-neutral-500 focus:outline-none"
             aria-label="検索"
           />
-          <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded bg-white border border-neutral-200 text-[10px] font-mono text-neutral-500 shrink-0">
-            ⌘K
-          </kbd>
+          <GlobalSearchKbd />
         </div>
 
         <button

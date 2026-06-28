@@ -24,6 +24,7 @@ import { fetchJpxExcel, parseJpxExcel } from "./lib/jpx.js";
 import { pbkdf2HashSyncForSeed } from "./lib/passwordSeed.js";
 import {
   adminUsers,
+  categories,
   companies,
   stocks,
 } from "../src/server/db/schema.js";
@@ -85,6 +86,18 @@ async function main() {
     })
     .run();
   console.log(`管理者ユーザー作成: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`);
+
+  // ── 4.5. 記事カテゴリ ──
+  const categoryRows = [
+    { slug: "earnings", name: "決算解釈", sortOrder: 1 },
+    { slug: "industry_overview", name: "業界俯瞰", sortOrder: 2 },
+    { slug: "theme_dive", name: "テーマ深掘り", sortOrder: 3 },
+    { slug: "primer", name: "プライマー", sortOrder: 4 },
+  ];
+  for (const c of categoryRows) {
+    db.insert(categories).values(c).run();
+  }
+  console.log(`記事カテゴリを ${categoryRows.length} 件投入`);
 
   if (!shouldFetch) {
     console.log("\n--no-fetch 指定のため JPX 取得をスキップ。終了。");

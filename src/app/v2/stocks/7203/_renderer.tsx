@@ -40,7 +40,8 @@ function unsplashUrl(id: string, w: number, h?: number) {
   return `https://images.unsplash.com/${id}?${params.toString()}`;
 }
 
-const HERO_IMAGE = "photo-1503376780353-7e6692767b70";
+/** 業界 hero 画像が未設定の銘柄向け汎用画像(モノクロのビル) */
+const DEFAULT_HERO_IMAGE = "photo-1496664444929-8c75efb9546f";
 
 function fmtOku(oku: number | null | undefined) {
   if (oku == null) return "—";
@@ -89,9 +90,10 @@ function Breadcrumb({ data }: { data: LiveData }) {
 
 function Hero({ data }: { data: LiveData }) {
   const { basics, stockTrend } = data;
+  const heroImage = data.industryHeroImage ?? DEFAULT_HERO_IMAGE;
   return (
     <section className="relative overflow-hidden rounded-3xl bg-neutral-900 text-white shadow-sm">
-      <Image src={unsplashUrl(HERO_IMAGE, 1400, 600)} alt="" fill sizes="100vw" className="object-cover opacity-30" priority />
+      <Image src={unsplashUrl(heroImage, 1400, 600)} alt="" fill sizes="100vw" className="object-cover opacity-30" priority />
       <div className="absolute inset-0 bg-gradient-to-br from-neutral-900/95 via-neutral-900/80 to-neutral-900/50" />
       <div className="relative p-6 sm:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -265,17 +267,19 @@ function LatestEarnings({ data }: { data: LiveData }) {
         <BigStat label="営業利益率" value={`${latestEarnings.operatingMargin.toFixed(2)}%`} accent="neutral" />
         <BigStat label="EPS" value={`¥${latestEarnings.eps.toFixed(1)}`} accent="amber" />
       </div>
-      <div className="bg-white rounded-2xl shadow-sm p-6">
-        <div className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">ハイライト</div>
-        <ul className="space-y-2.5">
-          {latestEarnings.highlights.map((h, i) => (
-            <li key={i} className="flex gap-3 text-sm leading-relaxed">
-              <span className="font-mono tabular text-emerald-600 font-bold shrink-0">{String(i + 1).padStart(2, "0")}</span>
-              <span className="text-neutral-700">{h}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {latestEarnings.highlights.length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <div className="text-xs font-bold uppercase tracking-wider text-neutral-500 mb-3">ハイライト</div>
+          <ul className="space-y-2.5">
+            {latestEarnings.highlights.map((h, i) => (
+              <li key={i} className="flex gap-3 text-sm leading-relaxed">
+                <span className="font-mono tabular text-emerald-600 font-bold shrink-0">{String(i + 1).padStart(2, "0")}</span>
+                <span className="text-neutral-700">{h}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }
@@ -491,6 +495,22 @@ function AnalystTargets({ data }: { data: LiveData }) {
   const { analystTargets } = data;
   const { consensus, high, low, currentPrice, upsidePct, ratingCount, analystComment } = analystTargets;
   const totalRatings = ratingCount.buy + ratingCount.hold + ratingCount.sell;
+  // アナリストカバレッジが無い銘柄はサマリだけ出す(consensus/レンジは未公表とする)
+  if (totalRatings === 0 || high <= low) {
+    if (!analystComment) return null;
+    return (
+      <section>
+        <SectionHeader kicker="アナリストカバレッジは未公表" title="アナリスト目標株価" icon={Target} />
+        <div className="mt-5 bg-white rounded-2xl shadow-sm p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-7 h-7 rounded-lg bg-neutral-900 text-white flex items-center justify-center"><Sparkles className="w-3.5 h-3.5" /></div>
+            <span className="text-sm font-bold">サマリ</span>
+          </div>
+          <p className="text-sm leading-relaxed text-neutral-700">{analystComment}</p>
+        </div>
+      </section>
+    );
+  }
   const buyPct = (ratingCount.buy / totalRatings) * 100;
   const holdPct = (ratingCount.hold / totalRatings) * 100;
   const sellPct = (ratingCount.sell / totalRatings) * 100;
@@ -746,7 +766,7 @@ function ShareholdersSection({ data }: { data: LiveData }) {
                   <div className="text-sm font-semibold truncate">{s.name}</div>
                   <div className="text-[10px] text-neutral-500">{s.type}</div>
                 </div>
-                <div className="font-mono tabular font-bold text-sm shrink-0">{s.share.toFixed(2)}%</div>
+                <div className="font-mono tabular font-bold text-sm shrink-0">{s.share > 0 ? `${s.share.toFixed(2)}%` : "—"}</div>
               </li>
             ))}
           </ul>

@@ -8,7 +8,11 @@ import type { Task } from "../lib/task.js";
 // fetch
 import { jpxSyncTask } from "./fetch/jpx-sync.js";
 import { yahooSnapshotTask } from "./fetch/yahoo-snapshot.js";
+import { marketIndicesTask } from "./fetch/market-indices.js";
 import { edinetPipelineTask } from "./fetch/edinet-pipeline.js";
+
+// derive
+import { derivedHighlightsTask } from "./derive/highlights.js";
 
 // ai
 import { stockTrendTask } from "./ai/stock-trend.js";
@@ -22,7 +26,9 @@ import { logoColorTask } from "./ai/logo-color.js";
 export const ALL_TASKS: Task[] = [
   jpxSyncTask as Task,
   yahooSnapshotTask as Task,
+  marketIndicesTask as Task,
   edinetPipelineTask as Task,
+  derivedHighlightsTask as Task,
   stockTrendTask as Task,
   valuationTask as Task,
   positioningTask as Task,

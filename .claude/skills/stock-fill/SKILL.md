@@ -161,6 +161,23 @@ INSERT INTO events (kind, scope, scope_ref, title, body, occurs_at, impact, dire
 
 業界 slug は kebab-case 英数字(例: `automobile` / `internet-services` / `semiconductors`)。`name` (日本語フル名) と `short_name` (3-5 字) と `description` (300 字以内) を Wikipedia から抽出 or 推定。
 
+`hero_image_id` は v2 詳細ページの hero 背景に使う Unsplash 写真 ID。業界の "象徴" として **下記のプリセットから 1 つ選ぶ**(自社のロゴ色やテーマで上書きはしない):
+
+| 業界カテゴリ | photo ID | 雰囲気 |
+|---|---|---|
+| 自動車・輸送機器 | `photo-1503376780353-7e6692767b70` | 現代の自動車 |
+| 半導体・電子部品 | `photo-1518770660439-4636190af475` | 基板 |
+| SaaS・IT・ソフトウェア | `photo-1559136555-9303baea8ebd` | データセンター |
+| 通信・インターネット | `photo-1551434678-e076c223a692` | チーム |
+| 金融・銀行 | `photo-1556761175-5973dc0f32e7` | ビジネスデスク |
+| 商社・物流 | `photo-1496664444929-8c75efb9546f` | 都市・ビル |
+| 機械・産業機器 | `photo-1568667256531-3379a4076b1e` | 工業機械 |
+| 製薬・医療 | `photo-1551836022-d5d88e9218df` | ラボ |
+| 食品・小売 | `photo-1542362567-b07e54358753` | 店舗 |
+| エネルギー・素材 | `photo-1492321936769-b49830bc1d1e` | 工業夜景 |
+
+業界に当てはまるものが無ければ、最も近い雰囲気のものを選ぶ。**判定は LLM 側で**(コードで自動推測はしない)。
+
 ### Step 10. story_decks + story_slides(20〜30 枚、沿革中心)
 
 Wikipedia の「沿革」セクションを章立てし、**20〜30 枚** のスライドを作成。トヨタの既存 30 枚スライド(/Users/taiga/workspace/kigyo-db/src/app/v2/stocks/7203/_data.ts:312 以降)が**フォーマットの参考**になる。

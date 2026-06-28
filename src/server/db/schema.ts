@@ -240,6 +240,75 @@ export const marketBrief = sqliteTable("market_brief", {
   generatedAt: text("generated_at"),
 });
 
+/**
+ * 主要指数のスナップショット。Yahoo Finance から日次取得。
+ * v2 トップの市場サマリと ai-market-brief の入力に使う。
+ */
+export const marketIndices = sqliteTable("market_indices", {
+  /** Yahoo シンボル "^N225" / "^TOPX" / "JPY=X" / "^SOX" */
+  symbol: text("symbol").primaryKey(),
+  /** 表示名 "日経平均" "TOPIX" "USD/JPY" "SOX 指数" */
+  name: text("name").notNull(),
+  /** 表示順 (小さいほど先頭) */
+  displayOrder: integer("display_order").notNull().default(0),
+  /** 直近値 */
+  value: real("value"),
+  /** 前日終値 */
+  previousClose: real("previous_close"),
+  /** 騰落 % */
+  change1dPct: real("change_1d_pct"),
+  /** 騰落 絶対値 */
+  change1dAbs: real("change_1d_abs"),
+  /** 値の参照日 YYYY-MM-DD */
+  asOf: text("as_of"),
+  updatedAt: text("updated_at"),
+});
+
+/**
+ * v2 トップの「本日のハイライト」用テーブル。
+ *
+ * 既存テーブル (stockSnapshot, financialsQuarterly, dividends, events) から
+ * derive-highlights タスクが日次で抽出 → 上書き保存する派生データ。
+ *
+ * 編集記事との紐付け (relatedArticleSlug) は手動キュレーションで埋めるか、
+ * subject_code 一致の最新記事を自動で当てる。
+ */
+export const homepageHighlights = sqliteTable("homepage_highlights", {
+  id: text("id").primaryKey(),
+  /** 抽出ロジック分類 */
+  kind: text("kind", {
+    enum: ["earnings_brief", "price_anomaly", "indicator_shift", "dividend_shift"],
+  }).notNull(),
+  /** 主役 ("company" / "industry" / "theme" / "metric") */
+  subjectKind: text("subject_kind").notNull(),
+  /** 銘柄コード (subjectKind=company のとき) */
+  subjectCode: text("subject_code"),
+  /** 表示名 (企業名 / 業界名 / テーマ名) */
+  subjectName: text("subject_name").notNull(),
+  /** 一行サマリ */
+  oneLiner: text("one_liner").notNull(),
+  /** 主要指標ラベル "出来高/平均" "純利益" 等 */
+  keyMetricLabel: text("key_metric_label").notNull(),
+  /** 主要指標値 "×3.2" "¥5.7T" 等 */
+  keyMetricValue: text("key_metric_value").notNull(),
+  /** +/- /中立 */
+  keyMetricPositive: integer("key_metric_positive"), // 1 / 0 / NULL
+  /** どのテーブル/ロジック由来か (透明性表示用) */
+  source: text("source").notNull(),
+  /** 表示用時刻 "17:02" */
+  publishedAt: text("published_at").notNull(),
+  /** 並び替え用 ISO8601 */
+  publishedAtIso: text("published_at_iso").notNull(),
+  /** 紐付け編集記事の slug (NULLなら未紐付け) */
+  relatedArticleSlug: text("related_article_slug"),
+  /** スコア (大きいほど上位表示)。同日内の表示順制御に使う */
+  score: real("score").notNull().default(0),
+  /** 値の参照日 YYYY-MM-DD (古いハイライトを掃除するため) */
+  asOf: text("as_of").notNull(),
+}, (t) => ({
+  idxAsOfScore: index("idx_homepage_highlights_asof_score").on(t.asOf, t.score),
+}));
+
 // ─────────────────────────────────────────────────────────
 // F. 業界層 (大幅簡素化)
 // ─────────────────────────────────────────────────────────
@@ -250,6 +319,8 @@ export const industries = sqliteTable("industries", {
   shortName: text("short_name").notNull(),
   description: text("description"),
   insightsJson: text("insights_json"),
+  /** 業界ページ・hero の背景に使う Unsplash 写真 ID (例: photo-1559136555-9303baea8ebd) */
+  heroImageId: text("hero_image_id"),
 });
 
 export const companyIndustries = sqliteTable("company_industries", {

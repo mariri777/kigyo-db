@@ -9,19 +9,25 @@ import {
   Sparkles,
   Activity,
 } from "lucide-react";
-import {
-  postsSorted,
-  themeEntries,
-  ANGLE_META,
-  type Post,
-  type Subject,
-} from "./_lib/posts";
-import { ArticlesView } from "./_ArticlesView";
+import { getDb } from "@/server/db/client";
+import { listAll } from "@/server/repo/articleRepo";
+import { ANGLE_META, angleFromCategorySlug, type Subject } from "./_lib/posts";
+import { ArticlesView, type PostListItem } from "./_ArticlesView";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "記事 — v2",
-  description: "企業DBに紐づく解釈と分析記事。",
-  robots: { index: false, follow: false },
+  title: "AI銘柄分析・業界深掘り記事",
+  description:
+    "決算解釈・業界深掘り・テーマ分析・入門記事まで、AIと編集部が日本株の見落とし論点を掘り下げる記事一覧。",
+  alternates: { canonical: "/v2/articles" },
+  openGraph: {
+    title: "AI銘柄分析・業界深掘り記事 | 超!企業DB",
+    description:
+      "決算解釈・業界深掘り・テーマ分析・入門記事まで、AIと編集部が日本株の見落とし論点を掘り下げる記事一覧。",
+    url: "/v2/articles",
+    type: "website",
+  },
 };
 
 function unsplashUrl(id: string, w: number, h?: number) {
@@ -30,65 +36,59 @@ function unsplashUrl(id: string, w: number, h?: number) {
   return `https://images.unsplash.com/${id}?${p.toString()}`;
 }
 
-export default function ArticlesIndex() {
-  const all = postsSorted();
-  const [today, ...rest] = all;
+export default async function ArticlesIndex() {
+  const db = await getDb();
+  const rows = await listAll(db);
+  const published = rows.filter((r) => r.status === "published");
 
-  // Server→Client 境界では関数 (LucideIcon コンポーネント) を渡せないため、
-  // 純粋なデータだけのshape (PostListItem / ThemeChip) に整形する。
-  const postsForClient = rest.map((p) => ({
-    slug: p.slug,
-    angle: p.angle,
-    title: p.title,
-    subject: p.subject,
-    lede: p.lede,
-    publishedAt: p.publishedAt,
-    publishedAtIso: p.publishedAtIso,
-    readMin: p.readMin,
-    image: p.image,
-    tagLabels: p.tags.map((t) => t.label),
-    industry: inferIndustry(p.subject),
-  }));
-  const themeChips = themeEntries.map((t) => ({
-    slug: t.slug,
-    name: t.name,
-    count: t.count.posts,
-  }));
-
-  // カテゴリ (=angle) の件数
-  const categories = (
-    ["earnings", "industry_overview", "theme_dive", "primer"] as const
-  ).map((key) => ({
-    key,
-    label: ANGLE_META[key].label,
-    count: rest.filter((p) => p.angle === key).length,
-  }));
-
-  // 業界 (主役の subject.kind === "industry" もしくは企業の場合は所属業界)
-  // モックでは記事に直接「業界名」が紐付けられないので、登場した業界・企業名から
-  // 簡易マップで集計する。
-  const industryCounts = new Map<string, number>();
-  for (const p of rest) {
-    const ind = inferIndustry(p.subject);
-    if (!ind) continue;
-    industryCounts.set(ind, (industryCounts.get(ind) ?? 0) + 1);
+  if (published.length === 0) {
+    return (
+      <div className="bg-neutral-50 min-h-screen">
+        <div className="max-w-[1120px] mx-auto px-4 sm:px-6 py-5 space-y-6">
+          <Breadcrumb />
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight">記事</h1>
+          <EmptyState />
+        </div>
+      </div>
+    );
   }
-  const industries = [...industryCounts.entries()]
+
+  const items: PostListItem[] = published.map((r) => ({
+    slug: r.slug,
+    title: r.title,
+    lede: r.lede,
+    publishedAt: r.publishedAt ?? r.updatedAt.slice(0, 10),
+    publishedAtIso: r.publishedAt ?? r.updatedAt,
+    readMin: 5,
+    image: undefined,
+    subject: buildSubject(r.subjectKind, r.subjectRef, r.subjectName),
+    angleSlug: r.categoryName,
+    tagLabels: [],
+    industry: null,
+  }));
+
+  const [today, ...rest] = items;
+
+  const categories = Array.from(
+    items.reduce((m, p) => {
+      m.set(p.angleSlug, (m.get(p.angleSlug) ?? 0) + 1);
+      return m;
+    }, new Map<string, number>()),
+  )
     .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => ({ name, count }));
+    .map(([label, count]) => ({ key: label, label, count }));
+
+  const industries: { name: string; count: number }[] = [];
 
   return (
     <div className="bg-neutral-50 min-h-screen">
       <div className="max-w-[1120px] mx-auto px-4 sm:px-6 py-5 space-y-6">
         <Breadcrumb />
-
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight">記事</h1>
-
         <TodayHero post={today} />
-
         <ArticlesView
-          posts={postsForClient}
-          themes={themeChips}
+          posts={rest}
+          themes={[]}
           categories={categories}
           industries={industries}
         />
@@ -97,32 +97,36 @@ export default function ArticlesIndex() {
   );
 }
 
-/** 主役から所属業界名を推定 (モック)。実運用ではDBから引く。 */
-function inferIndustry(subject: Subject): string | null {
-  if (subject.kind === "industry") return subject.name;
-  if (subject.kind === "company") {
-    const map: Record<string, string> = {
-      "9984": "情報・通信",
-      "6594": "電気機器",
-      "8058": "総合商社",
-      "8035": "電気機器",
-      "7203": "輸送用機器",
-      "9501": "電気・ガス",
-      "9983": "小売",
-    };
-    return map[subject.code] ?? null;
+function buildSubject(
+  kind: "company" | "industry" | "theme" | "metric",
+  ref: string,
+  name: string,
+): Subject {
+  switch (kind) {
+    case "company":
+      return { kind: "company", code: ref, name };
+    case "industry":
+      return { kind: "industry", slug: ref, name };
+    case "theme":
+      return { kind: "theme", slug: ref, name };
+    case "metric":
+      return { kind: "metric", slug: ref, name };
   }
-  if (subject.kind === "theme") {
-    // テーマ深掘り記事は業界に紐付けない (テーマrailで拾う)
-    return null;
-  }
-  if (subject.kind === "metric") return null;
-  return null;
 }
 
-// ─────────────────────────────────────────────────────────
-// Breadcrumb
-// ─────────────────────────────────────────────────────────
+function EmptyState() {
+  return (
+    <div className="rounded-2xl border border-dashed border-neutral-300 py-16 text-center">
+      <p className="text-sm text-neutral-600">まだ公開された記事がありません。</p>
+      <Link
+        href="/admin/articles"
+        className="inline-block mt-3 text-xs font-bold text-neutral-900 hover:underline"
+      >
+        管理画面で記事を作成 →
+      </Link>
+    </div>
+  );
+}
 
 function Breadcrumb() {
   return (
@@ -137,13 +141,11 @@ function Breadcrumb() {
   );
 }
 
-// ─────────────────────────────────────────────────────────
-// TodayHero (SSR; フィルタ対象外)
-// ─────────────────────────────────────────────────────────
-
-function TodayHero({ post }: { post: Post }) {
-  const angle = ANGLE_META[post.angle];
-  const AngleIcon = angle.icon;
+function TodayHero({ post }: { post: PostListItem }) {
+  const angleKey = angleFromCategorySlug(post.angleSlug);
+  const angle = angleKey
+    ? { label: ANGLE_META[angleKey].label, color: ANGLE_META[angleKey].color }
+    : { label: post.angleSlug, color: "bg-neutral-100 text-neutral-700" };
   return (
     <Link
       href={`/v2/articles/${post.slug}`}
@@ -155,7 +157,6 @@ function TodayHero({ post }: { post: Post }) {
             <span
               className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${angle.color}`}
             >
-              <AngleIcon className="w-3 h-3" />
               {angle.label}
             </span>
             <SubjectChip subject={post.subject} />
@@ -173,7 +174,6 @@ function TodayHero({ post }: { post: Post }) {
             読む <ArrowUpRight className="w-4 h-4" />
           </div>
         </div>
-
         <div className="relative aspect-[16/10] md:aspect-auto bg-neutral-100 order-1 md:order-2">
           {post.image && (
             <Image

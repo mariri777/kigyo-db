@@ -14,7 +14,7 @@ const HOT_THEMES = [
 
 export function V2Footer() {
   return (
-    <footer className="bg-neutral-950 text-neutral-300 mt-16">
+    <footer className="bg-neutral-950 text-neutral-300">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-10 space-y-8">
         <div className="flex items-start gap-3">
           <BrandMark className="w-8 h-8 text-white shrink-0" accent="#34d399" />

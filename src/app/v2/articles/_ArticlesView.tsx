@@ -13,13 +13,14 @@ import {
   Activity,
   Hash,
 } from "lucide-react";
-import { ANGLE_META, type Subject, type Angle } from "./_lib/posts";
+import { ANGLE_META, angleFromCategorySlug, type Subject } from "./_lib/posts";
 
 /** _lib/posts.ts の Post / ThemeEntry は関数 (icon コンポーネント) を含むので、
  *  Server→Client 境界では渡せない。Client 用にプレーンな shape を定義する。 */
 export type PostListItem = {
   slug: string;
-  angle: Angle;
+  /** categories.name (例: "決算解釈"). ANGLE_META が対応していれば色も引ける */
+  angleSlug: string;
   title: string;
   subject: Subject;
   lede: string;
@@ -32,7 +33,7 @@ export type PostListItem = {
   industry: string | null;
 };
 export type ThemeChip = { slug: string; name: string; count: number };
-export type CategoryFacet = { key: Angle; label: string; count: number };
+export type CategoryFacet = { key: string; label: string; count: number };
 export type IndustryFacet = { name: string; count: number };
 
 function unsplashUrl(id: string, w: number, h?: number) {
@@ -53,13 +54,13 @@ export function ArticlesView({
   industries: IndustryFacet[];
 }) {
   const [query, setQuery] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<Set<Angle>>(new Set());
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [selectedIndustries, setSelectedIndustries] = useState<Set<string>>(new Set());
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return posts.filter((p) => {
-      if (selectedCategories.size > 0 && !selectedCategories.has(p.angle)) return false;
+      if (selectedCategories.size > 0 && !selectedCategories.has(p.angleSlug)) return false;
       if (selectedIndustries.size > 0) {
         if (!p.industry || !selectedIndustries.has(p.industry)) return false;
       }
@@ -84,7 +85,7 @@ export function ArticlesView({
   const activeFilterCount =
     (query ? 1 : 0) + selectedCategories.size + selectedIndustries.size;
 
-  const toggleCategory = (a: Angle) =>
+  const toggleCategory = (a: string) =>
     setSelectedCategories((prev) => {
       const next = new Set(prev);
       if (next.has(a)) next.delete(a);
@@ -141,7 +142,7 @@ export function ArticlesView({
             title="カテゴリ"
             items={categories.map((c) => ({ key: c.key, label: c.label, count: c.count }))}
             selected={selectedCategories as Set<string>}
-            onToggle={(k) => toggleCategory(k as Angle)}
+            onToggle={(k) => toggleCategory(k)}
           />
           <FacetList
             title="業界"
@@ -328,8 +329,10 @@ function DayHeading({ label, iso }: { label: string; iso: string }) {
 }
 
 function ArticleRow({ post }: { post: PostListItem }) {
-  const angle = ANGLE_META[post.angle];
-  const AngleIcon = angle.icon;
+  const angleKey = angleFromCategorySlug(post.angleSlug);
+  const angle = angleKey
+    ? ANGLE_META[angleKey]
+    : { label: post.angleSlug, color: "bg-neutral-100 text-neutral-700", icon: null as null };
   return (
     <Link
       href={`/v2/articles/${post.slug}`}
@@ -351,7 +354,10 @@ function ArticleRow({ post }: { post: PostListItem }) {
           <span
             className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${angle.color}`}
           >
-            <AngleIcon className="w-2.5 h-2.5" />
+            {angle.icon && (() => {
+              const Icon = angle.icon;
+              return <Icon className="w-2.5 h-2.5" />;
+            })()}
             {angle.label}
           </span>
           <SubjectChip subject={post.subject} compact />

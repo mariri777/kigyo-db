@@ -24,9 +24,11 @@ export type ScheduleEntry = {
 
 export const SCHEDULE: ScheduleEntry[] = [
   // ─── 日次(JST 04:00) ─────────────────────────────────────
-  // データ取得 → AI 生成 → 本番反映
+  // データ取得 → 派生抽出 → AI 生成 → 本番反映
   { task: "fetch-jpx", frequency: "daily" },
   { task: "fetch-yahoo-snapshot", frequency: "daily", selector: "all" },
+  // 指数 (^N225/^TOPX/JPY=X/^SOX) を Yahoo から日次取得
+  { task: "fetch-market-indices", frequency: "daily" },
   { task: "edinet-pipeline", frequency: "daily" },
   {
     task: "ai-stock-trend",
@@ -34,6 +36,10 @@ export const SCHEDULE: ScheduleEntry[] = [
     selector: "movers",
     params: { threshold: 5 },
   },
+  // stock_snapshot からトップ用ハイライトを派生抽出
+  // (ai-market-brief より前。market-brief は将来 highlights を引用する可能性)
+  { task: "derive-highlights", frequency: "daily" },
+  // market_indices を入力に market_brief を生成
   { task: "ai-market-brief", frequency: "daily" },
   { task: "sync-remote", frequency: "daily" },
 

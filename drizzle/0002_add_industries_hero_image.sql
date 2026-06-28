@@ -1,0 +1,1 @@
+ALTER TABLE `industries` ADD `hero_image_id` text;

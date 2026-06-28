@@ -18,7 +18,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             超!企業DB <span className="text-foreground/60 font-normal">管理画面</span>
           </Link>
           <nav className="flex items-center gap-4 text-xs">
-            <Link href="/admin" className="text-muted-foreground hover:text-foreground transition">
+            <Link href="/admin/articles" className="text-muted-foreground hover:text-foreground transition">
               記事
             </Link>
             <Link
@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               アカウント
             </Link>
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition">
+            <Link href="/v2" className="text-muted-foreground hover:text-foreground transition">
               公開サイト ↗
             </Link>
           </nav>
