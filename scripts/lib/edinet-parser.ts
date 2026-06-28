@@ -11,6 +11,7 @@ import { XMLParser } from "fast-xml-parser";
 import {
   COVER_META_TAGS,
   DEI_TAGS,
+  INSTANT_METRICS,
   PL_METRICS,
   SUMMARY_METRICS,
   parseAccountingStandard,
@@ -44,6 +45,8 @@ export type ExtractedFinancials = {
   summaryByFy: SummaryByFy[];
   /** 当期の P/L 指標 (consolidated 優先) */
   currentPl: PlValues;
+  /** 期末時点の発行済株式総数 (当期末)。取れなければ undefined。 */
+  issuedShares?: number;
 };
 
 export type SummaryByFy = {
@@ -244,11 +247,43 @@ export function extractFromXbrl(xml: string): ExtractedFinancials {
     }
   }
 
+  // ── 5. Instant 系 (発行済株式数等) を当期末 (prior=0) から取る ──
+  // Summary 系の TotalNumberOfIssuedSharesSummaryOfBusinessResults は
+  // 5 期分の値を持つので、prior=0 (当期) を優先。
+  // 自己株式を差し引かず純粋な発行済総数。
+  let issuedShares: number | undefined;
+  for (const spec of INSTANT_METRICS) {
+    const tagCandidates = tagsFor(spec, accountingStandard);
+    for (const tag of tagCandidates) {
+      const elements = arrayify(xbrl[tag]);
+      let bestPrior = -Infinity;
+      let bestValue: number | undefined;
+      for (const el of elements) {
+        const ctxRef: string = el["@contextRef"];
+        const ctx = contexts.get(ctxRef);
+        if (!ctx) continue;
+        const num = parseNumber(text(el));
+        if (num == null) continue;
+        // prior=0 (当期末) が最優先、Prior1 > Prior2 ... と古いほど低優先
+        const prior = ctx.prior ?? 0;
+        if (prior > bestPrior) {
+          bestPrior = prior;
+          bestValue = num;
+        }
+      }
+      if (bestValue != null) {
+        if (spec.key === "issuedShares") issuedShares = bestValue;
+        break;
+      }
+    }
+  }
+
   return {
     ...dei,
     accountingStandard,
     summaryByFy: summaryByFy.sort((a, b) => b.prior - a.prior),
     currentPl,
+    issuedShares,
   };
 }
 

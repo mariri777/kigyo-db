@@ -54,13 +54,17 @@ function escapeCell(v: string): string {
 // decode
 // ──────────────────────────────────────────────────
 
-/** 空セル → null、数値表記 → number、それ以外 → 文字列(JSON 値を含む) */
-function parseCell(raw: string): string | number | null {
+/**
+ * 空セル → null、それ以外 → 文字列のまま返す。
+ *
+ * 数値判定をしない理由: CSV からは型を 100% 復元できない。
+ *   - "1301" は銘柄コード(text)であって整数ではない (前ゼロ "0001" 失われも怖い)
+ *   - "1e3" を 1000 にしてしまう、等
+ * SQLite に投入するときは bind value が string でも、カラム型が INTEGER/REAL なら
+ * 自動で適切に変換される (SQLite の type affinity)。なので string で十分。
+ */
+function parseCell(raw: string): string | null {
   if (raw === "") return null;
-  if (/^-?\d+(\.\d+)?$/.test(raw)) {
-    const n = Number(raw);
-    if (Number.isFinite(n)) return n;
-  }
   return raw;
 }
 

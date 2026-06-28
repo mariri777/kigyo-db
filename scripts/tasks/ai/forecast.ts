@@ -83,7 +83,7 @@ const ScenarioSchema = z.object({
   probability: z.number().int().min(0).max(100),
   priceLow: z.number().nullable().optional(),
   priceHigh: z.number().nullable().optional(),
-  note: z.string().min(30).max(220),
+  note: z.string().min(15).max(240),
 });
 
 const ISO_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
@@ -224,6 +224,8 @@ results 配列に以下を返す:
 - 各 take.body は 180〜280字
 - scenarios は 3 本必須
 - 固定指数では ["base","bull","bear"]、スクラッチでは ["base","yes-case","no-case"] の組み合わせ
+- 各 scenario.note は 60〜180字。1〜2 文で「どんな展開で、なぜそうなるか」を書く
+- scenario.label は短く (5〜12字)。「もみ合い継続」「リスク選好で 5,950 タッチ」など
 `;
 
 // ──────────────────────────────────────────────────

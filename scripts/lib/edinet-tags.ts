@@ -109,6 +109,22 @@ export const PL_METRICS: FinancialMetricSpec[] = [
 ];
 
 /**
+ * Instant 系 (期末時点値) のタグ。Summary と違って「当期末の 1 数値」だけを引く。
+ *
+ * 発行済株式数は Yahoo の marketCap が一部銘柄で壊れている (株式分割サイレント
+ * 未反映) のを回避するため、自前で listed_shares × price で時価総額を算出するのに使う。
+ * 自己株式を差し引きたい場合は別途 TotalNumberOfSharesHeldTreasurySharesEtc を追加検討。
+ */
+export const INSTANT_METRICS: FinancialMetricSpec[] = [
+  {
+    key: "issuedShares",
+    label: "発行済株式総数",
+    japanGaap: ["jpcrp_cor:TotalNumberOfIssuedSharesSummaryOfBusinessResults"],
+    ifrs: ["jpcrp_cor:TotalNumberOfIssuedSharesSummaryOfBusinessResults"],
+  },
+];
+
+/**
  * DEI (Document and Entity Information) — 書類自体のメタ
  */
 export const DEI_TAGS = {

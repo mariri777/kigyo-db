@@ -1,6 +1,27 @@
 # AI World Markets Daily Forecast 仕様
 
-> v2 トップに常設する「AIが世界の翌営業日を毎日真面目に予想する」コーナー。6 時間ごとに更新される。実装は `scripts/tasks/ai/forecast.ts`、表示は `src/app/v2/page.tsx` の `Predictions` セクション。
+> トップ「AIの明日予想」コーナー。6h ごとに固定指数 2 + AI スクラッチ 1〜3 を生成する Polymarket 風 stock。実装は `scripts/tasks/ai/forecast.ts`、リポは `src/server/repo/forecastRepo.ts`、表示は `src/app/(main)/page.tsx` の `Predictions` セクション、一覧 `src/app/(main)/forecasts/page.tsx`、詳細 `src/app/(main)/forecasts/[id]/page.tsx`。
+
+## Polymarket 化 (2026-06)
+
+- forecasts に `issue_kind` (fixed-index / ai-scratch) / `position` (yes / no) / `yes_label` / `no_label` / `topic_slug` を追加
+- forecast_scenarios.kind 拡張: 指数系は `base / bull / bear`、スクラッチは `base / yes-case / no-case`
+- AI は曖昧解 (47-53%) 禁止。必ず yes / no いずれかに賭ける
+- UI は大型 YES / NO ペア表示 (`YesNoBlock` in `_viz.tsx`)
+- 「答え合わせ / outcome」関連の UI は撤去 (運用負担を避け、stock の更新と Issue の質に集中)
+- 関連: `drizzle/0006_polymarket_forecasts.sql` / `_lib/format.ts:readStance` / `_viz.tsx:YesNoBlock`
+
+## 自動定期実行
+
+`pnpm pipeline run ai-forecast` 1 行で完結する (selectTargets → runClaudeCli → applyLocal → writeLake)。
+
+手動 cron (例: 6h ごと、ローカル D1 への書き込みのみ):
+
+```cron
+0 */6 * * * cd /Users/taiga/workspace/kigyo-db && /opt/homebrew/bin/pnpm pipeline run ai-forecast >> ~/.local/share/kigyo-db/forecast.log 2>&1
+```
+
+本番 D1 にも反映したい場合は後段で `pnpm pipeline sync` を叩くか、`pnpm pipeline every-6h` を回す (fetch-market-indices → ai-forecast → sync-remote が並ぶ)。
 
 ## コンセプト
 

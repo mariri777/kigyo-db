@@ -13,7 +13,7 @@
  *   - GH Actions 1 ジョブ内で完結するなら中間 R2 は不要
  *   - 同一ジョブ内でやり直したいケースは、status='failed' を一度クリアして再 discover で十分
  */
-import { and, eq, isNotNull } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { unzipSync } from "fflate";
 
 import { fetchDocZip, sleep } from "../lib/edinet-api.js";
@@ -36,18 +36,60 @@ import {
 
 const REQUEST_DELAY_MS = 200;
 
-export async function processDiscovered(): Promise<{
+export type ProcessFilter = {
+  /** プライム上場銘柄に限定する */
+  primeOnly?: boolean;
+  /** doc_type_code (例: ["120"] = 有報のみ) */
+  docTypeCodes?: string[];
+  /** sec_code 1 つにつき最新 1 件 (submit_date DESC) に絞る */
+  latestPerSecCode?: boolean;
+};
+
+export async function processDiscovered(filter: ProcessFilter = {}): Promise<{
   attempted: number;
   succeeded: number;
   failed: number;
   skippedNoCompany: number;
 }> {
   const db = getLocalDb();
-  const pending = db
-    .select()
-    .from(edinetDocs)
-    .where(and(eq(edinetDocs.fetchStatus, "discovered"), isNotNull(edinetDocs.secCode)))
-    .all();
+
+  // 基本クエリ: discovered + secCode あり
+  const conds: ReturnType<typeof eq>[] = [
+    eq(edinetDocs.fetchStatus, "discovered"),
+    isNotNull(edinetDocs.secCode) as unknown as ReturnType<typeof eq>,
+  ];
+
+  // プライム銘柄に限定: stocks から sec_code (5 桁) のセットを取る
+  // stocks.code は 4 桁。EDINET の sec_code は 5 桁 (末尾 0)。
+  if (filter.primeOnly) {
+    const primeCodes = db
+      .select({ code: stocks.code })
+      .from(stocks)
+      .where(eq(stocks.exchange, "Prime"))
+      .all();
+    const primeSecCodes = primeCodes.map((r) => `${r.code}0`);
+    if (primeSecCodes.length === 0) {
+      return { attempted: 0, succeeded: 0, failed: 0, skippedNoCompany: 0 };
+    }
+    conds.push(inArray(edinetDocs.secCode, primeSecCodes) as unknown as ReturnType<typeof eq>);
+  }
+
+  if (filter.docTypeCodes && filter.docTypeCodes.length > 0) {
+    conds.push(inArray(edinetDocs.docTypeCode, filter.docTypeCodes) as unknown as ReturnType<typeof eq>);
+  }
+
+  let pending = db.select().from(edinetDocs).where(and(...conds)).all();
+
+  // sec_code ごとに最新 1 件に絞る (submit_date DESC)
+  if (filter.latestPerSecCode) {
+    const bySec = new Map<string, typeof pending[number]>();
+    for (const d of pending) {
+      if (!d.secCode) continue;
+      const ex = bySec.get(d.secCode);
+      if (!ex || (d.submitDate ?? "") > (ex.submitDate ?? "")) bySec.set(d.secCode, d);
+    }
+    pending = Array.from(bySec.values());
+  }
 
   let succeeded = 0;
   let failed = 0;
@@ -88,6 +130,7 @@ export async function processDiscovered(): Promise<{
       writeFinancials(companyId, extracted);
       writeDividends(companyId, extracted, dividendSchedules);
       writeCompanyMeta(companyId, extracted, coverMeta);
+      writeStockListedShares(doc.secCode, extracted);
 
       db.update(edinetDocs)
         .set({ fetchStatus: "parsed", failedReason: null, updatedAt: now })
@@ -210,6 +253,21 @@ function writeDividends(
       })
       .run();
   }
+}
+
+/**
+ * stocks.listed_shares (発行済株式総数) を UPSERT。
+ * Yahoo の marketCap が一部銘柄で壊れているので、自前計算用にここで持つ。
+ * secCode は EDINET 形式 (5桁)。stocks.code は 4 桁なので slice(0,4)。
+ */
+function writeStockListedShares(secCode: string | null, e: ExtractedFinancials) {
+  if (secCode == null || e.issuedShares == null) return;
+  const code4 = secCode.slice(0, 4);
+  const db = getLocalDb();
+  db.update(stocks)
+    .set({ listedShares: e.issuedShares })
+    .where(eq(stocks.code, code4))
+    .run();
 }
 
 function writeCompanyMeta(

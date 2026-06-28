@@ -7,7 +7,7 @@
  *   並列度・リトライ・進捗ログは lib/concurrency に委譲。
  *   Yahoo HTTP は lib/yahoo に集約 — このファイルにはビジネスロジックだけ残す。
  */
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 import { stockPricesDaily, stockSnapshot, stocks } from "../../../src/server/db/schema.js";
 import { mapWithLimit } from "../../lib/concurrency.js";
@@ -134,6 +134,12 @@ export const yahooSnapshotTask: Task<Input, Output> = {
   async applyLocal(target, output, ctx) {
     const now = new Date().toISOString();
 
+    // Yahoo の marketCap は一部銘柄 (株式分割サイレント未反映なデータ) で
+    // 4 倍に水増しされる事故が確認されている。stocks.listed_shares (EDINET 有報由来)
+    // が非 NULL なら listed_shares × price で再計算して上書き。NULL のときだけ
+    // Yahoo の marketCap をフォールバックで使う。
+    const marketCapOku = computeMarketCapOku(ctx, target.input.code, output);
+
     await ctx.db
       .insert(stockSnapshot)
       .values({
@@ -143,7 +149,7 @@ export const yahooSnapshotTask: Task<Input, Output> = {
         change1dPct: output.change1dPct,
         change1mPct: output.change1mPct,
         change1yPct: output.change1yPct,
-        marketCapOku: output.marketCapOku,
+        marketCapOku,
         per: output.per,
         pbr: output.pbr,
         dividendYield: output.dividendYield,
@@ -209,6 +215,32 @@ export const yahooSnapshotTask: Task<Input, Output> = {
 // ──────────────────────────────────────────────────
 // 取得本体: 1 銘柄分 = quote + chart 90d + chart 1y
 // ──────────────────────────────────────────────────
+
+/**
+ * stocks.listed_shares が埋まっていれば listed_shares × price で時価総額を計算 (単位: 億円)。
+ * NULL の銘柄は Yahoo の marketCap (= Yahoo 内部の price × sharesOutstanding) を
+ * そのままフォールバックとして使う。
+ *
+ * Yahoo US の marketCap は一部銘柄 (株式分割サイレント未反映) で約 4 倍に水増しされる
+ * 問題があるため、可能な限り EDINET 由来の値を優先する。
+ */
+function computeMarketCapOku(
+  ctx: PipelineCtx,
+  code: string,
+  output: Output,
+): number | null {
+  if (output.priceJpy == null) return null;
+  const rows = ctx.db
+    .select({ listedShares: stocks.listedShares })
+    .from(stocks)
+    .where(eq(stocks.code, code))
+    .all();
+  const listedShares = rows[0]?.listedShares;
+  if (listedShares != null && listedShares > 0) {
+    return Math.round((listedShares * output.priceJpy) / 1e8);
+  }
+  return output.marketCapOku;
+}
 
 async function fetchSnapshot(code: string): Promise<Output> {
   const symbol = jpStockSymbol(code);
