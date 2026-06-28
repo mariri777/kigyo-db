@@ -1,37 +1,39 @@
-# 超！企業DB
+# 超!企業DB
 
-> AI が掘る、日本株の発見。
-> 東証上場企業を対象に、事業類似銘柄・成長フェーズ・ファクター感応度・見落とし論点を AI が先回りで整理して提示する、個人投資家向けの銘柄分析サービス。
+> AIが掘る、日本株の発見。
+> 東証上場 約3,800 社を対象に、AI が「ひとことで言うと何の会社か」「直近の動意」「業界の構図」「市場が見落とす論点」を先回りで整理して提示する、個人投資家向けの銘柄分析データベース。
 
 公開サイト: <https://kigyo.cho-super.com>
 
-## プロダクト概要
+## いまの状態
 
-「超！企業DB」は、有報・決算説明会資料・適時開示を AI が解析し、銘柄ごとに「ひとことで言うと何の会社か」「似たビジネスをやっている会社」「市場が見落としていそうな論点」を一枚にまとめて表示します。
+このリポジトリは戦略レイヤーから一段組み直している最中で、**`/v2` 配下が現行の公開ルート**になっています(`/v2` のヘッダーに `v2 prototype` バッジが出ます)。旧 `/stocks` `/industries` `/screens` `/themes` `/predictions` `/compare` 等のルートは一度削除済みで、今後 `/v2` を `/` に昇格させる順序で進めます。
 
-サイトで読める主なものは次のとおり。
+実装済み(`/v2/...`):
 
-- **銘柄ページ** (`/stocks/[code]`): ひとこと要約、AI 評価（割安・割高判定）、類似銘柄、見落とし論点、ファクター感応度、業績推移
-- **業界マップ** (`/industries`, `/industries/[slug]`): 業界カバレッジと業界内の競争構造・主要 KPI
-- **スクリーン** (`/screens`, `/screens/[slug]`): 「割安」「拡大期」「高配当」などの切り口で銘柄を抽出
-- **特集テーマ** (`/themes`, `/themes/[slug]`): 編集キュレーションによる横断テーマ
-- **AI 予測トラッカー** (`/predictions`, `/predictions/[id]`, `/predictions/track-record`): 決算ガイダンス・配当方針などを AI が事前予測し、当たりも外れも公開
-- **比較ビュー** (`/compare`): 任意銘柄の指標を並べて比較
-- **マイ予測** (`/profile`): ユーザーの予測投票履歴
-- **ガイド / 超！企業DBとは** (`/guide`, `/about`): サービスの設計思想と使い方
-- **ブログ** (`/blog`, `/blog/[slug]`): 編集記事
-- **法務文書** (`/legal/terms`, `/legal/privacy`, `/legal/disclaimer`, `/legal/editorial-policy`): 利用規約・プライバシー・免責・編集方針
+- **ホーム** (`/v2`): 本日の市場サマリ(`market_indices` + AI Daily Brief)、本日のハイライト(`stock_snapshot` 由来の自動生成)、編集記事一覧、注目企業/業界、予測コーナーのプロトタイプ、半導体テーマ + 全銘柄DB入口
+- **銘柄一覧** (`/v2/stocks`): コード/社名検索、JPX 33業種フィルタ、時価総額/前日比/PER/利回りの各種ソート、ページネーション
+- **銘柄詳細** (`/v2/stocks/[code]`): companies / stock_snapshot / financials_annual / dividends / top_shareholders / company_ai_brief / story_decks 等を 1 枚に展開
+- **記事一覧 / 記事詳細** (`/v2/articles`, `/v2/articles/[slug]`): 編集記事(angle = 決算解釈/業界俯瞰/テーマ深掘り/プライマー)
+- **管理画面** (`/admin`): 記事 CRUD、Tiptap WYSIWYG、下書き保存、公開/非公開、関連銘柄/業界、ユーザー管理、パスワード変更
+- **API** (`/api/search`): 銘柄横断検索(Workers Cache API でキャッシュ)
+- **sitemap / robots / manifest / OG image / Twitter image**: app router の慣例どおり root に配置
+
+戦略の意図は `docs/strategy.md` 参照(3 レイヤー設計: 薄い全銘柄DB × 全業種・予想解釈メディア × テーマ深掘りDB)。
 
 ## 技術スタック
 
-- **Next.js 16**（App Router）+ React 19
-- **Tailwind CSS v4**（PostCSS 経由）
-- **Drizzle ORM** + **Cloudflare D1**（SQLite ベース）
-- **Cloudflare Workers** にデプロイ（[`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) 経由）
-- **Cloudflare Web Analytics**（cookie レス・本番ビルドのみ）
-- TypeScript / Noto Sans JP + JetBrains Mono
+- **Next.js 16**(App Router) + React 19.2
+- **Tailwind CSS v4**(PostCSS 経由) / shadcn/ui / Radix UI / lucide-react
+- **Tiptap v3**(管理画面の WYSIWYG)
+- **Drizzle ORM 0.45** + **Cloudflare D1**(SQLite)
+- **Cloudflare R2**(EDINET の生 ZIP / XBRL 保管)
+- **Cloudflare Workers** へデプロイ([`@opennextjs/cloudflare`](https://opennext.js.org/cloudflare) 経由)
+- **Zod 4**(AI タスクの出力スキーマ)、**fast-xml-parser / fflate**(XBRL 解析)、**yahoo-finance2**、**better-sqlite3**(ローカル D1 直アクセス)
+- **TypeScript 5** / Noto Sans JP + JetBrains Mono
+- パッケージマネージャは **pnpm 10**、Node 22。lint は ESLint 9、git hook は lefthook
 
-> **注意**: このリポジトリの Next.js は本記事執筆時点の最新版で、過去のバージョンと API・規約・ファイル構成が異なる場合があります。コードを書く前に `node_modules/next/dist/docs/` 内の該当ガイドを必ず参照してください（[AGENTS.md](./AGENTS.md) 参照）。
+> **注意**: ここで使っている Next.js は最新版で、過去のバージョンと API/規約/ファイル構成が異なります。コードを書く前に `node_modules/next/dist/docs/` 内の該当ガイドを必ず参照してください(`AGENTS.md` 参照)。
 
 ## 開発手順
 
@@ -39,22 +41,23 @@
 # 依存関係のインストール
 pnpm install
 
-# 開発サーバ（http://localhost:3000）
+# 開発サーバ (http://localhost:3000)
 pnpm dev
 
-# プロダクションビルド
-pnpm build
-
-# Cloudflare Workers 互換でローカルプレビュー（OpenNext でビルドして preview）
+# Cloudflare Workers 互換でローカルプレビュー (OpenNext でビルドして preview)
 pnpm preview
 
 # Cloudflare Workers にデプロイ
 pnpm deploy
+
+# 型チェック / Lint
+pnpm typecheck
+pnpm lint
 ```
 
-`pnpm preview` / `pnpm deploy` は、OpenNext で `.open-next/` 配下に成果物を生成してから wrangler を呼びます。Cloudflare のリソース（D1 など）は `wrangler.toml` で定義されています。
+`pnpm preview` / `pnpm deploy` は OpenNext で `.open-next/` 配下に成果物を生成してから wrangler を呼びます。D1 や R2 などのバインディングは `wrangler.toml` に宣言しています。
 
-### データベース（Cloudflare D1）
+## データベース(Cloudflare D1)
 
 スキーマは `src/server/db/schema.ts`、マイグレーションは `drizzle/` に生成されます。
 
@@ -62,80 +65,154 @@ pnpm deploy
 # スキーマ変更からマイグレーション SQL を生成
 pnpm exec drizzle-kit generate
 
-# 本番 D1 に適用（wrangler.toml の binding 名は DB）
+# 本番 D1 に適用 (wrangler.toml の binding 名は DB)
 pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --remote
 
 # ローカル D1 に適用
 pnpm exec wrangler d1 migrations apply cho-kigyo-db-database --local
 ```
 
-#### 本番 D1 の自動更新（24h cron）
-
-本番 D1 は GitHub Actions の cron（`.github/workflows/refresh-d1.yml`、JST 04:00）が毎日 1 回更新します。`scripts/refresh-d1.ts` が以下を 1 コマンドで実行:
-
-1. 本番 D1 から id seed（companies/sources）を SELECT し、id の連続性を保つ
-2. JPX 銘柄一覧 + Yahoo Finance を取得
-3. `src/content/data.ts` と `src/content/industries.ts` の overlay と統合
-4. 本番 D1 と差分比較して INSERT/UPDATE/DELETE を計算
-5. wrangler 経由で本番 D1 に SQL を順次反映
-6. 件数しきい値で検証
-
-手動で叩く場合（`CLOUDFLARE_API_TOKEN` と `CLOUDFLARE_ACCOUNT_ID` を env に渡す）:
+### ローカル D1 の初期化
 
 ```bash
-pnpm db:refresh:dry-run   # SQL を tmp/sync-remote/ に書き出すだけ
-pnpm db:refresh            # 本番 D1 へ反映
-```
-
-blog/admin 系（posts, post_tags, tags, admin_users, admin_sessions）は cron のスコープ外。
-
-#### ローカル D1 の初期化
-
-ローカル開発では `scripts/seed/*.csv`（手動で `pnpm db:snapshot` を叩いた時点のスナップショット）を投入する。古くて良い（本番 D1 は cron で常に最新）。
-
-```bash
-# ローカル D1 をリセットして seed スナップショットを一括 INSERT
+# .wrangler/state/v3/d1 を破棄 → migrations apply → JPX から companies/stocks 投入
+#                            → 管理者アカウントと記事カテゴリを seed
 pnpm db:seed-local
 
-# 必要なら seed スナップショット自体を再生成(オンライン必須、JPX/Yahoo を叩く)
-pnpm db:snapshot
+# JPX を叩かずスキーマだけ作りたい場合 (CI 等)
+pnpm db:seed-local -- --no-fetch
+
+# 同じものを名前を変えただけのエイリアス
+pnpm db:reset-local
 ```
 
-### ブログ管理画面
+`db:seed-local` で投入される初期管理者:
 
-ブログ記事は D1 の `posts` テーブルに HTML として保存します。管理画面で WYSIWYG エディタによる作成・編集・下書き保存・公開/非公開・タグ・関連銘柄/業界の設定ができます。
-
-- 管理画面: <http://localhost:3000/admin>（本番: <https://kigyo.cho-super.com/admin>）
-- ログイン: <http://localhost:3000/admin/login>
-
-`pnpm db:seed-local` で投入される初期管理者は次のとおりです。**本番反映時は必ず `/admin/account` でパスワードを変更してください。**
-
-- メールアドレス: `admin@example.com`
+- メール: `admin@example.com`
 - パスワード: `password0`
 
-管理画面の主な動線:
+**本番に反映する前に必ず `/admin/account` でパスワードを変更してください。**
+
+価格・財務・AI 生成パートはこのあと「データパイプライン」のとおりに後追いで埋めます。
+
+## データパイプライン(`pnpm pipeline`)
+
+データ取得・派生抽出・AI 生成・本番反映は、すべて単一のエントリ `pnpm pipeline` 配下に集約しました(`scripts/pipeline.ts`)。スケジュールは `scripts/lib/schedule.ts` の `SCHEDULE` 配列で宣言、各タスクは `scripts/tasks/<kind>/<task>.ts` に 1 ファイル 1 タスクで実装します。
+
+```bash
+# JST 04:00 cron 相当
+#   fetch-jpx → fetch-yahoo-snapshot → fetch-market-indices
+#   → edinet-pipeline → ai-stock-trend(動意) → derive-highlights
+#   → ai-market-brief → sync-remote
+pnpm pipeline daily
+
+# 土曜 JST 06:00 相当
+#   edinet-pipeline(過去8日補修) → ai-stock-trend ローテ 1/4 → sync-remote
+pnpm pipeline weekly
+
+# 月初 JST 05:00 相当
+#   ai-valuation / ai-positioning / ai-summary / ai-catalysts のローテ 1/8
+#   → ai-logo-color → sync-remote
+pnpm pipeline monthly
+
+# ローカルで生成済みの local/ai-generated/*.json を本番 D1 に UPSERT するだけ
+pnpm pipeline sync
+
+# 1 タスクだけデバッグ実行
+pnpm pipeline run fetch-jpx
+pnpm pipeline run ai-stock-trend --limit 10 --auto
+pnpm pipeline run ai-valuation --codes 7203,9984 --manual
+
+# AI タスクを手動ループで回す場合: prepare 済み入力 → LLM 実行 → output.json で apply
+pnpm pipeline ai-apply ai-valuation --file ./output.json
+```
+
+共通オプション:
+
+- `--limit N` 対象を先頭 N 件に限定
+- `--codes 7203,9984` 銘柄コード明示
+- `--date YYYY-MM-DD` 論理日付の上書き(default: 今日 JST)
+- `--auto` / `--manual` AI タスクの実行モード(default: `--auto`)
+
+GitHub Actions で日次/週次/月次を回しています:
+
+- `.github/workflows/pipeline-daily.yml`(UTC 19:00 = JST 04:00)
+- `.github/workflows/pipeline-weekly.yml`(UTC 21:00 金 = JST 土 06:00)
+- `.github/workflows/pipeline-monthly.yml`(UTC 月初 20:00 = JST 月初 05:00)
+
+各 workflow は `pnpm pipeline daily/weekly/monthly` を呼ぶだけです。secrets は `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `EDINET_API_KEY`。
+
+### 実行モデル(なぜ「ローカル D1 → 本番 D1」の 2 段か)
+
+- **fetch / derive 系**(JPX / Yahoo / EDINET / 派生抽出)は決定的に同じ値が返るので、CI 上のローカル D1 にいったん書き、`sync-remote` で本番に UPSERT する
+- **ai 系**(LLM 生成)は人間が品質を確認してから本番に出したいので、ローカル D1 と `local/ai-generated/<task>/<key>.json`(lake)に書き、`pnpm pipeline sync` で本番へ反映する
+- `sync-remote` は lake を walk して、タスクごとに UPSERT SQL をテーブル単位でまとめ、`wrangler d1 execute --remote --file` で投入する
+- 冪等性は全 SQL を `INSERT ... ON CONFLICT DO UPDATE` にすることで担保
+
+`blog/admin` 系テーブル(`articles` / `categories` / `admin_users` / `admin_sessions` 等)はパイプラインのスコープ外です。
+
+### EDINET XBRL パイプライン
+
+`edinet-pipeline` タスクは内部で次の 4 段を回します(詳細設計: `docs/data-pipeline.md`):
+
+1. **discover**: 書類一覧 API から前日提出書類の docID を `edinet_docs` に INSERT
+2. **download**: docID ごとに書類取得 API を叩き、ZIP を R2(`raw/<yyyy>/<edinet>/<docID>.zip`)に put
+3. **extract**: ZIP からメイン XBRL を取り出し R2(`xbrl/<yyyy>/<edinet>/<docID>.xbrl`)に put
+4. **parse**: XBRL を `fast-xml-parser` で読み、`financials_annual` / `dividends` / `companies` / `stock_snapshot` に UPSERT
+
+R2 バケット名は `cho-kigyo-db-edinet-raw`。会計基準別タグの対応表は `scripts/lib/edinet-tags.ts`。週次の `edinet-pipeline (backfill: 8)` で過去 8 日分の取りこぼしを回収します。
+
+### AI 生成パイプライン
+
+`scripts/tasks/ai/*.ts` 配下の各タスクが「入力組立 / プロンプト / 出力 Zod スキーマ / DB マッピング / SQL ジェネレータ」を 1 ファイルに閉じています。
+
+| タスク | 反映先 | 頻度 | 役割 |
+|---|---|---|---|
+| `ai-stock-trend` | `stock_snapshot.trend_*` | 日次(動意) + 週次ローテ | 値動きや材料の一言解釈 |
+| `ai-market-brief` | `market_brief` | 日次 | 市場全体のリード文 + 箇条書き + watch テーマ |
+| `ai-valuation` | `company_ai_brief.valuation_*` | 月次ローテ 1/8 | 割安/割高判定と根拠 |
+| `ai-positioning` | `company_ai_brief.positioning_*` | 月次ローテ 1/8 | 業界内ポジション |
+| `ai-summary` | `company_ai_brief.summary` | 月次ローテ 1/8 | ひとこと要約 |
+| `ai-catalysts` | `company_ai_brief.catalysts` | 月次ローテ 1/8 | 短期/中期カタリスト |
+| `ai-logo-color` | `companies.logo_color` | 月次 | 未着色銘柄のブランド色 |
+
+詳細は `docs/ai-pipeline.md`。出力 JSON はすべて `local/ai-generated/<task>/<key>.json` に保存され、`pnpm pipeline sync` で本番に投入されます。
+
+### 1 銘柄分のリッチデータをまとめて埋める
+
+`/v2/stocks/[code]` で出る情報(companies / stock_snapshot / financials_annual / dividends / top_shareholders / company_ai_brief / story_decks / story_slides / company_industries / industries)を 1 銘柄分まとめて作るには `.claude/skills/stock-fill/SKILL.md` の手順で `pnpm pipeline run ...` を順に流します(Wikipedia を一次ソースに使う Claude Code 用スキル)。
+
+## ブログ / 記事管理画面
+
+記事は D1 の `articles` テーブルに HTML として保存します。管理画面で Tiptap WYSIWYG による作成・編集・下書き保存・公開/非公開・angle(カテゴリ)・関連銘柄/業界の設定ができます。
+
+- 管理トップ: <http://localhost:3000/admin>(本番: <https://kigyo.cho-super.com/admin>)
+- ログイン: <http://localhost:3000/admin/login>
+
+主な動線:
 
 - `/admin` — 下書き / 公開済みの記事一覧
-- `/admin/posts/new` — 新規記事作成（WYSIWYG）
-- `/admin/posts/[id]` — 記事の編集・削除
+- `/admin/articles` — 記事一覧
+- `/admin/articles/new` — 新規記事作成
+- `/admin/articles/[id]` — 記事の編集・削除
 - `/admin/account` — ログイン中ユーザーのパスワード変更
 - `/admin/users` — 管理者ユーザー一覧 + 新規発行
 
-## サイトのコンセプト（要約）
+## サイトのコンセプト(要約)
 
-- **大手では出せない領域を取る**: 証券会社のコンプラ上踏み込みにくい「割安・割高評価」「見落としリスク」を、根拠と数値を併記して提示。
+- **大手では出せない領域を取る**: 証券会社のコンプラ上、踏み込みにくい「割安・割高評価」「見落としリスク」「業界の見立て」を、根拠と数値を併記して提示する
 - **信頼性の三層構造**:
-  1. 定量データは EDINET XBRL から決定的に取得し、AI に数値を生成させない。
-  2. 類似度などは 0〜100 の整数スコア+根拠一文。曖昧なラベリングをしない。
-  3. AI 生成パートは AI 生成と明示し、引用検証で根拠未確認の出力は非表示。
-- **横断比較**: 東証の業種分類を超えた事業類似性で隣接銘柄を発見。
-- **透明性**: AI 予測は事前にロックし、結果と学びをそのまま公開する。
+  1. 定量データは EDINET XBRL から決定的に取得し、AI に数値を生成させない
+  2. 類似度などは 0〜100 の整数スコア + 根拠一文。曖昧なラベリングをしない
+  3. AI 生成パートは AI 生成と明示し、根拠未確認の出力は非表示
+- **横断比較**: 東証の業種分類を超えた事業類似性で隣接銘柄を発見
+- **AI 予測の透明性**: 事前にロック → 結果と学びをそのまま公開する(予測コーナーは現状プロトタイプ。バックエンドはまだ書いていない)
 
-詳細は `/about`・`/guide`・`/legal/editorial-policy` の各ページに記載しています。
+戦略の全体像は `docs/strategy.md`。
 
-## 注意事項（ディスクレーマ）
+## 注意事項(ディスクレーマ)
 
-本サービスの情報は、不特定多数に対する一般的な投資情報提供であり、投資助言業に該当する個別助言ではありません。投資判断はユーザー自身の責任で行ってください。本サービスは投資勧誘や売買推奨を目的とするものではありません。
+本サービスの情報は不特定多数に対する一般的な投資情報提供であり、投資助言業に該当する個別助言ではありません。投資判断はユーザー自身の責任で行ってください。本サービスは投資勧誘や売買推奨を目的とするものではありません。
 
 ## ライセンス
 

@@ -56,12 +56,24 @@ function findSqliteFile(): string | undefined {
 }
 
 let _db: LocalDb | undefined;
+let _sqlite: Database.Database | undefined;
 
 export function getLocalDb(): LocalDb {
   if (_db) return _db;
-  const dbPath = getLocalD1Path();
-  const sqlite = new Database(dbPath);
-  sqlite.pragma("journal_mode = WAL");
-  _db = drizzle(sqlite, { schema });
+  ensureSqlite();
+  _db = drizzle(_sqlite!, { schema });
   return _db;
+}
+
+/** raw better-sqlite3 ハンドル。生 SQL で投入したい seed が使う。 */
+export function getLocalSqlite(): Database.Database {
+  ensureSqlite();
+  return _sqlite!;
+}
+
+function ensureSqlite() {
+  if (_sqlite) return;
+  const dbPath = getLocalD1Path();
+  _sqlite = new Database(dbPath);
+  _sqlite.pragma("journal_mode = WAL");
 }

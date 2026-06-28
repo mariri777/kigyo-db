@@ -7,6 +7,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TipLink from "@tiptap/extension-link";
+import TipImage from "@tiptap/extension-image";
 import {
   CalloutNode,
   LeadNode,
@@ -44,6 +45,29 @@ const SUBJECT_KINDS: { value: SubjectKind; label: string }[] = [
   { value: "theme", label: "テーマ" },
   { value: "metric", label: "指標" },
 ];
+
+/**
+ * 画像 URL の正規化。
+ *   - "photo-xxxx" のような Unsplash photo ID を https://images.unsplash.com/photo-xxxx?auto=format... に展開
+ *   - "https://" / "http://" / "/" で始まるならそのまま使う
+ */
+function normalizeImageSrc(input: string): string {
+  const v = input.trim();
+  if (!v) return v;
+  if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) {
+    return v;
+  }
+  if (v.startsWith("photo-")) {
+    const params = new URLSearchParams({
+      auto: "format",
+      fit: "crop",
+      w: "1200",
+      q: "75",
+    });
+    return `https://images.unsplash.com/${v}?${params.toString()}`;
+  }
+  return v;
+}
 
 function slugify(s: string): string {
   return s
@@ -125,6 +149,11 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
       StatGridNode,
       StatGridItemNode,
       TickerNode,
+      TipImage.configure({
+        inline: false,
+        allowBase64: false,
+        HTMLAttributes: { class: "v2-image" },
+      }),
       createSlashCommandExtension(),
     ],
     content: initial?.contentJson
@@ -463,6 +492,22 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
                     ?.chain()
                     .focus()
                     .insertContent({ type: "ticker", attrs: { code } })
+                    .run();
+                }}
+              />
+              <BlockInsertButton
+                label="画像"
+                onClick={() => {
+                  const src = window.prompt(
+                    "画像 URL (Unsplash photo-... 形式 or https:// で始まる任意 URL)",
+                    "",
+                  );
+                  if (!src) return;
+                  const alt = window.prompt("代替テキスト (alt) 任意", "") ?? "";
+                  editor
+                    ?.chain()
+                    .focus()
+                    .setImage({ src: normalizeImageSrc(src), alt })
                     .run();
                 }}
               />

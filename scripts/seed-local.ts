@@ -19,7 +19,8 @@ import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { getLocalDb, getLocalD1Path } from "./lib/local-db.js";
+import { getLocalDb, getLocalD1Path, getLocalSqlite } from "./lib/local-db.js";
+import { insertArticles, sampleArticles } from "./lib/seedArticles.js";
 import { fetchJpxExcel, parseJpxExcel } from "./lib/jpx.js";
 import { pbkdf2HashSyncForSeed } from "./lib/passwordSeed.js";
 import {
@@ -98,6 +99,17 @@ async function main() {
     db.insert(categories).values(c).run();
   }
   console.log(`記事カテゴリを ${categoryRows.length} 件投入`);
+
+  // ── 4.6. articles のサンプル ──
+  const adminRow = (
+    getLocalSqlite()
+      .prepare("SELECT id FROM admin_users WHERE email = ?")
+      .get(ADMIN_EMAIL) as { id: number } | undefined
+  );
+  if (adminRow) {
+    insertArticles(getLocalSqlite(), sampleArticles, adminRow.id);
+    console.log(`サンプル記事を ${sampleArticles.length} 件投入`);
+  }
 
   if (!shouldFetch) {
     console.log("\n--no-fetch 指定のため JPX 取得をスキップ。終了。");

@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
 import {
+  ArrowDown,
+  ArrowUp,
   ArrowUpRight,
+  ArrowUpDown,
   Building2,
   ChevronLeft,
   ChevronRight,
@@ -17,14 +20,30 @@ import { companies, stockSnapshot, stocks } from "@/server/db/schema";
 
 const PAGE_SIZE = 50;
 
-type SortKey = "marketCap" | "change1d" | "per" | "yield" | "code";
-const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "marketCap", label: "時価総額" },
-  { key: "change1d", label: "前日比" },
-  { key: "per", label: "PER" },
-  { key: "yield", label: "配当利回り" },
-  { key: "code", label: "コード" },
-];
+type SortKey =
+  | "code"
+  | "name"
+  | "sector"
+  | "exchange"
+  | "price"
+  | "change1d"
+  | "marketCap"
+  | "per"
+  | "yield";
+type SortDir = "asc" | "desc";
+
+// 列ごとのデフォルト方向(クリック時に未選択列ならこの向き)
+const DEFAULT_DIR: Record<SortKey, SortDir> = {
+  code: "asc",
+  name: "asc",
+  sector: "asc",
+  exchange: "asc",
+  price: "desc",
+  change1d: "desc",
+  marketCap: "desc",
+  per: "asc",
+  yield: "desc",
+};
 
 export const metadata: Metadata = {
   title: "銘柄一覧 — 東証 3,800 社のAI分析",
@@ -63,7 +82,7 @@ export default async function StocksIndexPage({
   const q = (sp.q ?? "").trim();
   const sector = (sp.sector ?? "").trim();
   const exchange = (sp.exchange ?? "").trim();
-  const sortKey: SortKey = isSortKey(sp.sort) ? sp.sort : "marketCap";
+  const { key: sortKey, dir: sortDir } = parseSort(sp.sort);
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   const db = await getDb();
@@ -87,21 +106,32 @@ export default async function StocksIndexPage({
   const whereExpr = conditions.length > 0 ? and(...conditions) : undefined;
 
   // ── ORDER BY ──────────────────────────────────────
+  // NULL は常に末尾に寄せて、ユーザの「降順」操作で空欄が頭に来ないようにする。
   const orderExpr = (() => {
-    switch (sortKey) {
-      case "code":
-        return asc(stocks.code);
-      case "change1d":
-        return desc(stockSnapshot.change1dPct);
-      case "per":
-        // 低い順。NULL は最後
-        return sql`${stockSnapshot.per} IS NULL, ${stockSnapshot.per} ASC`;
-      case "yield":
-        return desc(stockSnapshot.dividendYield);
-      case "marketCap":
-      default:
-        return desc(stockSnapshot.marketCapOku);
-    }
+    const col = (() => {
+      switch (sortKey) {
+        case "code":
+          return stocks.code;
+        case "name":
+          return companies.name;
+        case "sector":
+          return stocks.sectorTse;
+        case "exchange":
+          return stocks.exchange;
+        case "price":
+          return stockSnapshot.priceJpy;
+        case "change1d":
+          return stockSnapshot.change1dPct;
+        case "per":
+          return stockSnapshot.per;
+        case "yield":
+          return stockSnapshot.dividendYield;
+        case "marketCap":
+        default:
+          return stockSnapshot.marketCapOku;
+      }
+    })();
+    return sql`${col} IS NULL, ${col} ${sql.raw(sortDir.toUpperCase())}`;
   })();
 
   // ── 件数 + ページ ──────────────────────────────────
@@ -173,7 +203,6 @@ export default async function StocksIndexPage({
           q={q}
           sector={sector}
           exchange={exchange}
-          sortKey={sortKey}
           sectorOptions={sectorOptions}
         />
 
@@ -182,16 +211,16 @@ export default async function StocksIndexPage({
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 text-[11px] uppercase tracking-widest text-neutral-500">
                 <tr>
-                  <Th className="text-left w-[88px]">コード</Th>
-                  <Th className="text-left">銘柄名</Th>
-                  <Th className="text-left hidden md:table-cell w-[140px]">業界</Th>
-                  <Th className="text-center hidden sm:table-cell w-[64px]">市場</Th>
-                  <Th className="text-right w-[100px]">株価</Th>
-                  <Th className="text-right w-[88px]">前日比</Th>
-                  <Th className="text-right hidden lg:table-cell w-[120px]">時価総額</Th>
-                  <Th className="text-right hidden lg:table-cell w-[72px]">PER</Th>
-                  <Th className="text-right hidden xl:table-cell w-[80px]">配当利回</Th>
-                  <Th className="w-[36px]" />
+                  <SortTh sortKey="code" align="left" widthClass="w-[88px]" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>コード</SortTh>
+                  <SortTh sortKey="name" align="left" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>銘柄名</SortTh>
+                  <SortTh sortKey="sector" align="left" widthClass="w-[140px] hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>業界</SortTh>
+                  <SortTh sortKey="exchange" align="center" widthClass="w-[64px] hidden sm:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>市場</SortTh>
+                  <SortTh sortKey="price" align="right" widthClass="w-[100px]" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>株価</SortTh>
+                  <SortTh sortKey="change1d" align="right" widthClass="w-[88px]" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>前日比</SortTh>
+                  <SortTh sortKey="marketCap" align="right" widthClass="w-[120px] hidden lg:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>時価総額</SortTh>
+                  <SortTh sortKey="per" align="right" widthClass="w-[72px] hidden lg:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>PER</SortTh>
+                  <SortTh sortKey="yield" align="right" widthClass="w-[80px] hidden xl:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>配当利回</SortTh>
+                  <th className="px-3 py-2.5 w-[36px]" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
@@ -217,7 +246,7 @@ export default async function StocksIndexPage({
           q={q}
           sector={sector}
           exchange={exchange}
-          sort={sortKey}
+          sortParam={serializeSort(sortKey, sortDir)}
         />
       </div>
     </div>
@@ -241,29 +270,15 @@ function Breadcrumb() {
   );
 }
 
-function Th({
-  children,
-  className = "",
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th className={`px-3 py-2.5 font-bold ${className}`}>{children}</th>
-  );
-}
-
 function FilterBar({
   q,
   sector,
   exchange,
-  sortKey,
   sectorOptions,
 }: {
   q: string;
   sector: string;
   exchange: string;
-  sortKey: SortKey;
   sectorOptions: string[];
 }) {
   return (
@@ -313,19 +328,6 @@ function FilterBar({
         <option value="Growth">グロース</option>
       </select>
 
-      <select
-        name="sort"
-        defaultValue={sortKey}
-        className="bg-neutral-50 rounded-lg px-2.5 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
-        aria-label="並び替え"
-      >
-        {SORT_OPTIONS.map((o) => (
-          <option key={o.key} value={o.key}>
-            並び:{o.label}
-          </option>
-        ))}
-      </select>
-
       <button
         type="submit"
         className="px-3 py-2 rounded-lg bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition"
@@ -333,7 +335,7 @@ function FilterBar({
         適用
       </button>
 
-      {(q || sector || exchange || sortKey !== "marketCap") && (
+      {(q || sector || exchange) && (
         <Link
           href="/v2/stocks"
           className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 underline-offset-2 hover:underline"
@@ -342,6 +344,73 @@ function FilterBar({
         </Link>
       )}
     </form>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+// クリック可能なソート ヘッダ
+// ─────────────────────────────────────────────────────────
+
+function SortTh({
+  sortKey,
+  current,
+  dir,
+  align,
+  widthClass = "",
+  ctx,
+  children,
+}: {
+  sortKey: SortKey;
+  current: SortKey;
+  dir: SortDir;
+  align: "left" | "right" | "center";
+  widthClass?: string;
+  ctx: { q: string; sector: string; exchange: string };
+  children: React.ReactNode;
+}) {
+  const active = current === sortKey;
+  // 同列クリック = 方向トグル、別列クリック = その列のデフォルト方向
+  const nextDir: SortDir = active
+    ? dir === "asc"
+      ? "desc"
+      : "asc"
+    : DEFAULT_DIR[sortKey];
+  const href = buildHref({
+    ...ctx,
+    sort: serializeSort(sortKey, nextDir),
+  });
+  const alignClass =
+    align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
+  const justifyClass =
+    align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start";
+
+  return (
+    <th className={`px-0 py-0 font-bold ${alignClass} ${widthClass}`}>
+      <Link
+        href={href}
+        scroll={false}
+        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+        className={`group flex items-center gap-1 px-3 py-2.5 w-full select-none cursor-pointer hover:text-neutral-900 transition ${justifyClass} ${
+          active ? "text-neutral-900" : ""
+        }`}
+      >
+        <span>{children}</span>
+        <SortIcon active={active} dir={dir} />
+      </Link>
+    </th>
+  );
+}
+
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) {
+    return (
+      <ArrowUpDown className="w-3 h-3 text-neutral-300 group-hover:text-neutral-500 transition" />
+    );
+  }
+  return dir === "asc" ? (
+    <ArrowUp className="w-3 h-3 text-emerald-600" />
+  ) : (
+    <ArrowDown className="w-3 h-3 text-emerald-600" />
   );
 }
 
@@ -455,7 +524,7 @@ function Pagination({
   q,
   sector,
   exchange,
-  sort,
+  sortParam,
 }: {
   page: number;
   totalPages: number;
@@ -463,18 +532,10 @@ function Pagination({
   q: string;
   sector: string;
   exchange: string;
-  sort: SortKey;
+  sortParam: string;
 }) {
-  const hrefFor = (p: number) => {
-    const params = new URLSearchParams();
-    if (q) params.set("q", q);
-    if (sector) params.set("sector", sector);
-    if (exchange) params.set("exchange", exchange);
-    if (sort !== "marketCap") params.set("sort", sort);
-    if (p > 1) params.set("page", String(p));
-    const s = params.toString();
-    return s ? `/v2/stocks?${s}` : "/v2/stocks";
-  };
+  const hrefFor = (p: number) =>
+    buildHref({ q, sector, exchange, sort: sortParam, page: p });
 
   if (totalPages <= 1) {
     return (
@@ -537,8 +598,49 @@ function PageLink({
 // Utils
 // ─────────────────────────────────────────────────────────
 
-function isSortKey(v: string | undefined): v is SortKey {
-  return v === "marketCap" || v === "change1d" || v === "per" || v === "yield" || v === "code";
+const SORT_KEYS: SortKey[] = [
+  "code",
+  "name",
+  "sector",
+  "exchange",
+  "price",
+  "change1d",
+  "marketCap",
+  "per",
+  "yield",
+];
+
+function parseSort(raw: string | undefined): { key: SortKey; dir: SortDir } {
+  const fallback = { key: "marketCap" as SortKey, dir: "desc" as SortDir };
+  if (!raw) return fallback;
+  const [keyRaw, dirRaw] = raw.split(":");
+  const key = SORT_KEYS.find((k) => k === keyRaw);
+  if (!key) return fallback;
+  const dir: SortDir = dirRaw === "asc" ? "asc" : dirRaw === "desc" ? "desc" : DEFAULT_DIR[key];
+  return { key, dir };
+}
+
+function serializeSort(key: SortKey, dir: SortDir): string {
+  // デフォルト (marketCap:desc) なら URL に乗せない
+  if (key === "marketCap" && dir === "desc") return "";
+  return `${key}:${dir}`;
+}
+
+function buildHref(opts: {
+  q?: string;
+  sector?: string;
+  exchange?: string;
+  sort?: string;
+  page?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (opts.q) params.set("q", opts.q);
+  if (opts.sector) params.set("sector", opts.sector);
+  if (opts.exchange) params.set("exchange", opts.exchange);
+  if (opts.sort) params.set("sort", opts.sort);
+  if (opts.page && opts.page > 1) params.set("page", String(opts.page));
+  const s = params.toString();
+  return s ? `/v2/stocks?${s}` : "/v2/stocks";
 }
 
 function formatOku(oku: number | null | undefined): string {
