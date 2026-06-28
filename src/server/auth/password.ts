@@ -4,9 +4,11 @@ import "server-only";
  * PBKDF2-SHA256 によるパスワードハッシュ。
  *
  * Workers の Web Crypto SubtleCrypto は scrypt をサポートしないため、
- * PBKDF2-SHA256(200,000 iter, 32 byte 出力) を採用する。Node の crypto.pbkdf2Sync と
+ * PBKDF2-SHA256(100,000 iter, 32 byte 出力) を採用する。Node の crypto.pbkdf2Sync と
  * 等価なので、seed (scripts/lib/passwordSeed.ts) で書き込んだハッシュをそのまま
  * 検証できる。
+ *
+ * 反復回数は Workers の SubtleCrypto 制約(>100000 で NotSupportedError)に揃える。
  *
  * 保存形式は base64(hash), base64(salt), iter の 3 カラム。将来 iter を増やしたとき
  * もカラムごとに保持しているので互換性を保てる。
@@ -15,7 +17,7 @@ import "server-only";
 const PBKDF2_HASH = "SHA-256";
 const PBKDF2_KEYLEN_BITS = 32 * 8; // 32 bytes
 const SALT_LEN = 16;
-export const PBKDF2_ITERATIONS = 200_000;
+export const PBKDF2_ITERATIONS = 100_000;
 
 function bytesToBase64(bytes: Uint8Array): string {
   // Workers / Node どちらも btoa が使えないケース対策

@@ -4,7 +4,9 @@
 
 import { pbkdf2Sync, randomBytes } from "node:crypto";
 
-export const PBKDF2_ITERATIONS = 200_000;
+// Cloudflare Workers の SubtleCrypto は >100000 で NotSupportedError を投げるため
+// password 検証側 (src/server/auth/password.ts) と揃えて 100000 に固定する。
+export const PBKDF2_ITERATIONS = 100_000;
 export const PBKDF2_HASH = "sha256";
 export const PBKDF2_KEYLEN = 32;
 export const PBKDF2_SALT_LEN = 16;

@@ -127,7 +127,7 @@ const derivedHighlightsTask: Task<unknown, Output> & SyncCapable<Output> = {
         subjectName: `${r.code} ${r.name}`,
         oneLiner: `前日比 ${formatPct(r.change1d)} で${direction}。${
           r.price ? `終値 ${formatJpy(r.price)}。` : ""
-        }要因の整理を本日 AI が後追い。`,
+        }`.trim(),
         keyMetricLabel: "前日比",
         keyMetricValue: formatPct(r.change1d),
         keyMetricPositive: positive,
@@ -171,7 +171,7 @@ const derivedHighlightsTask: Task<unknown, Output> & SyncCapable<Output> = {
     }>;
     for (const r of ma200Shift) {
       const overshoot = ((r.price - r.ma200) / r.ma200) * 100;
-      const rsiText = r.rsi != null ? ` RSI(14)は${r.rsi.toFixed(0)}で過熱感はまだ薄い。` : "";
+      const rsiText = r.rsi != null ? ` RSI(14) ${r.rsi.toFixed(0)}。` : "";
       rows.push({
         id: `ma200-${date}-${r.code}`,
         kind: "indicator_shift",

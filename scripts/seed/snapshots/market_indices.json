@@ -1,0 +1,57 @@
+[
+  {
+    "symbol": "^N225",
+    "name": "日経平均",
+    "display_order": 1,
+    "value": 69360.88,
+    "previous_close": 72366.34,
+    "change_1d_pct": -4.1531196,
+    "change_1d_abs": -3005.461,
+    "as_of": "2026-06-26",
+    "updated_at": "2026-06-28T09:51:07.497Z"
+  },
+  {
+    "symbol": "^TOPX",
+    "name": "TOPIX",
+    "display_order": 2,
+    "value": null,
+    "previous_close": null,
+    "change_1d_pct": null,
+    "change_1d_abs": null,
+    "as_of": "2019-06-28",
+    "updated_at": "2026-06-28T09:51:07.497Z"
+  },
+  {
+    "symbol": "JPY=X",
+    "name": "USD/JPY",
+    "display_order": 3,
+    "value": 161.685,
+    "previous_close": 161.777,
+    "change_1d_pct": -0.05686547,
+    "change_1d_abs": -0.09199524,
+    "as_of": "2026-06-28",
+    "updated_at": "2026-06-28T09:51:07.497Z"
+  },
+  {
+    "symbol": "^SOX",
+    "name": "SOX 指数",
+    "display_order": 4,
+    "value": 13203.569,
+    "previous_close": 13940.87,
+    "change_1d_pct": -5.2887716,
+    "change_1d_abs": -737.3008,
+    "as_of": "2026-06-26",
+    "updated_at": "2026-06-28T09:51:07.497Z"
+  },
+  {
+    "symbol": "^GSPC",
+    "name": "S&P 500",
+    "display_order": 5,
+    "value": 7354.02,
+    "previous_close": 7357.49,
+    "change_1d_pct": -0.04716574,
+    "change_1d_abs": -3.4702148,
+    "as_of": "2026-06-26",
+    "updated_at": "2026-06-28T09:51:07.497Z"
+  }
+]

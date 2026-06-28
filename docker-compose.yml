@@ -1,0 +1,46 @@
+# ローカル開発用のコンテナ群。
+# 起動: docker compose up -d
+#
+#   - minio        ... S3 互換オブジェクトストレージ (本番 Cloudflare R2 の代替)
+#   - minio-init   ... 起動直後に kigyo-db-assets バケットを作って public read を許可
+#
+# Web UI: http://localhost:9001 (minio / minio12345)
+# S3 API: http://localhost:9000
+# 公開:   http://localhost:9000/kigyo-db-assets/<key>
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: kigyo-minio
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    volumes:
+      - minio-data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: kigyo-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minio minio12345 &&
+        mc mb -p local/kigyo-db-assets &&
+        mc anonymous set download local/kigyo-db-assets &&
+        echo '✓ bucket kigyo-db-assets is ready (public read)'
+      "
+    restart: "no"
+
+volumes:
+  minio-data:

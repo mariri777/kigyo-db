@@ -550,6 +550,7 @@ export const predictions = sqliteTable("predictions", {
   idxStatus: index("idx_predictions_status").on(t.status),
   idxCode: index("idx_predictions_code").on(t.code),
   idxResolveAt: index("idx_predictions_resolve_at").on(t.resolveAt),
+  uqNatural: uniqueIndex("uq_predictions_natural").on(t.category, t.resolveAt, t.question),
 }));
 
 export const predictionShifts = sqliteTable("prediction_shifts", {
@@ -615,6 +616,143 @@ export const topShareholders = sqliteTable("top_shareholders", {
   asOf: text("as_of"),
 }, (t) => ({
   pk: primaryKey({ columns: [t.companyId, t.rank] }),
+}));
+
+// ─────────────────────────────────────────────────────────
+// I-2. AI 予測 (stock) 層
+// ─────────────────────────────────────────────────────────
+//
+// 旧 predictions / prediction_shifts は短命の polymarket 風 widget だった。
+// こちらは「1 予測 = しっかり読める分析記事」として stock 化する。
+//
+// テーブル分離の意図:
+//   - forecasts        : 1 予測 = 1 行 (見出し・確率・解決状態など 1 行で取れるサマリ)
+//   - forecast_takes   : 予測本文を「視点 (macro / technical / sentiment / bull / bear / contrarian)」
+//                        ごとの段落として可変ボリュームで持つ
+//   - forecast_scenarios: ベース / 強気 / 弱気の 3 シナリオ。価格帯と確率と一行ノート
+//   - forecast_shifts  : 6h 毎の確率推移。スパークライン用
+//
+// 同一性キーは (target_symbol, resolve_at)。1 つの (指数, 解決時刻) に対して必ず最新の 1 行のみ。
+
+export const forecasts = sqliteTable("forecasts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  /** "^GSPC" / "^N225" / 個別銘柄なら "7203.T" など */
+  targetSymbol: text("target_symbol").notNull(),
+  /** 表示名 "S&P 500" */
+  targetName: text("target_name").notNull(),
+  /** "global-index" / "jp-stock" / "fx" / "commodity" */
+  targetKind: text("target_kind", {
+    enum: ["global-index", "jp-stock", "fx", "commodity"],
+  })
+    .notNull()
+    .default("global-index"),
+  /** 個別銘柄予測のとき、stocks.code を持つ (任意) */
+  stockCode: text("stock_code").references(() => stocks.code, { onDelete: "set null" }),
+  /** "next-session" (翌営業日) / "1w" / "1m" など */
+  horizon: text("horizon", { enum: ["next-session", "1w", "1m"] })
+    .notNull()
+    .default("next-session"),
+  /** "翌営業日の S&P 500 終値は前日比プラスか?" */
+  question: text("question").notNull(),
+  /** ヒーローで使う短い結論 (12〜26 字)。例「テクニカル復調で上方バイアス」 */
+  headline: text("headline").notNull(),
+  /** リード 1〜2 文。140〜220 字 */
+  lede: text("lede").notNull(),
+  /** YES (= 上がる) 側の確率 0-100 */
+  probability: integer("probability").notNull(),
+  /** "low" / "med" / "high" — AI が自信度をつける */
+  confidence: text("confidence", { enum: ["low", "med", "high"] }).notNull().default("med"),
+  /** 解決時刻 ISO 8601 例 "2026-06-29T05:00:00+09:00" */
+  resolveAt: text("resolve_at").notNull(),
+  /** 観測スナップショット時の価格 (= 予測時の前日終値) */
+  referencePrice: real("reference_price"),
+  /** "live" 公開中 / "resolved" 解決済 / "archived" 非表示 */
+  status: text("status", { enum: ["live", "resolved", "archived"] })
+    .notNull()
+    .default("live"),
+  /** 解決後: "up" / "down" / "flat" */
+  outcome: text("outcome", { enum: ["up", "down", "flat"] }),
+  /** 解決後の終値 */
+  outcomePrice: real("outcome_price"),
+  outcomeAt: text("outcome_at"),
+  /** 一行のおまけコメント (任意) */
+  closingNote: text("closing_note"),
+  generatedAt: text("generated_at").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+}, (t) => ({
+  uqNatural: uniqueIndex("uq_forecasts_natural").on(t.targetSymbol, t.resolveAt),
+  idxStatus: index("idx_forecasts_status").on(t.status),
+  idxResolveAt: index("idx_forecasts_resolve_at").on(t.resolveAt),
+  idxTargetKind: index("idx_forecasts_target_kind").on(t.targetKind),
+  idxStockCode: index("idx_forecasts_stock_code").on(t.stockCode),
+}));
+
+export const forecastTakes = sqliteTable("forecast_takes", {
+  forecastId: integer("forecast_id")
+    .notNull()
+    .references(() => forecasts.id, { onDelete: "cascade" }),
+  /**
+   * macro/technical/sentiment は必須の 3 視点。
+   * bull/bear/contrarian は補強。
+   * keyData は数字ピックアップ ("VIX 13.2" 等)。
+   */
+  kind: text("kind", {
+    enum: [
+      "macro",
+      "technical",
+      "sentiment",
+      "bull",
+      "bear",
+      "contrarian",
+      "key-data",
+    ],
+  }).notNull(),
+  /** UI 表示順 0,1,2,... 同一 kind が複数あるときの順序 */
+  position: integer("position").notNull().default(0),
+  /** "FOMC ハト派的シグナル" — 15〜30 字 */
+  heading: text("heading").notNull(),
+  /** 本文 140〜400 字。読み物として読めるボリュームを持たせる */
+  body: text("body").notNull(),
+  /** バイアス: "up" / "down" / "neutral" — body の方向性タグ */
+  bias: text("bias", { enum: ["up", "down", "neutral"] }).notNull().default("neutral"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.forecastId, t.kind, t.position] }),
+  idxForecast: index("idx_forecast_takes_forecast").on(t.forecastId),
+}));
+
+export const forecastScenarios = sqliteTable("forecast_scenarios", {
+  forecastId: integer("forecast_id")
+    .notNull()
+    .references(() => forecasts.id, { onDelete: "cascade" }),
+  /** "base" / "bull" / "bear" */
+  kind: text("kind", { enum: ["base", "bull", "bear"] }).notNull(),
+  /** "もみ合い" 等の短いラベル */
+  label: text("label").notNull(),
+  /** このシナリオの想定確率 0-100 */
+  probability: integer("probability").notNull(),
+  /** 想定価格帯 下限 */
+  priceLow: real("price_low"),
+  /** 想定価格帯 上限 */
+  priceHigh: real("price_high"),
+  /** 1〜2 文の説明 80〜180 字 */
+  note: text("note").notNull(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.forecastId, t.kind] }),
+}));
+
+export const forecastShifts = sqliteTable("forecast_shifts", {
+  forecastId: integer("forecast_id")
+    .notNull()
+    .references(() => forecasts.id, { onDelete: "cascade" }),
+  /** YYYY-MM-DDTHH:MM */
+  at: text("at").notNull(),
+  probability: integer("probability").notNull(),
+  /** その時点での一言メモ (任意)。AI が「VIX 急騰で弱気」等 */
+  reason: text("reason"),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.forecastId, t.at] }),
+  idxForecastAt: index("idx_forecast_shifts_at").on(t.forecastId, t.at),
 }));
 
 // ─────────────────────────────────────────────────────────

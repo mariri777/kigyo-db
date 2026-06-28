@@ -323,7 +323,7 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
     });
   };
 
-  const previewHref = currentId != null ? `/v2/articles/${slug}` : null;
+  const previewHref = currentId != null ? `/articles/${slug}` : null;
 
   return (
     <div className="min-h-[calc(100vh-3rem)]">
@@ -589,7 +589,7 @@ export function AdminArticleEditor({ id, initial, categories }: Props) {
                   <input
                     value={a.href}
                     onChange={(e) => updateAction(i, { href: e.target.value })}
-                    placeholder="リンク (/v2/stocks/9984)"
+                    placeholder="リンク (/stocks/9984)"
                     className="w-full text-sm bg-white border border-neutral-200 rounded px-2 py-1 font-mono focus:border-neutral-900 focus:outline-none"
                   />
                   <input
@@ -640,7 +640,7 @@ function SlugInput({
   return (
     <Field label="スラッグ (URL の一部、英小文字)" required>
       <div className="flex items-center gap-1 text-sm">
-        <span className="text-neutral-400 font-mono">/v2/articles/</span>
+        <span className="text-neutral-400 font-mono">/articles/</span>
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}

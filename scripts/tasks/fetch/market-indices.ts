@@ -1,13 +1,13 @@
 /**
- * fetch-market-indices: 日経平均/TOPIX/USD-JPY/SOX を Yahoo Finance から取得し
- * market_indices テーブルに UPSERT する。
+ * fetch-market-indices: 日経平均/TOPIX/USD-JPY/SOX/S&P 500 を Yahoo Finance から
+ * 取得し market_indices テーブルに UPSERT する。
  *
- * シングルトン target (key="_singleton")。run() の中で 4 シンボル並列取得。
+ * シングルトン target (key="_singleton")。run() の中で全シンボル並列取得。
  * runBatch も不要 — 1 ターゲット内で 1 回叩くだけ。
  *
  * 個別の銘柄 fetch (3,800社) とは別の経路にする理由:
  *   - 指数は数本なので 1 まとめにしたい
- *   - 失敗時の再試行単位が違う (1 銘柄失敗より、4 指数まとめて失敗のほうが扱いやすい)
+ *   - 失敗時の再試行単位が違う (1 銘柄失敗より、まとめて失敗のほうが扱いやすい)
  *   - sync-remote に乗せるため、target ごとに lake file を分けたい
  */
 import { sql } from "drizzle-orm";
@@ -44,6 +44,7 @@ const INDEX_DEFS: Array<{ symbol: string; name: string; displayOrder: number }> 
   { symbol: "^TOPX", name: "TOPIX", displayOrder: 2 },
   { symbol: "JPY=X", name: "USD/JPY", displayOrder: 3 },
   { symbol: "^SOX", name: "SOX 指数", displayOrder: 4 },
+  { symbol: "^GSPC", name: "S&P 500", displayOrder: 5 },
 ];
 
 const TABLE = "market_indices";
@@ -62,7 +63,7 @@ const COLS = [
 const marketIndicesTask: Task<unknown, Output> & SyncCapable<Output> = {
   name: "fetch-market-indices",
   kind: "fetch",
-  description: "Yahoo Finance から日経/TOPIX/USDJPY/SOX を取得 → market_indices",
+  description: "Yahoo Finance から日経/TOPIX/USDJPY/SOX/S&P500 を取得 → market_indices",
   remoteTable: TABLE,
 
   async selectTargets(ctx): Promise<Target<unknown>[]> {
@@ -92,7 +93,7 @@ const marketIndicesTask: Task<unknown, Output> & SyncCapable<Output> = {
       }
     }
     if (rows.length === 0) {
-      throw new Error("market-indices: 全 4 指数の取得に失敗");
+      throw new Error(`market-indices: 全 ${INDEX_DEFS.length} 指数の取得に失敗`);
     }
     return { date: input.date, rows };
   },

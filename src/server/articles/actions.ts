@@ -54,8 +54,8 @@ export async function saveArticleAction(
     }
     revalidatePath("/admin/articles");
     revalidatePath(`/admin/articles/${savedId}`);
-    revalidatePath(`/v2/articles/${input.slug}`);
-    revalidatePath("/v2/articles");
+    revalidatePath(`/articles/${input.slug}`);
+    revalidatePath("/articles");
     return {
       ok: true,
       id: savedId,
@@ -78,8 +78,8 @@ export async function deleteArticleAction(id: number): Promise<void> {
   if (!existing) redirect("/admin/articles");
   await deleteArticle(db, id);
   revalidatePath("/admin/articles");
-  revalidatePath(`/v2/articles/${existing.slug}`);
-  revalidatePath("/v2/articles");
+  revalidatePath(`/articles/${existing.slug}`);
+  revalidatePath("/articles");
   redirect("/admin/articles?deleted=1");
 }
 
@@ -104,8 +104,8 @@ export async function updateStatusAction(
   });
   revalidatePath("/admin/articles");
   revalidatePath(`/admin/articles/${id}`);
-  revalidatePath(`/v2/articles/${existing.slug}`);
-  revalidatePath("/v2/articles");
+  revalidatePath(`/articles/${existing.slug}`);
+  revalidatePath("/articles");
   return {
     ok: true,
     id,

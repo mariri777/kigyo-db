@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `uq_predictions_natural` ON `predictions` (`category`,`resolve_at`,`question`);

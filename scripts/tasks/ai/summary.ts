@@ -24,6 +24,13 @@ const summaryTask: Task<unknown, Output> & SyncCapable<Output> = {
   remoteTable: "company_ai_brief",
 
   async selectTargets(ctx: PipelineCtx, opts) {
+    // --codes 指定時は legacy の「未生成のみ + 上限」を緩めて
+    // 全銘柄の input を組み立て、指定コードだけ返す。
+    if (opts.codes && opts.codes.length > 0) {
+      const wanted = new Set(opts.codes);
+      const all = await legacy.selectTargets(ctx.db, 9999);
+      return all.filter((t) => wanted.has(t.key)) as Target<unknown>[];
+    }
     const legacyTargets = await legacy.selectTargets(ctx.db, opts.limit);
     return legacyTargets as Target<unknown>[];
   },

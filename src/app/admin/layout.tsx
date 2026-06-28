@@ -33,7 +33,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             >
               アカウント
             </Link>
-            <Link href="/v2" className="text-muted-foreground hover:text-foreground transition">
+            <Link href="/" className="text-muted-foreground hover:text-foreground transition">
               公開サイト ↗
             </Link>
           </nav>

@@ -29,7 +29,7 @@ import type { PipelineCtx, Target } from "./lib/task.js";
 import { ALL_TASKS, getTask } from "./tasks/index.js";
 
 type ParsedArgs = {
-  subcommand: "daily" | "weekly" | "monthly" | "sync" | "run" | "ai-apply" | "help";
+  subcommand: "every-6h" | "daily" | "weekly" | "monthly" | "sync" | "run" | "ai-apply" | "help";
   taskName?: string;
   limit?: number;
   codes?: string[];
@@ -47,7 +47,13 @@ function parseArgs(argv: string[]): ParsedArgs {
     auto: true,
     manual: false,
   };
-  if (sub === "daily" || sub === "weekly" || sub === "monthly" || sub === "sync") {
+  if (
+    sub === "every-6h" ||
+    sub === "daily" ||
+    sub === "weekly" ||
+    sub === "monthly" ||
+    sub === "sync"
+  ) {
     out.subcommand = sub;
   } else if (sub === "run") {
     out.subcommand = "run";
@@ -101,6 +107,7 @@ function printHelp() {
   console.log(`pnpm pipeline <subcommand> [options]
 
 subcommands:
+  every-6h           SCHEDULE の every-6h エントリを順次実行 (forecast 等)
   daily              SCHEDULE の daily エントリを順次実行
   weekly             SCHEDULE の weekly エントリを順次実行
   monthly            SCHEDULE の monthly エントリを順次実行

@@ -22,6 +22,7 @@ import { marketBriefTask } from "./ai/market-brief.js";
 import { catalystsTask } from "./ai/catalysts.js";
 import { summaryTask } from "./ai/summary.js";
 import { logoColorTask } from "./ai/logo-color.js";
+import { forecastTask } from "./ai/forecast.js";
 
 export const ALL_TASKS: Task[] = [
   jpxSyncTask as Task,
@@ -36,6 +37,7 @@ export const ALL_TASKS: Task[] = [
   catalystsTask as Task,
   summaryTask as Task,
   logoColorTask as Task,
+  forecastTask as Task,
 ];
 
 export function getTask(name: string): Task {

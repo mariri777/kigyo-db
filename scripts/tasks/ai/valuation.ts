@@ -26,6 +26,11 @@ const valuationTask: Task<unknown, Output> & SyncCapable<Output> = {
   remoteTable: "company_ai_brief",
 
   async selectTargets(ctx: PipelineCtx, opts) {
+    if (opts.codes && opts.codes.length > 0) {
+      const wanted = new Set(opts.codes);
+      const all = await legacy.selectTargets(ctx.db, 9999);
+      return all.filter((t) => wanted.has(t.key)) as Target<unknown>[];
+    }
     const legacyTargets = await legacy.selectTargets(ctx.db, opts.limit);
     return legacyTargets as Target<unknown>[];
   },

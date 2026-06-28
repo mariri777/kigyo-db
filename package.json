@@ -13,10 +13,13 @@
     "pipeline": "tsx scripts/pipeline.ts",
     "db:seed-local": "tsx scripts/seed-local.ts",
     "db:reset-local": "tsx scripts/seed-local.ts",
+    "db:snapshot": "tsx scripts/db-snapshot.ts",
+    "db:restore": "tsx scripts/db-restore.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0",
     "@tiptap/core": "^3.27.1",
     "@tiptap/extension-bubble-menu": "^3.27.1",
     "@tiptap/extension-image": "^3.27.1",

@@ -2,7 +2,7 @@
  * 記事 (articles) の DB アクセス層。
  * v2 の記事フォーマット (Block[] JSON + 派生 HTML) を扱う。
  */
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, ne } from "drizzle-orm";
 import {
   articles,
   articleCompanies,
@@ -43,15 +43,15 @@ export type ArticleListItem = {
   categorySlug: string;
   categoryName: string;
   authorName: string | null;
+  heroImageKey: string | null;
+  readMinutes: number;
 };
 
 export type ArticleDetail = ArticleListItem & {
-  heroImageKey: string | null;
   heroImageAlt: string | null;
   heroImageCredit: string | null;
   contentJson: string;
   contentHtml: string;
-  readMinutes: number;
   actions: ArticleAction[];
   scheduledAt: string | null;
   createdAt: string;
@@ -105,6 +105,8 @@ export async function listAll(db: DbClient): Promise<ArticleListItem[]> {
       categorySlug: categories.slug,
       categoryName: categories.name,
       authorName: adminUsers.name,
+      heroImageKey: articles.heroImageKey,
+      readMinutes: articles.readMinutes,
     })
     .from(articles)
     .innerJoin(categories, eq(articles.categoryId, categories.id))
@@ -364,4 +366,94 @@ async function replaceRelations(
           .map((tagId) => ({ articleId, tagId })),
       );
   }
+}
+
+// ─────────────────────────────────────────────────────────
+// RELATED (詳細ページの「この記事のあとに」用)
+// ─────────────────────────────────────────────────────────
+
+/**
+ * 同じ主役 (subject_kind + subject_ref) の他の公開記事を最新順で返す。
+ */
+export async function listBySubject(
+  db: DbClient,
+  subjectKind: SubjectKind,
+  subjectRef: string,
+  opts: { excludeId?: number; limit?: number } = {},
+): Promise<ArticleListItem[]> {
+  const limit = opts.limit ?? 5;
+  const conditions = [
+    eq(articles.subjectKind, subjectKind),
+    eq(articles.subjectRef, subjectRef),
+    eq(articles.status, "published"),
+  ];
+  if (opts.excludeId != null) conditions.push(ne(articles.id, opts.excludeId));
+  return (await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      lede: articles.lede,
+      status: articles.status,
+      publishedAt: articles.publishedAt,
+      updatedAt: articles.updatedAt,
+      subjectKind: articles.subjectKind,
+      subjectRef: articles.subjectRef,
+      subjectName: articles.subjectName,
+      categoryId: articles.categoryId,
+      categorySlug: categories.slug,
+      categoryName: categories.name,
+      authorName: adminUsers.name,
+      heroImageKey: articles.heroImageKey,
+      readMinutes: articles.readMinutes,
+    })
+    .from(articles)
+    .innerJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(adminUsers, eq(articles.authorId, adminUsers.id))
+    .where(and(...conditions))
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit)
+    .all()) as ArticleListItem[];
+}
+
+/**
+ * 同じカテゴリの他の公開記事を最新順で返す。
+ */
+export async function listByCategory(
+  db: DbClient,
+  categoryId: number,
+  opts: { excludeId?: number; limit?: number } = {},
+): Promise<ArticleListItem[]> {
+  const limit = opts.limit ?? 5;
+  const conditions = [
+    eq(articles.categoryId, categoryId),
+    eq(articles.status, "published"),
+  ];
+  if (opts.excludeId != null) conditions.push(ne(articles.id, opts.excludeId));
+  return (await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      lede: articles.lede,
+      status: articles.status,
+      publishedAt: articles.publishedAt,
+      updatedAt: articles.updatedAt,
+      subjectKind: articles.subjectKind,
+      subjectRef: articles.subjectRef,
+      subjectName: articles.subjectName,
+      categoryId: articles.categoryId,
+      categorySlug: categories.slug,
+      categoryName: categories.name,
+      authorName: adminUsers.name,
+      heroImageKey: articles.heroImageKey,
+      readMinutes: articles.readMinutes,
+    })
+    .from(articles)
+    .innerJoin(categories, eq(articles.categoryId, categories.id))
+    .leftJoin(adminUsers, eq(articles.authorId, adminUsers.id))
+    .where(and(...conditions))
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit)
+    .all()) as ArticleListItem[];
 }

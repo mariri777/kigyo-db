@@ -182,6 +182,11 @@ async function main() {
   }
 
   console.log(`\n✅ seed 完了: companies=${inserted.length}, stocks=${stockRows.length}`);
+  console.log(
+    `\n💡 fetch/AI で埋めたデータを復元するには:  pnpm db:restore\n` +
+      `   (scripts/seed/snapshots/*.json から stock_snapshot / stock_prices_daily /\n` +
+      `    company_ai_brief / market_* / predictions / homepage_highlights 等を復旧)`,
+  );
 }
 
 main().catch((e) => {

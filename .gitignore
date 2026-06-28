@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files
+# .env.local だけ ignore (秘匿値を入れる用)。
+# .env.development / .env.production は非機密のデフォルト設定でコミット可。
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -45,9 +48,8 @@ next-env.d.ts
 .wrangler/
 .dev.vars
 
-# scripts/seed/ はローカル D1 初期化(pnpm db:seed-local)のスナップショット。
-# 本番 cron はこれを参照せず JPX/Yahoo を毎回取得する。
-# snapshot 自体は pnpm db:snapshot を任意のタイミングで叩いて更新する。
+# scripts/seed/snapshots/ は db:seed-local 後の復元用 (db:snapshot ↔ db:restore)。
+# 中身の *.json は git にコミットして永続化する(本番 cron はこれを参照せず JPX/Yahoo から再取得)。
 scripts/seed/.jpx-cache.*
 scripts/seed/*.sql
 

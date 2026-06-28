@@ -33,8 +33,11 @@ import {
   Minimize2,
   Check,
   X,
+  Upload,
 } from "lucide-react";
 import { normalizeImageSrc } from "./imageSrc";
+import { uploadImage } from "./uploadImage";
+import { resolveMediaSrc } from "@/shared/media";
 
 type Width = "narrow" | "normal" | "wide" | "full";
 
@@ -153,6 +156,11 @@ function FigureView({ node, updateAttributes, deleteNode, selected }: NodeViewPr
   const [altDraft, setAltDraft] = useState(alt);
   const [hrefDraft, setHrefDraft] = useState(href);
   const [loadError, setLoadError] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [urlMode, setUrlMode] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setAltDraft(alt);
@@ -177,7 +185,23 @@ function FigureView({ node, updateAttributes, deleteNode, selected }: NodeViewPr
     if (!v) return;
     updateAttributes({ src: v });
     setDraftSrc("");
+    setUrlMode(false);
   };
+
+  const handleFile = async (file: File) => {
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const { key } = await uploadImage(file);
+      updateAttributes({ src: key });
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : "アップロードに失敗");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const pickFile = () => fileInputRef.current?.click();
 
   const commitAlt = () => {
     updateAttributes({ alt: altDraft });
@@ -188,31 +212,97 @@ function FigureView({ node, updateAttributes, deleteNode, selected }: NodeViewPr
     setEditingHref(false);
   };
 
-  // src 未設定 → URL 入力プレースホルダ
+  // src 未設定 → ファイル選択 / ドロップ / URL 入力
   if (!src) {
     return (
       <NodeViewWrapper as="figure" className="v2-figure-edit v2-figure-empty my-6">
         <div
-          className={`rounded-lg border-2 border-dashed border-neutral-300 bg-neutral-50 p-6 ${
-            selected ? "ring-2 ring-neutral-900 ring-offset-2" : ""
+          onDragEnter={(e) => {
+            e.preventDefault();
+            setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOver(false);
+            const f = e.dataTransfer.files?.[0];
+            if (f) handleFile(f);
+          }}
+          className={`rounded-lg border-2 border-dashed p-6 transition ${
+            dragOver
+              ? "border-emerald-500 bg-emerald-50"
+              : selected
+                ? "border-neutral-900 bg-neutral-50"
+                : "border-neutral-300 bg-neutral-50"
           }`}
         >
-          <div className="flex items-center gap-2 text-sm text-neutral-600 mb-3">
-            <ImageIcon className="w-4 h-4" />
-            画像 URL を貼り付け
-            <span className="text-[11px] text-neutral-400 ml-1">
-              (Unsplash の <code className="font-mono">photo-...</code> でも OK)
-            </span>
-          </div>
-          <UrlField
-            value={draftSrc}
-            onChange={setDraftSrc}
-            onSubmit={commitSrc}
-            placeholder="https://... or photo-1518770660439-..."
-            submitLabel="挿入"
-          />
+          {uploading ? (
+            <div className="text-sm text-neutral-600 text-center py-4">
+              アップロード中…
+            </div>
+          ) : urlMode ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-neutral-600">
+                <ImageIcon className="w-4 h-4" />
+                画像 URL を貼り付け
+              </div>
+              <UrlField
+                value={draftSrc}
+                onChange={setDraftSrc}
+                onSubmit={commitSrc}
+                placeholder="https://... / photo-... / articles/..."
+                submitLabel="挿入"
+              />
+              <button
+                type="button"
+                onClick={() => setUrlMode(false)}
+                className="text-[11px] text-neutral-500 hover:text-neutral-900 underline"
+              >
+                ← アップロードに戻る
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-sm text-neutral-600">
+              <ImageIcon className="w-5 h-5" />
+              <span>画像をドロップ</span>
+              <div className="flex items-center gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={pickFile}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-neutral-900 text-white text-[11px] font-bold hover:bg-neutral-800"
+                >
+                  <Upload className="w-3 h-3" />
+                  ファイルを選択
+                </button>
+                <span className="text-neutral-400">/</span>
+                <button
+                  type="button"
+                  onClick={() => setUrlMode(true)}
+                  className="text-[11px] text-neutral-600 hover:text-neutral-900 underline"
+                >
+                  URL を貼り付け
+                </button>
+              </div>
+            </div>
+          )}
+          {uploadError && (
+            <div className="mt-2 text-[11px] text-rose-600 text-center">
+              {uploadError}
+            </div>
+          )}
         </div>
-        {/* figcaption は HTML 構造上必須なので非表示で持たせる (空でレンダリング) */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+            e.target.value = "";
+          }}
+        />
         <NodeViewContent<"figcaption"> as="figcaption" className="hidden" />
         <div className="mt-2 flex items-center justify-end">
           <ToolbarButton onClick={() => deleteNode()} label="削除" icon={Trash2} />
@@ -237,7 +327,7 @@ function FigureView({ node, updateAttributes, deleteNode, selected }: NodeViewPr
           // 普通の img: Tiptap NodeView 内で next/image は使いにくいため
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={src}
+            src={resolveMediaSrc(src) ?? src}
             alt={alt}
             className="w-full h-auto block"
             onError={() => setLoadError(true)}

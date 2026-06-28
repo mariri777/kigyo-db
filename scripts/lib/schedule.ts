@@ -11,7 +11,7 @@
  */
 import type { SelectorKind, SelectorParams } from "./selectors.js";
 
-export type Frequency = "daily" | "weekly" | "monthly";
+export type Frequency = "every-6h" | "daily" | "weekly" | "monthly";
 
 export type ScheduleEntry = {
   task: string;
@@ -23,11 +23,17 @@ export type ScheduleEntry = {
 };
 
 export const SCHEDULE: ScheduleEntry[] = [
+  // ─── 6 時間ごと(JST 09/15/21/03) ─────────────────────────
+  // 市場指数の最新値で v2 トップの AI Daily Forecast を更新
+  { task: "fetch-market-indices", frequency: "every-6h" },
+  { task: "ai-forecast", frequency: "every-6h" },
+  { task: "sync-remote", frequency: "every-6h" },
+
   // ─── 日次(JST 04:00) ─────────────────────────────────────
   // データ取得 → 派生抽出 → AI 生成 → 本番反映
   { task: "fetch-jpx", frequency: "daily" },
   { task: "fetch-yahoo-snapshot", frequency: "daily", selector: "all" },
-  // 指数 (^N225/^TOPX/JPY=X/^SOX) を Yahoo から日次取得
+  // 指数 (^N225/^TOPX/JPY=X/^SOX/^GSPC) を Yahoo から日次取得
   { task: "fetch-market-indices", frequency: "daily" },
   { task: "edinet-pipeline", frequency: "daily" },
   {

@@ -16,7 +16,7 @@ export default function NotFound() {
         お探しのページは存在しないか、URL が変更されている可能性があります。
       </p>
       <Link
-        href="/v2"
+        href="/"
         className="text-neutral-900 hover:text-neutral-600 transition font-bold"
       >
         トップへ →

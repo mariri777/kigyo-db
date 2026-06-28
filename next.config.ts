@@ -5,6 +5,10 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
+      // 本番: Cloudflare R2 のカスタムドメイン
+      { protocol: "https", hostname: "kigyo-assets.cho-super.com" },
+      // 開発: ローカル MinIO
+      { protocol: "http", hostname: "localhost", port: "9000" },
     ],
   },
 };
