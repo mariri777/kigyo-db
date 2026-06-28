@@ -53,6 +53,10 @@ next-env.d.ts
 scripts/seed/.jpx-cache.*
 scripts/seed/*.sql
 
+# docker-compose の bind mount 用ローカルディレクトリ
+# (named volume を使う想定だが、誤って bind mount しても巻き込まれないよう保険)
+.docker/
+
 local/
 
 # macOS

@@ -106,7 +106,7 @@ export default async function ForecastDetailPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <main className="lg:col-span-8 space-y-8">
             {primary.length > 0 && (
-              <Section title="AI の根拠" kicker="ANALYSIS" icon={Activity}>
+              <Section title="AI の根拠" kicker="分析" icon={Activity}>
                 <div className="space-y-4">
                   {primary.map((take, i) => (
                     <TakeBlock key={`p-${i}`} take={take} />
@@ -116,13 +116,13 @@ export default async function ForecastDetailPage({
             )}
 
             {detail.scenarios.length > 0 && (
-              <Section title="3 つのシナリオ" kicker="SCENARIOS" icon={Target}>
+              <Section title="3 つのシナリオ" kicker="シナリオ" icon={Target}>
                 <ScenarioPanel scenarios={detail.scenarios} />
               </Section>
             )}
 
             {supporting.length > 0 && (
-              <Section title="補強する視点" kicker="DEEP DIVE" icon={Sparkles}>
+              <Section title="補強する視点" kicker="深掘り" icon={Sparkles}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {supporting.map((take, i) => (
                     <TakeBlock key={`s-${i}`} take={take} compact />
@@ -133,8 +133,8 @@ export default async function ForecastDetailPage({
 
             {detail.closingNote && (
               <aside className="rounded-2xl bg-gradient-to-br from-neutral-900 to-neutral-800 text-white p-6 sm:p-8">
-                <div className="text-[11px] font-bold uppercase tracking-widest text-neutral-400 mb-2">
-                  CLOSING NOTE
+                <div className="text-[11px] font-bold tracking-widest text-neutral-400 mb-2">
+                  ひとこと
                 </div>
                 <p className="text-base sm:text-lg font-bold leading-relaxed">
                   {detail.closingNote}
@@ -239,7 +239,7 @@ function Hero({
               <Clock className="w-3 h-3" /> 答え合わせ {formatResolveAtLong(detail.resolveAt)}
             </span>
             <span className="text-neutral-600">·</span>
-            <span>最終更新 {formatGeneratedAtJst(detail.generatedAt)} JST</span>
+            <span>最終更新 {formatGeneratedAtJst(detail.generatedAt)}</span>
           </div>
         </div>
 
@@ -571,7 +571,7 @@ function ResolvePanel({ detail }: { detail: ForecastDetail }) {
         </div>
         {detail.outcomeAt && (
           <div className="text-[11px] font-mono tabular text-neutral-500">
-            {detail.outcomeAt.slice(0, 16).replace("T", " ")} JST
+            {detail.outcomeAt.slice(0, 16).replace("T", " ")}
           </div>
         )}
       </aside>
@@ -633,9 +633,9 @@ function RelatedPanel({
                   {d.value}%
                 </span>
                 <span
-                  className={`text-[10px] font-bold uppercase tracking-widest ${v.color}`}
+                  className={`text-[10px] font-bold tracking-widest ${v.color}`}
                 >
-                  {d.direction === "up" ? "UP" : "DOWN"}
+                  {d.direction === "up" ? "上がる" : "下がる"}
                 </span>
               </Link>
             </li>

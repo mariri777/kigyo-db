@@ -47,10 +47,6 @@ export default async function ForecastsIndex() {
   const live = all.filter((f) => f.status === "live");
   const resolved = all.filter((f) => f.status === "resolved");
 
-  // 直近 30 件の resolved を ベース に的中率を集計
-  const sample = resolved.slice(0, 30);
-  const accuracy = computeAccuracy(sample);
-
   return (
     <div className="bg-neutral-50 min-h-screen">
       <div className="max-w-[1180px] mx-auto px-4 sm:px-6 py-5 space-y-8">
@@ -59,7 +55,6 @@ export default async function ForecastsIndex() {
         <Hero
           liveCount={live.length}
           resolvedCount={resolved.length}
-          accuracy={accuracy}
           latestGeneratedAt={all[0]?.generatedAt ?? null}
         />
 
@@ -80,7 +75,7 @@ export default async function ForecastsIndex() {
 
         <section>
           <SectionTitle
-            kicker="ARCHIVE"
+            kicker="アーカイブ"
             title="過去の予想と答え合わせ"
             icon={Target}
             note={`${resolved.length}件`}
@@ -105,41 +100,16 @@ export default async function ForecastsIndex() {
 }
 
 // ─────────────────────────────────────────────────────────
-// 集計
-// ─────────────────────────────────────────────────────────
-
-type Accuracy = {
-  total: number;
-  hits: number;
-  rate: number; // 0-100
-};
-
-function computeAccuracy(rows: ForecastSummary[]): Accuracy {
-  const total = rows.length;
-  let hits = 0;
-  for (const r of rows) {
-    if (!r.outcome || r.outcome === "flat") continue;
-    const aiSaysUp = r.probability >= 50;
-    const realUp = r.outcome === "up";
-    if (aiSaysUp === realUp) hits++;
-  }
-  const rate = total === 0 ? 0 : Math.round((hits / total) * 100);
-  return { total, hits, rate };
-}
-
-// ─────────────────────────────────────────────────────────
 // Hero
 // ─────────────────────────────────────────────────────────
 
 function Hero({
   liveCount,
   resolvedCount,
-  accuracy,
   latestGeneratedAt,
 }: {
   liveCount: number;
   resolvedCount: number;
-  accuracy: Accuracy;
   latestGeneratedAt: string | null;
 }) {
   return (
@@ -164,9 +134,9 @@ function Hero({
 
       <div className="relative px-6 sm:px-10 py-10 sm:py-14 grid grid-cols-1 lg:grid-cols-12 gap-8 items-end">
         <div className="lg:col-span-7 space-y-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[11px] font-bold uppercase tracking-widest backdrop-blur">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-[11px] font-bold tracking-widest backdrop-blur">
             <Sparkles className="w-3 h-3" />
-            AI Daily Forecast
+            AIの明日予想
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
             明日のマーケットを、
@@ -181,22 +151,15 @@ function Hero({
             読み物として根拠・シナリオまで踏み込んで公開しています。
           </p>
           {latestGeneratedAt && (
-            <div className="text-[11px] font-mono uppercase tracking-widest text-neutral-400">
-              最終更新 {formatGeneratedAtJst(latestGeneratedAt)} JST
+            <div className="text-[11px] font-mono tracking-widest text-neutral-400">
+              最終更新 {formatGeneratedAtJst(latestGeneratedAt)}
             </div>
           )}
         </div>
 
-        <div className="lg:col-span-5 grid grid-cols-3 gap-3">
-          <StatBlock label="進行中" value={liveCount} unit="本" />
-          <StatBlock label="解決済" value={resolvedCount} unit="本" />
-          <StatBlock
-            label="直近の的中率"
-            value={accuracy.rate}
-            unit="%"
-            sub={accuracy.total > 0 ? `直近${accuracy.total}件` : "サンプル蓄積中"}
-            emphasize
-          />
+        <div className="lg:col-span-5 grid grid-cols-2 gap-3">
+          <StatBlock label="進行中の予想" value={liveCount} unit="本" emphasize />
+          <StatBlock label="アーカイブ" value={resolvedCount} unit="本" />
         </div>
       </div>
     </section>
@@ -207,13 +170,11 @@ function StatBlock({
   label,
   value,
   unit,
-  sub,
   emphasize,
 }: {
   label: string;
   value: number;
   unit: string;
-  sub?: string;
   emphasize?: boolean;
 }) {
   return (
@@ -237,9 +198,6 @@ function StatBlock({
           {unit}
         </span>
       </div>
-      {sub && (
-        <div className="mt-1 text-[10px] font-mono text-neutral-400">{sub}</div>
-      )}
     </div>
   );
 }
@@ -346,16 +304,12 @@ function LiveCard({ forecast }: { forecast: ForecastSummary }) {
 }
 
 // ─────────────────────────────────────────────────────────
-// Resolved row (一覧用 — 結果と的中可否で素早く眺める)
+// Resolved row (一覧用 — 予想だけを素早く眺める)
 // ─────────────────────────────────────────────────────────
 
 function ResolvedRow({ forecast }: { forecast: ForecastSummary }) {
   const verdict = readVerdict(forecast.probability);
   const dominant = dominantProbability(forecast.probability);
-  const aiSaysUp = forecast.probability >= 50;
-  const realUp = forecast.outcome === "up";
-  const hit =
-    forecast.outcome && forecast.outcome !== "flat" ? aiSaysUp === realUp : null;
 
   return (
     <Link
@@ -380,23 +334,8 @@ function ResolvedRow({ forecast }: { forecast: ForecastSummary }) {
             {dominant.value}%
           </span>
           <span className={`text-[10px] font-bold uppercase tracking-widest ${verdict.color}`}>
-            {dominant.direction === "up" ? "UP" : "DOWN"} 予想
+            {dominant.direction === "up" ? "上がる" : "下がる"} 予想
           </span>
-        </div>
-        <div className="shrink-0">
-          {hit === null ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-600 text-[11px] font-bold">
-              結果なし
-            </span>
-          ) : hit ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">
-              ✓ 的中
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold">
-              × 外れ
-            </span>
-          )}
         </div>
         <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:text-neutral-700 group-hover:translate-x-0.5 transition shrink-0" />
       </div>
