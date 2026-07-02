@@ -1,7 +1,13 @@
-// プロトタイプ用ハードコードデータ. データ非接続。
-// subagent A: basics + summary + latestEarnings + history10y + stockTrend
-// subagent B: positioning + peers
-// subagent C: storyDeck (沿革紙芝居)
+// 銘柄詳細ページのサンプルデータ (トヨタ 7203 を題材にした手作り実値ベース)。
+//
+// 役割は 2 つ:
+//  1. 7203 の履歴値など、D1 にまだ無いカラムの fallback ソース。
+//  2. D1 が空のとき、全セクションの見た目を開発中に確認するためのサンプル。
+//     ただし本物のように誤認させないため、サンプル使用時はヒーローに
+//     「サンプルデータ」バッジを出す (loadStockPageData の usesSampleData フラグ)。
+//
+// storyDeck の slides は image / imageAlt フィールドを持つが、StorySlider は
+// タイポグラフィ主体の設計に移行したため画像は表示に使わない (型互換のため残置)。
 
 export const basics = {
   code: "7203",

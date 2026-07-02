@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import {
   Search,
   X,
@@ -49,9 +50,52 @@ export function ArticlesView({
   categories: CategoryFacet[];
   industries: IndustryFacet[];
 }) {
-  const [query, setQuery] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [selectedIndustries, setSelectedIndustries] = useState<Set<string>>(new Set());
+  // フィルタ状態は URL クエリが唯一のソース (共有・ブックマーク・戻る対応)。
+  // このページはクライアント側フィルタなので、サーバー再フェッチを避けるため
+  // router ではなく History API で URL を更新する (useSearchParams が追従する)。
+  const searchParams = useSearchParams();
+  const query = searchParams.get("q") ?? "";
+  const selectedCategories = useMemo(
+    () => new Set((searchParams.get("category") ?? "").split(",").filter(Boolean)),
+    [searchParams],
+  );
+  const selectedIndustries = useMemo(
+    () => new Set((searchParams.get("industry") ?? "").split(",").filter(Boolean)),
+    [searchParams],
+  );
+
+  const updateParams = useCallback(
+    (mutate: (p: URLSearchParams) => void, mode: "push" | "replace" = "replace") => {
+      const p = new URLSearchParams(window.location.search);
+      mutate(p);
+      const qs = p.toString();
+      const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      if (mode === "push") window.history.pushState(null, "", url);
+      else window.history.replaceState(null, "", url);
+    },
+    [],
+  );
+
+  const setQuery = useCallback(
+    (v: string) =>
+      updateParams((p) => {
+        if (v.trim()) p.set("q", v);
+        else p.delete("q");
+      }),
+    [updateParams],
+  );
+
+  const toggleInSet = useCallback(
+    (param: "category" | "industry", key: string) =>
+      updateParams((p) => {
+        const cur = new Set((p.get(param) ?? "").split(",").filter(Boolean));
+        if (cur.has(key)) cur.delete(key);
+        else cur.add(key);
+        if (cur.size > 0) p.set(param, [...cur].join(","));
+        else p.delete(param);
+      }, "push"),
+    [updateParams],
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -81,25 +125,14 @@ export function ArticlesView({
   const activeFilterCount =
     (query ? 1 : 0) + selectedCategories.size + selectedIndustries.size;
 
-  const toggleCategory = (a: string) =>
-    setSelectedCategories((prev) => {
-      const next = new Set(prev);
-      if (next.has(a)) next.delete(a);
-      else next.add(a);
-      return next;
-    });
-  const toggleIndustry = (name: string) =>
-    setSelectedIndustries((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
-      return next;
-    });
-  const clearAll = () => {
-    setQuery("");
-    setSelectedCategories(new Set());
-    setSelectedIndustries(new Set());
-  };
+  const toggleCategory = (a: string) => toggleInSet("category", a);
+  const toggleIndustry = (name: string) => toggleInSet("industry", name);
+  const clearAll = () =>
+    updateParams((p) => {
+      p.delete("q");
+      p.delete("category");
+      p.delete("industry");
+    }, "push");
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 lg:gap-12">
@@ -146,7 +179,7 @@ export function ArticlesView({
             selected={selectedIndustries}
             onToggle={toggleIndustry}
           />
-          <ThemeChips themes={themes} />
+          <ThemeChips themes={themes} onPick={(name) => setQuery(name)} />
         </div>
       </aside>
     </div>
@@ -216,7 +249,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (v: string) =
           type="search"
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="銘柄・キーワード"
+          placeholder="銘柄・キーワードで絞り込み…"
           className="flex-1 min-w-0 bg-transparent px-2 py-1.5 text-sm placeholder:text-neutral-400 focus:outline-none"
         />
         {value && (
@@ -288,7 +321,14 @@ function FacetList({
 // テーマrail (チップ群)
 // ─────────────────────────────────────────────────────────
 
-function ThemeChips({ themes }: { themes: ThemeChip[] }) {
+function ThemeChips({
+  themes,
+  onPick,
+}: {
+  themes: ThemeChip[];
+  onPick: (name: string) => void;
+}) {
+  if (themes.length === 0) return null;
   return (
     <div>
       <h3 className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-neutral-500 mb-2">
@@ -297,14 +337,15 @@ function ThemeChips({ themes }: { themes: ThemeChip[] }) {
       </h3>
       <div className="flex flex-wrap gap-1">
         {themes.map((t) => (
-          <Link
+          <button
             key={t.slug}
-            href="#"
+            type="button"
+            onClick={() => onPick(t.name)}
             className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-700 font-semibold transition inline-flex items-center gap-1"
           >
             {t.name}
             <span className="font-mono tabular text-[10px] opacity-60">{t.count}</span>
-          </Link>
+          </button>
         ))}
       </div>
     </div>
@@ -409,8 +450,12 @@ function groupByDayInline(
     map.set(date, arr);
   }
   const sortedKeys = [...map.keys()].sort((a, b) => b.localeCompare(a));
-  const today = "2026-06-28";
-  const yesterday = "2026-06-27";
+  // 「今日/昨日」は JST の実日付で判定する (以前は固定文字列で、
+  // 過去の日付に「今日」ラベルが付き続けるバグがあった)
+  const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const toIsoDay = (d: Date) => d.toISOString().slice(0, 10);
+  const today = toIsoDay(jstNow);
+  const yesterday = toIsoDay(new Date(jstNow.getTime() - 24 * 60 * 60 * 1000));
   return sortedKeys.map((date) => {
     let label: string;
     if (date === today) label = "今日";

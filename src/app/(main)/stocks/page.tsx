@@ -4,19 +4,17 @@ import { and, asc, desc, eq, like, or, sql } from "drizzle-orm";
 import {
   ArrowDown,
   ArrowUp,
-  ArrowUpRight,
   ArrowUpDown,
   Building2,
   ChevronLeft,
   ChevronRight,
-  Filter,
-  Search,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 
 import { getDb } from "@/server/db/client";
 import { companies, stockSnapshot, stocks } from "@/server/db/schema";
+import { StockFilterBar } from "./_components/StockFilterBar";
 
 const PAGE_SIZE = 50;
 
@@ -199,7 +197,7 @@ export default async function StocksIndexPage({
           </div>
         </header>
 
-        <FilterBar
+        <StockFilterBar
           q={q}
           sector={sector}
           exchange={exchange}
@@ -211,22 +209,26 @@ export default async function StocksIndexPage({
             <table className="w-full text-sm">
               <thead className="bg-neutral-50 text-[11px] uppercase tracking-widest text-neutral-500">
                 <tr>
-                  <SortTh sortKey="code" align="left" widthClass="w-[88px]" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>コード</SortTh>
-                  <SortTh sortKey="name" align="left" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>銘柄名</SortTh>
+                  {/* モバイル(< md): 銘柄 / 株価+前日比 の 2 列に集約 */}
+                  <SortTh sortKey="name" align="left" widthClass="md:hidden" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>銘柄</SortTh>
+                  <SortTh sortKey="change1d" align="right" widthClass="md:hidden" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>株価 / 前日比</SortTh>
+
+                  {/* md 以上: 全列 */}
+                  <SortTh sortKey="code" align="left" widthClass="w-[88px] hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>コード</SortTh>
+                  <SortTh sortKey="name" align="left" widthClass="hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>銘柄名</SortTh>
                   <SortTh sortKey="sector" align="left" widthClass="w-[140px] hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>業界</SortTh>
-                  <SortTh sortKey="exchange" align="center" widthClass="w-[64px] hidden sm:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>市場</SortTh>
-                  <SortTh sortKey="price" align="right" widthClass="w-[100px]" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>株価</SortTh>
-                  <SortTh sortKey="change1d" align="right" widthClass="w-[88px]" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>前日比</SortTh>
+                  <SortTh sortKey="exchange" align="center" widthClass="w-[64px] hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>市場</SortTh>
+                  <SortTh sortKey="price" align="right" widthClass="w-[100px] hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>株価</SortTh>
+                  <SortTh sortKey="change1d" align="right" widthClass="w-[88px] hidden md:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>前日比</SortTh>
                   <SortTh sortKey="marketCap" align="right" widthClass="w-[120px] hidden lg:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>時価総額</SortTh>
                   <SortTh sortKey="per" align="right" widthClass="w-[72px] hidden lg:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>PER</SortTh>
                   <SortTh sortKey="yield" align="right" widthClass="w-[80px] hidden xl:table-cell" current={sortKey} dir={sortDir} ctx={{ q, sector, exchange }}>配当利回</SortTh>
-                  <th className="px-3 py-2.5 w-[36px]" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="py-16 text-center text-sm text-neutral-500">
+                    <td colSpan={11} className="py-16 text-center text-sm text-neutral-500">
                       該当する銘柄が見つかりませんでした。
                     </td>
                   </tr>
@@ -267,83 +269,6 @@ function Breadcrumb() {
       <span className="text-neutral-300">/</span>
       <span className="text-neutral-700 font-semibold">銘柄一覧</span>
     </nav>
-  );
-}
-
-function FilterBar({
-  q,
-  sector,
-  exchange,
-  sectorOptions,
-}: {
-  q: string;
-  sector: string;
-  exchange: string;
-  sectorOptions: string[];
-}) {
-  return (
-    <form
-      action="/stocks"
-      method="get"
-      className="bg-white rounded-xl shadow-sm p-3 sm:p-4 flex flex-wrap items-center gap-2 sm:gap-3"
-    >
-      <div className="flex items-center bg-neutral-50 rounded-lg pl-2.5 pr-1 flex-1 min-w-[200px] focus-within:ring-2 focus-within:ring-neutral-900/20 focus-within:bg-white transition">
-        <Search className="w-4 h-4 text-neutral-400 shrink-0" />
-        <input
-          type="text"
-          name="q"
-          defaultValue={q}
-          placeholder="銘柄コード・社名で検索 (例: 7203, トヨタ)"
-          className="flex-1 bg-transparent px-2.5 py-2 text-sm placeholder:text-neutral-400 focus:outline-none"
-          aria-label="銘柄検索"
-        />
-      </div>
-
-      <label className="flex items-center gap-1.5 text-xs text-neutral-600">
-        <Filter className="w-3.5 h-3.5" />
-        <select
-          name="sector"
-          defaultValue={sector}
-          className="bg-neutral-50 rounded-lg px-2.5 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
-          aria-label="業界で絞り込み"
-        >
-          <option value="">すべての業界</option>
-          {sectorOptions.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <select
-        name="exchange"
-        defaultValue={exchange}
-        className="bg-neutral-50 rounded-lg px-2.5 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-neutral-900/20"
-        aria-label="市場で絞り込み"
-      >
-        <option value="">すべての市場</option>
-        <option value="Prime">プライム</option>
-        <option value="Standard">スタンダード</option>
-        <option value="Growth">グロース</option>
-      </select>
-
-      <button
-        type="submit"
-        className="px-3 py-2 rounded-lg bg-neutral-900 text-white text-xs font-bold hover:bg-neutral-800 transition"
-      >
-        適用
-      </button>
-
-      {(q || sector || exchange) && (
-        <Link
-          href="/stocks"
-          className="text-xs font-semibold text-neutral-500 hover:text-neutral-900 underline-offset-2 hover:underline"
-        >
-          条件をクリア
-        </Link>
-      )}
-    </form>
   );
 }
 
@@ -429,21 +354,44 @@ type Row = {
 };
 
 function StockRow({ row: r }: { row: Row }) {
-  const positive = r.change1d != null && r.change1d >= 0;
+  const href = `/stocks/${r.code}`;
+  const priceText = r.price != null ? `¥${r.price.toLocaleString()}` : "—";
   return (
     <tr className="hover:bg-neutral-50 transition group">
-      <td className="px-3 py-3 font-mono tabular text-sm font-bold text-neutral-900">
-        <Link href={`/stocks/${r.code}`} className="hover:underline">
+      {/* ── モバイル(< md): 銘柄 / 株価+前日比 の 2 セルに集約 ── */}
+      <td className="p-0 md:hidden min-w-0">
+        <Link href={href} className="flex items-center gap-2 px-3 py-3 min-w-0">
+          <span className="font-mono tabular text-[11px] font-bold text-neutral-500 shrink-0">
+            {r.code}
+          </span>
+          <span className="min-w-0">
+            <span className="block font-bold text-sm tracking-tight truncate text-neutral-900">
+              {r.name}
+            </span>
+            <span className="block text-[10px] text-neutral-500 truncate">{r.sector}</span>
+          </span>
+        </Link>
+      </td>
+      <td className="p-0 md:hidden w-[104px]">
+        <Link href={href} className="flex flex-col items-end px-3 py-3 font-mono tabular leading-tight">
+          <span className="font-semibold text-neutral-900">{priceText}</span>
+          <ChangePct value={r.change1d} />
+        </Link>
+      </td>
+
+      {/* ── md 以上: 全列 ── */}
+      <td className="p-0 hidden md:table-cell w-[88px]">
+        <Link href={href} className="block px-3 py-3 font-mono tabular text-sm font-bold text-neutral-900 group-hover:underline">
           {r.code}
         </Link>
       </td>
-      <td className="px-3 py-3 min-w-0">
-        <Link href={`/stocks/${r.code}`} className="block group/n">
-          <div className="font-bold text-sm tracking-tight truncate group-hover/n:text-neutral-900">
+      <td className="p-0 hidden md:table-cell min-w-0">
+        <Link href={href} className="block px-3 py-3 min-w-0">
+          <span className="block font-bold text-sm tracking-tight truncate text-neutral-900">
             {r.name}
-          </div>
+          </span>
           {r.nameEn && (
-            <div className="text-[10px] text-neutral-500 truncate">{r.nameEn}</div>
+            <span className="block text-[10px] text-neutral-500 truncate">{r.nameEn}</span>
           )}
         </Link>
       </td>
@@ -456,50 +404,58 @@ function StockRow({ row: r }: { row: Row }) {
           {r.sector}
         </Link>
       </td>
-      <td className="px-3 py-3 hidden sm:table-cell text-center">
-        <ExchangeBadge exchange={r.exchange} />
+      <td className="p-0 hidden md:table-cell text-center">
+        <Link href={href} className="block px-3 py-3">
+          <ExchangeBadge exchange={r.exchange} />
+        </Link>
       </td>
-      <td className="px-3 py-3 text-right font-mono tabular font-semibold">
-        {r.price != null ? `¥${r.price.toLocaleString()}` : "—"}
+      <td className="p-0 hidden md:table-cell">
+        <Link href={href} className="block px-3 py-3 text-right font-mono tabular font-semibold">
+          {priceText}
+        </Link>
       </td>
-      <td className="px-3 py-3 text-right font-mono tabular">
-        {r.change1d == null ? (
-          <span className="text-neutral-400">—</span>
-        ) : (
-          <span
-            className={`inline-flex items-center gap-0.5 font-bold ${
-              positive ? "text-emerald-600" : "text-rose-600"
-            }`}
-          >
-            {positive ? (
-              <TrendingUp className="w-3 h-3" />
-            ) : (
-              <TrendingDown className="w-3 h-3" />
-            )}
-            {positive ? "+" : ""}
-            {r.change1d.toFixed(2)}%
-          </span>
-        )}
+      <td className="p-0 hidden md:table-cell">
+        <Link href={href} className="block px-3 py-3 text-right font-mono tabular">
+          <ChangePct value={r.change1d} />
+        </Link>
       </td>
-      <td className="px-3 py-3 text-right hidden lg:table-cell font-mono tabular text-neutral-700">
-        {formatOku(r.marketCapOku)}
+      <td className="p-0 text-right hidden lg:table-cell">
+        <Link href={href} className="block px-3 py-3 font-mono tabular text-neutral-700">
+          {formatOku(r.marketCapOku)}
+        </Link>
       </td>
-      <td className="px-3 py-3 text-right hidden lg:table-cell font-mono tabular text-neutral-700">
-        {r.per != null ? `${r.per.toFixed(1)}x` : "—"}
+      <td className="p-0 text-right hidden lg:table-cell">
+        <Link href={href} className="block px-3 py-3 font-mono tabular text-neutral-700">
+          {r.per != null ? `${r.per.toFixed(1)}x` : "—"}
+        </Link>
       </td>
-      <td className="px-3 py-3 text-right hidden xl:table-cell font-mono tabular text-neutral-700">
-        {r.dividendYield != null ? `${r.dividendYield.toFixed(2)}%` : "—"}
-      </td>
-      <td className="px-3 py-3 text-right">
-        <Link
-          href={`/stocks/${r.code}`}
-          aria-label={`${r.name} の詳細`}
-          className="inline-flex w-7 h-7 items-center justify-center rounded-md text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 transition"
-        >
-          <ArrowUpRight className="w-4 h-4" />
+      <td className="p-0 text-right hidden xl:table-cell">
+        <Link href={href} className="block px-3 py-3 font-mono tabular text-neutral-700">
+          {r.dividendYield != null ? `${r.dividendYield.toFixed(2)}%` : "—"}
         </Link>
       </td>
     </tr>
+  );
+}
+
+/** 前日比 % を色付きで描画。株価一覧のモバイル/デスクトップ両方で共用。 */
+function ChangePct({ value }: { value: number | null }) {
+  if (value == null) return <span className="text-neutral-400">—</span>;
+  const positive = value >= 0;
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 font-bold ${
+        positive ? "text-emerald-600" : "text-rose-600"
+      }`}
+    >
+      {positive ? (
+        <TrendingUp className="w-3 h-3" />
+      ) : (
+        <TrendingDown className="w-3 h-3" />
+      )}
+      {positive ? "+" : ""}
+      {value.toFixed(2)}%
+    </span>
   );
 }
 

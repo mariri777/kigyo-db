@@ -220,6 +220,8 @@ function renderNode(node: AnyNode, ctx: RenderCtx): React.ReactNode {
         <img
           src={resolveMediaSrc(src) ?? src}
           alt={alt}
+          loading="lazy"
+          decoding="async"
           className="w-full h-auto block"
           aria-hidden={alt ? undefined : true}
         />

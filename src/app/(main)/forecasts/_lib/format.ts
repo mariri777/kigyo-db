@@ -140,7 +140,9 @@ export function timeUntilResolveJp(iso: string, nowMs = Date.now()): string {
   const resolveMs = Date.parse(iso);
   if (Number.isNaN(resolveMs)) return "";
   const diffMs = resolveMs - nowMs;
-  if (diffMs <= 0) return "解決済";
+  // 対象時刻を過ぎてもまだ答え合わせ(resolved 化)されていない状態。
+  // 「解決済」と表示すると status バッジの「観測中」と矛盾するため「結果待ち」とする。
+  if (diffMs <= 0) return "結果待ち";
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 60) return `あと${minutes}分`;
   const hours = Math.floor(minutes / 60);

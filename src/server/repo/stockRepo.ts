@@ -1,6 +1,6 @@
 import "server-only";
 
-import { eq, inArray, like, or, sql } from "drizzle-orm";
+import { desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { chunkedFetch } from "@/server/db/helpers";
 import type { Db } from "@/server/db/client";
 import * as s from "@/server/db/schema";
@@ -191,6 +191,23 @@ export async function search(
   const partial = `%${lower}%`;
   const prefix = `${lower}%`;
 
+  // 関連度ランク: 小さいほど上位。
+  //   0: 証券コード完全一致
+  //   1: 証券コード前方一致
+  //   2: 社名(和/英)前方一致
+  //   3: それ以外の部分一致(業種ヒットなど)
+  const codeLower = sql`lower(${s.stocks.code})`;
+  const nameLower = sql`lower(${s.companies.name})`;
+  const nameEnLower = sql`lower(${s.companies.nameEn})`;
+  const rank = sql<number>`
+    case
+      when ${codeLower} = ${lower} then 0
+      when ${codeLower} like ${prefix} then 1
+      when ${nameLower} like ${prefix} or ${nameEnLower} like ${prefix} then 2
+      else 3
+    end
+  `;
+
   const rows = await db
     .select({
       code: s.stocks.code,
@@ -200,14 +217,17 @@ export async function search(
     })
     .from(s.stocks)
     .innerJoin(s.companies, eq(s.companies.id, s.stocks.companyId))
+    .leftJoin(s.stockSnapshot, eq(s.stockSnapshot.code, s.stocks.code))
     .where(
       or(
-        like(sql`lower(${s.stocks.code})`, prefix),
-        like(sql`lower(${s.companies.name})`, partial),
-        like(sql`lower(${s.companies.nameEn})`, partial),
+        like(codeLower, prefix),
+        like(nameLower, partial),
+        like(nameEnLower, partial),
         like(sql`lower(${s.stocks.sectorTse})`, partial),
       ),
     )
+    // 関連度 → 同ランク内は時価総額降順(NULL は末尾)
+    .orderBy(rank, sql`${s.stockSnapshot.marketCapOku} is null`, desc(s.stockSnapshot.marketCapOku))
     .limit(limit);
   return rows;
 }

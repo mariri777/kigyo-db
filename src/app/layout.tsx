@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP, JetBrains_Mono } from "next/font/google";
+import { Noto_Sans_JP, Noto_Serif_JP, JetBrains_Mono } from "next/font/google";
 import {
   SITE_DESCRIPTION,
   SITE_KEYWORDS,
@@ -8,7 +8,6 @@ import {
   SITE_NAME,
   SITE_PUBLISHER,
   SITE_TAGLINE,
-  SITE_THEME_COLOR,
   SITE_TWITTER,
   SITE_URL,
 } from "@/shared/site";
@@ -28,6 +27,14 @@ const jbMono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
   display: "swap",
+});
+// 記事見出し・エディトリアル用のセリフ体。従来は未定義の --font-serif を参照して
+// OS ごとに別の明朝で描画されていたため、正式に読み込んで統一する。
+const notoSerifJp = Noto_Serif_JP({
+  variable: "--font-noto-serif-jp",
+  weight: ["600", "700"],
+  display: "swap",
+  preload: false,
 });
 
 const SITE_TITLE = `${SITE_NAME} — ${SITE_TAGLINE}`;
@@ -89,14 +96,13 @@ export const metadata: Metadata = {
   },
 };
 
+// ダークモードは現状未提供(globals.css の color-scheme: light と一致させる)。
+// dark を宣言すると OS ダーク環境でフォーム部品だけ暗転する不整合が起きる。
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: SITE_THEME_COLOR },
-  ],
-  colorScheme: "dark light",
+  themeColor: "#ffffff",
+  colorScheme: "light",
 };
 
 /**
@@ -111,7 +117,10 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang={SITE_LANG} className={`${notoJp.variable} ${jbMono.variable} h-full antialiased`}>
+    <html
+      lang={SITE_LANG}
+      className={`${notoJp.variable} ${notoSerifJp.variable} ${jbMono.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

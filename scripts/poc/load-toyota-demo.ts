@@ -30,7 +30,7 @@ import {
   ownerActivism,
   industryLinkSlug,
   industryName,
-} from "../../src/app/(main)/stocks/7203/_data.js";
+} from "../../src/app/(main)/stocks/_lib/sampleStockData.js";
 import {
   companies,
   companyAiBrief,

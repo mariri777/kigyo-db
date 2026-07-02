@@ -26,6 +26,7 @@ export function SearchBox({ variant = "header", onNavigate }: Props) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -41,6 +42,7 @@ export function SearchBox({ variant = "header", onNavigate }: Props) {
       fetch(`/api/search?q=${encodeURIComponent(term)}`, { signal: ac.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
         .then((data: { results: Hit[] }) => {
+          setFailed(false);
           setHits(data.results);
           setActive(0);
           setOpen(true);
@@ -48,6 +50,8 @@ export function SearchBox({ variant = "header", onNavigate }: Props) {
         .catch((err: unknown) => {
           if (err instanceof Error && err.name === "AbortError") return;
           setHits([]);
+          setFailed(true);
+          setOpen(true);
         })
         .finally(() => setLoading(false));
     }, 200);
@@ -59,6 +63,7 @@ export function SearchBox({ variant = "header", onNavigate }: Props) {
     if (v.trim().length === 0) {
       setHits([]);
       setLoading(false);
+      setFailed(false);
       setOpen(false);
       abortRef.current?.abort();
     }
@@ -120,12 +125,15 @@ export function SearchBox({ variant = "header", onNavigate }: Props) {
             if (hits.length > 0) setOpen(true);
           }}
           onKeyDown={onKeyDown}
-          placeholder="銘柄・業界・キーワードを検索"
+          placeholder="銘柄名・証券コードで検索 (例: 7203)…"
           className="flex-1 bg-transparent px-2.5 text-sm placeholder:text-neutral-500 focus:outline-none"
           aria-label="検索"
           aria-autocomplete="list"
           aria-controls="site-search-listbox"
           aria-expanded={open && hits.length > 0}
+          aria-activedescendant={
+            open && hits.length > 0 ? `search-opt-${active}` : undefined
+          }
           role="combobox"
           autoComplete="off"
         />
@@ -138,15 +146,21 @@ export function SearchBox({ variant = "header", onNavigate }: Props) {
           role="listbox"
           className="absolute left-0 right-0 mt-2 bg-white border border-neutral-200 rounded-xl shadow-lg overflow-hidden z-50 max-h-[60vh] overflow-y-auto"
         >
-          {loading && hits.length === 0 && (
+          {loading && hits.length === 0 && !failed && (
             <div className="px-4 py-3 text-xs text-neutral-500">検索中…</div>
           )}
-          {!loading && hits.length === 0 && (
+          {failed && (
+            <div className="px-4 py-3 text-xs text-rose-600">
+              検索に失敗しました。再試行してください
+            </div>
+          )}
+          {!loading && !failed && hits.length === 0 && (
             <div className="px-4 py-3 text-xs text-neutral-500">該当する銘柄がありません</div>
           )}
           {hits.map((h, i) => (
             <Link
               key={h.code}
+              id={`search-opt-${i}`}
               href={`/stocks/${h.code}`}
               role="option"
               aria-selected={i === active}

@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { eq } from "drizzle-orm";
 
 import { getDb } from "@/server/db/client";
 import { stocks } from "@/server/db/schema";
+import {
+  organizationLd,
+  financialProductLd,
+  breadcrumbList,
+} from "@/lib/seo/structuredData";
 
-import { StockDetailRenderer } from "../7203/_renderer";
-import { loadStockPageData } from "../7203/_live";
+import { StockDetail } from "../_components/StockDetail";
+import { loadStockPageData } from "../_lib/loadStockPageData";
 import { buildStockMetadata } from "../_meta";
 
 type Params = Promise<{ code: string }>;
@@ -47,8 +51,47 @@ export default async function StockPage({ params }: { params: Params }) {
   }
 
   const data = await loadStockPageData(code);
-  return <StockDetailRenderer data={data} />;
+  const jsonLd = buildJsonLd(data);
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <StockDetail data={data} />
+    </>
+  );
 }
 
-// avoid unused warning
-void notFound;
+/** organization + financialProduct + breadcrumb の 3 種を @graph でまとめる。 */
+function buildJsonLd(data: Awaited<ReturnType<typeof loadStockPageData>>) {
+  const { basics, industryName, summary } = data;
+  const path = `/stocks/${basics.code}`;
+  const sector = basics.sectorTSE;
+
+  const org = organizationLd({
+    name: basics.name,
+    path,
+    description: summary,
+    alternateName: basics.nameEn || undefined,
+    identifier: basics.code,
+    industry: industryName || sector || undefined,
+  });
+
+  const product = financialProductLd({
+    name: `${basics.name} (${basics.code})`,
+    identifier: basics.code,
+    description: summary,
+  });
+
+  const crumbs = breadcrumbList([
+    ...(sector ? [{ name: sector, href: `/stocks?sector=${encodeURIComponent(sector)}` }] : []),
+    { name: basics.name, href: path },
+  ]);
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [org, product, crumbs],
+  };
+}

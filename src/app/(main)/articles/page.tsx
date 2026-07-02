@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -98,12 +99,15 @@ export default async function ArticlesIndex() {
         <Breadcrumb />
         <h1 className="text-2xl sm:text-3xl font-black tracking-tight">記事</h1>
         <TodayHero post={today} />
-        <ArticlesView
-          posts={rest}
-          themes={[]}
-          categories={categories}
-          industries={industries}
-        />
+        {/* ArticlesView は useSearchParams (URL 同期フィルタ) を使うため Suspense 境界が必要 */}
+        <Suspense>
+          <ArticlesView
+            posts={rest}
+            themes={[]}
+            categories={categories}
+            industries={industries}
+          />
+        </Suspense>
       </div>
     </div>
   );

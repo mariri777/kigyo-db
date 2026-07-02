@@ -6,7 +6,7 @@
  */
 import type { Metadata } from "next";
 
-import type { loadStockPageData } from "./7203/_live";
+import type { loadStockPageData } from "./_lib/loadStockPageData";
 
 type LiveData = Awaited<ReturnType<typeof loadStockPageData>>;
 

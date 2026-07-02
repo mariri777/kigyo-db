@@ -23,6 +23,8 @@ import { extractToc, renderArticleContent } from "../_lib/contentRenderer";
 import { loadTickerSnapshots } from "../_lib/serverData";
 import { Toc } from "./_Toc";
 import { resolveMediaSrc, shouldSkipImageOptimization } from "@/shared/media";
+import { articleLd, breadcrumbList } from "@/lib/seo/structuredData";
+import { SITE_PUBLISHER } from "@/shared/site";
 
 type SubjectKind = "company" | "industry" | "theme" | "metric";
 
@@ -37,11 +39,29 @@ export async function generateMetadata({
   const { slug } = await params;
   const db = await getDb();
   const article = await findBySlug(db, slug);
-  if (!article) return { title: "記事が見つかりません" };
+  // 未発見・未公開のみ noindex。公開記事はコンテンツ SEO の主力なので index させる
+  if (!article || article.status !== "published") {
+    return {
+      title: "記事が見つかりません",
+      robots: { index: false, follow: false },
+    };
+  }
   return {
-    title: `${article.title}`,
+    title: article.title,
     description: article.lede,
-    robots: { index: false, follow: false },
+    alternates: { canonical: `/articles/${slug}` },
+    openGraph: {
+      type: "article",
+      title: article.title,
+      description: article.lede,
+      url: `/articles/${slug}`,
+      ...(article.publishedAt ? { publishedTime: article.publishedAt } : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.lede,
+    },
   };
 }
 
@@ -103,8 +123,28 @@ export default async function ArticleDetailPage({
     if (nextArticles.length >= 3) break;
   }
 
+  const jsonLd = [
+    articleLd({
+      title: article.title,
+      description: article.lede,
+      path: `/articles/${article.slug}`,
+      datePublished: article.publishedAt ?? article.updatedAt,
+      dateModified: article.updatedAt,
+      articleSection: angle.label,
+      authorName: SITE_PUBLISHER,
+    }),
+    breadcrumbList([
+      { name: "記事", href: "/articles" },
+      { name: article.title, href: `/articles/${article.slug}` },
+    ]),
+  ];
+
   return (
     <div className="bg-neutral-50 min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="max-w-[1120px] mx-auto px-4 sm:px-6 py-4 sm:py-5">
         <Breadcrumb
           subjectKind={article.subjectKind}

@@ -102,6 +102,7 @@
   --font-sans: var(--font-noto-jp);
   --font-mono: var(--font-jb-mono);
   --font-heading: var(--font-noto-jp);
+  --font-serif: var(--font-noto-serif-jp), "Hiragino Mincho ProN", "Yu Mincho", serif;
 
   /* ─ radius スケール ─ */
   --radius-sm: calc(var(--radius) * 0.6);
@@ -166,6 +167,32 @@ p, li, dd, summary {
 
 /* リンク・インタラクション基本 */
 ::selection { background: var(--foreground); color: var(--background); }
+
+/* ─ キーボードフォーカスの可視化 ─
+ * マウスクリックではリングを出さず、キーボード操作時のみ表示する。
+ * 個別コンポーネントで focus:outline-none を使う場合は、
+ * 必ず親の focus-within リング等の代替を用意すること。 */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ─ モーション配慮 ─
+ * OS の「視差効果を減らす」設定時は CSS アニメーション・トランジションを
+ * 一括で実質無効化する。JS の scrollTo({behavior:"smooth"}) はここでは
+ * 止まらないため、呼び出し側で matchMedia による分岐が必要。 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  html { scroll-behavior: auto !important; }
+}
+
+/* ─ タッチ最適化 ─ */
+html { -webkit-tap-highlight-color: transparent; }
+a, button, [role="button"], input, select, label { touch-action: manipulation; }
 
 /* スクロールバー非表示 (横スライダー用) */
 .scrollbar-hide::-webkit-scrollbar { display: none; }

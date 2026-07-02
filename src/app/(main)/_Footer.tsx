@@ -1,15 +1,11 @@
 import Link from "next/link";
 import { BrandMark } from "./_BrandMark";
 
-const HOT_THEMES = [
-  "半導体・HBM",
-  "AIデータセンタ",
-  "電力インフラ",
-  "防衛・宇宙",
-  "原発再稼働",
-  "全固体電池",
-  "SDV",
-  "為替・金利",
+const FOOTER_NAV = [
+  { href: "/", label: "ホーム" },
+  { href: "/forecasts", label: "AIの明日予想" },
+  { href: "/articles", label: "記事" },
+  { href: "/stocks", label: "銘柄一覧" },
 ];
 
 export function SiteFooter() {
@@ -28,22 +24,20 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-3">
-            今のホットテーマ
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {HOT_THEMES.map((t) => (
-              <Link
-                key={t}
-                href="#"
-                className="text-xs px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-white transition"
-              >
-                {t}
-              </Link>
+        <nav aria-label="フッター">
+          <ul className="flex flex-wrap gap-x-6 gap-y-2">
+            {FOOTER_NAV.map((l) => (
+              <li key={l.href}>
+                <Link
+                  href={l.href}
+                  className="text-sm text-neutral-400 hover:text-white transition"
+                >
+                  {l.label}
+                </Link>
+              </li>
             ))}
-          </div>
-        </div>
+          </ul>
+        </nav>
 
         <div className="pt-6 border-t border-neutral-800 text-[11px] text-neutral-500 leading-relaxed">
           本サービスの情報は、不特定多数に対する一般的な投資情報提供であり、投資助言業に該当する個別助言ではありません。投資判断はユーザー自身の責任で行ってください。本サービスは投資勧誘や売買推奨を目的とするものではありません。
